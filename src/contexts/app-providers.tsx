@@ -1,5 +1,6 @@
 import { PropsWithChildren } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export function AppProviders({ children }: PropsWithChildren) {
-  return <>{children}</>;
+  return <SafeAreaProvider>{children}</SafeAreaProvider>;
 }
