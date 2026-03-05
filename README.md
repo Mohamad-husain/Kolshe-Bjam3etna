@@ -112,7 +112,7 @@ npm run web
 Create a `.env` file based on `.env.example`:
 
 
-EXPO_PUBLIC_API_BASE_URL=https://api.example.com
+EXPO_PUBLIC_API_BASE_URL=[https://documenter.getpostman.com/view/42948246/2sBXcKDKB8](https://documenter.getpostman.com/view/42948246/2sBXcKDKB8)
 
 
 ---
