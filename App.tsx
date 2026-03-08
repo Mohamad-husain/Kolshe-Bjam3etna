@@ -8,8 +8,9 @@ import { useState } from 'react';
 
 import { BottomNavigation, type Screen } from '@src/components/bottom-navigation';
 import { AppProviders } from '@src/contexts/app-providers';
+import AuthScreen from '@src/screens/auth-screen';
+import type { User } from '@src/services/auth-service';
 import HomeScreen from '@src/screens/home-screen';
-import LoginScreen, { type User } from '@src/screens/login-screen';
 
 type AppTabsParamList = {
   home: undefined;
@@ -62,7 +63,7 @@ export default function App() {
           <MainTabs />
         </NavigationContainer>
       ) : (
-        <LoginScreen onSuccess={setUser} />
+        <AuthScreen onSuccess={setUser} />
       )}
     </AppProviders>
   );
