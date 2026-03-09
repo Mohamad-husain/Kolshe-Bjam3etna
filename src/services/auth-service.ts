@@ -15,6 +15,21 @@ type RegisterInput = {
   password: string;
 };
 
+type ForgotPasswordInput = {
+  email: string;
+};
+
+type VerifyResetCodeInput = {
+  email: string;
+  code: string;
+};
+
+type ResetPasswordInput = {
+  email: string;
+  code: string;
+  newPassword: string;
+};
+
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
 
 type ApiLoginResponse = {
@@ -24,6 +39,10 @@ type ApiLoginResponse = {
 };
 
 type ApiRegisterResponse = {
+  message?: string;
+};
+
+type ApiActionResponse = {
   message?: string;
 };
 
@@ -49,6 +68,10 @@ function parseResponsePayload(text: string) {
   } catch {
     return { message: text } as Record<string, unknown>;
   }
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
 }
 
 function extractMessage(payload: unknown, fallback: string) {
@@ -102,7 +125,7 @@ export function getAuthToken() {
 }
 
 export async function login(input: LoginInput): Promise<User> {
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeEmail(input.email);
 
   const response = await postJson<ApiLoginResponse>(
     '/api/Account/login',
@@ -127,7 +150,7 @@ export async function login(input: LoginInput): Promise<User> {
 }
 
 export async function register(input: RegisterInput): Promise<User> {
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeEmail(input.email);
   const name = input.name.trim();
 
   if (!name) {
@@ -155,4 +178,67 @@ export async function register(input: RegisterInput): Promise<User> {
   });
 
   return { ...user, name };
+}
+
+export async function forgotPassword(input: ForgotPasswordInput): Promise<string | null> {
+  const email = normalizeEmail(input.email);
+
+  if (!email) {
+    throw new Error('يرجى إدخال البريد الجامعي');
+  }
+
+  const response = await postJson<ApiActionResponse>(
+    '/api/Account/forgot-password',
+    { email },
+    'تعذر إرسال رمز التحقق',
+  );
+
+  return response.message ?? null;
+}
+
+export async function verifyResetCode(input: VerifyResetCodeInput): Promise<string | null> {
+  const email = normalizeEmail(input.email);
+  const code = input.code.trim();
+
+  if (!email) {
+    throw new Error('يرجى إدخال البريد الجامعي');
+  }
+
+  if (!code) {
+    throw new Error('يرجى إدخال رمز التحقق');
+  }
+
+  const response = await postJson<ApiActionResponse>(
+    '/api/Account/verify-reset-code',
+    { email, code },
+    'رمز التحقق غير صحيح',
+  );
+
+  return response.message ?? null;
+}
+
+export async function resetPassword(input: ResetPasswordInput): Promise<string | null> {
+  const email = normalizeEmail(input.email);
+  const code = input.code.trim();
+  const newPassword = input.newPassword.trim();
+
+  if (!email) {
+    throw new Error('يرجى إدخال البريد الجامعي');
+  }
+
+  if (!code) {
+    throw new Error('يرجى إدخال رمز التحقق');
+  }
+
+  if (newPassword.length < 8) {
+    throw new Error('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+  }
+
+  const response = await postJson<ApiActionResponse>(
+    '/api/Account/reset-password',
+    { email, code, newPassword },
+    'تعذر تغيير كلمة المرور',
+  );
+
+  return response.message ?? null;
 }

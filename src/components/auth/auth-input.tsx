@@ -5,7 +5,6 @@ import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'rea
 import {
   Colors,
   FontFamily,
-  Spacing,
 } from '@src/styles/ui-theme';
 
 type AuthInputProps = TextInputProps & {

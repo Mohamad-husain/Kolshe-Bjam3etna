@@ -8,7 +8,6 @@ import {
   Dimensions,
   FontFamily,
   FontWeight,
-  Spacing,
 } from '@src/styles/ui-theme';
 
 export type AuthTab = 'login' | 'register';
