@@ -4,57 +4,78 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 
 import { AuthInput } from '@src/components/auth/auth-input';
-import { login, type User } from '@src/services/auth-service';
+import { register, type User } from '@src/services/auth-service';
 import {
   Colors,
+  Dimensions,
   FontFamily,
   FontSize,
   FontWeight,
   Spacing,
 } from '@src/styles/ui-theme';
 
-type LoginScreenProps = {
+type RegisterScreenProps = {
   onSuccess: (user: User) => void;
-  onForgotPassword?: () => void;
 };
 
-type LoginFormValues = {
+type RegisterFormValues = {
+  name: string;
   email: string;
   password: string;
 };
 
-export default function LoginScreen({
-  onSuccess,
-  onForgotPassword,
-}: LoginScreenProps) {
+export default function RegisterScreen({ onSuccess }: RegisterScreenProps) {
   const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
+  } = useForm<RegisterFormValues>({
     defaultValues: {
+      name: '',
       email: '',
       password: '',
     },
     mode: 'onChange',
   });
 
-  const onLogin = handleSubmit(async (values) => {
+  const onRegister = handleSubmit(async (values) => {
     setServerError('');
 
     try {
-      const user = await login(values);
+      const user = await register(values);
       onSuccess(user);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'تعذر تسجيل الدخول';
+      const message = err instanceof Error ? err.message : 'تعذر إنشاء الحساب';
       setServerError(message);
     }
   });
 
   return (
     <View style={styles.container}>
+      <Controller
+        control={control}
+        name="name"
+        rules={{
+          required: 'يرجى إدخال الاسم الكامل',
+          minLength: {
+            value: 3,
+            message: 'الاسم الكامل قصير جدًا',
+          },
+        }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <AuthInput
+            icon="person-outline"
+            value={value}
+            onBlur={() => onBlur()}
+            onChangeText={(text) => onChange(text)}
+            placeholder="الاسم الكامل"
+          />
+        )}
+      />
+      {!!errors.name?.message && <Text style={styles.errorText}>{errors.name.message}</Text>}
+
       <Controller
         control={control}
         name="email"
@@ -84,8 +105,12 @@ export default function LoginScreen({
         rules={{
           required: 'يرجى إدخال كلمة المرور',
           minLength: {
-            value: 6,
-            message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+            value: 8,
+            message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+          },
+          pattern: {
+            value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).+$/,
+            message: 'يجب أن تحتوي على حرف كبير وصغير ورمز',
           },
         }}
         render={({ field: { onChange, onBlur, value } }) => (
@@ -105,20 +130,17 @@ export default function LoginScreen({
         <Text style={styles.errorText}>{errors.password.message}</Text>
       )}
 
-      <Pressable
-        onPress={onForgotPassword}
-        disabled={!onForgotPassword}
-        style={styles.inlineButton}
-      >
-        <Text style={styles.inlineButtonText}>نسيت كلمة المرور؟</Text>
-      </Pressable>
+      <View style={styles.hintBox}>
+        <View style={styles.hintDot} />
+        <Text style={styles.hintText}>استخدم بريدك الجامعي (.edu) للتوثيق الفوري.</Text>
+      </View>
 
       {!!serverError && <Text style={styles.errorText}>{serverError}</Text>}
 
       <Pressable
         disabled={isSubmitting}
         onPress={() => {
-          void onLogin();
+          void onRegister();
         }}
         style={({ pressed }) => [
           styles.submitButton,
@@ -129,7 +151,7 @@ export default function LoginScreen({
         <View style={styles.submitContent}>
           <Ionicons name="arrow-back" size={20} color="#ffffff" />
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'جاري الدخول...' : 'دخول'}
+            {isSubmitting ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب'}
           </Text>
         </View>
       </Pressable>
@@ -141,16 +163,29 @@ const styles = StyleSheet.create({
   container: {
     gap: Spacing.sm,
   },
-  inlineButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+  hintBox: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(74, 120, 247, 0.1)',
   },
-  inlineButtonText: {
-    color: Colors.primary,
+  hintDot: {
+    width: 6,
+    height: 6,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: Colors.primary,
+  },
+  hintText: {
+    flex: 1,
+    color: 'rgba(54, 101, 229, 0.9)',
+    textAlign: 'right',
+    writingDirection: 'rtl',
     fontFamily: FontFamily.cairo,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
+    fontSize: 12,
+    lineHeight: 18,
   },
   errorText: {
     color: Colors.destructive,
