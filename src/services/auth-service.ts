@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export type User = {
   id: string;
   name: string;
@@ -58,15 +60,19 @@ function buildUserName(name: string, email: string) {
   return name.replace(/\s+/g, '').toLowerCase() || `user${Date.now()}`;
 }
 
-function parseResponsePayload(text: string) {
-  if (!text) {
+function parseResponsePayload(payload: unknown) {
+  if (!payload) {
     return null;
   }
 
+  if (typeof payload !== 'string') {
+    return payload;
+  }
+
   try {
-    return JSON.parse(text) as Record<string, unknown>;
+    return JSON.parse(payload) as Record<string, unknown>;
   } catch {
-    return { message: text } as Record<string, unknown>;
+    return { message: payload } as Record<string, unknown>;
   }
 }
 
@@ -95,29 +101,30 @@ async function postJson<TResponse>(
     throw new Error('EXPO_PUBLIC_API_BASE_URL غير معرّف في ملف البيئة .env');
   }
 
-  let response: Response;
-
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'POST',
+    const response = await axios.post<TResponse>(`${API_BASE_URL}${path}`, body, {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
     });
+
+    const payload = parseResponsePayload(response.data);
+
+    return (payload ?? {}) as TResponse;
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        const payload = parseResponsePayload(error.response.data);
+        throw new Error(extractMessage(payload, fallbackMessage));
+      }
+
+      const details = error.message ? ` (${error.message})` : '';
+      throw new Error(`تعذر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.${details}`);
+    }
+
     const details = error instanceof Error ? ` (${error.message})` : '';
     throw new Error(`تعذر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.${details}`);
   }
-
-  const raw = await response.text();
-  const payload = parseResponsePayload(raw);
-
-  if (!response.ok) {
-    throw new Error(extractMessage(payload, fallbackMessage));
-  }
-
-  return (payload ?? {}) as TResponse;
 }
 
 export function getAuthToken() {
