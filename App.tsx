@@ -14,12 +14,12 @@ import AuthScreen from "@src/screens/auth-screen";
 import type { User } from "@src/services/auth-service";
 import HomeScreen from "@src/screens/home-screen";
 import ExploreScreen from "@src/screens/explore-screen";
-
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 type AppTabsParamList = {
   home: undefined;
   explore: undefined;
 };
-
+const queryClient = new QueryClient();
 const Tab = createBottomTabNavigator<AppTabsParamList>();
 
 const TAB_TITLES: Record<Screen, string> = {
@@ -70,15 +70,17 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
 
   return (
-    <AppProviders>
-      <StatusBar style="auto" />
-      {user ? (
-        <NavigationContainer>
-          <MainTabs />
-        </NavigationContainer>
-      ) : (
-        <AuthScreen onSuccess={setUser} />
-      )}
-    </AppProviders>
+    <QueryClientProvider client={queryClient}>
+      <AppProviders>
+        <StatusBar style="auto" />
+        {user ? (
+          <NavigationContainer>
+            <MainTabs />
+          </NavigationContainer>
+        ) : (
+          <AuthScreen onSuccess={setUser} />
+        )}
+      </AppProviders>
+    </QueryClientProvider>
   );
 }
