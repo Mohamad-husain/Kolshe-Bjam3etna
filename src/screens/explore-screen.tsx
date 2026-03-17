@@ -65,7 +65,6 @@ export default function ExploreScreen() {
   const [showFilter, setShowFilter] = useState(false);
   const currentTab = TABS.find((t) => t.id === activeTab)!;
 
-  // ① لما تتغير التاب، أخفي الفلتر
   const handleTabChange = (tab: TabId) => {
     setActiveTab(tab);
     setShowFilter(false);
@@ -96,7 +95,6 @@ export default function ExploreScreen() {
           <Text style={styles.title}>استكشف</Text>
         </View>
 
-        {/* ② زر الفلتر مع toggle ولون يتغير */}
         <TouchableOpacity
           style={[
             styles.filterButton,
@@ -118,7 +116,6 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ③ Tab Bar — استخدم handleTabChange */}
       <View style={styles.tabBar}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;

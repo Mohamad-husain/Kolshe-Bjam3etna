@@ -1,36 +1,28 @@
 import { useState, useMemo } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
-import { SemanticColors, Spacing } from "@src/styles/ui-theme";
+import {
+  FlatList,
+  StyleSheet,
+  View,
+  ActivityIndicator,
+  Text,
+} from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import {
+  SemanticColors,
+  Spacing,
+  Colors,
+  FontFamily,
+  FontSize,
+} from "@src/styles/ui-theme";
 import { SearchBar } from "./SearchBar";
 import { CategoryFilter, Category } from "./CategoryFilter";
-import { ExchangeCard, ExchangeCardData } from "./ExchangeCard";
-
+import { ExchangeCard } from "./ExchangeCard";
+import { getSwapAds } from "@src/services/swap.service";
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
   { id: "إلكترونيات", label: "إلكترونيات" },
   { id: "كتب", label: "كتب" },
   { id: "تصميم", label: "تصميم" },
-];
-
-const MOCK_EXCHANGE: ExchangeCardData[] = [
-  {
-    id: "1",
-    title: "آلة حاسبة علمية",
-    description: "أريد تبادل آلة حاسبة Casio FX-991 بكتاب رياضيات متقدمة.",
-    category: "إلكترونيات",
-    have: "آلة حاسبة Casio FX-991",
-    want: "كتاب رياضيات",
-    owner: { name: "يوسف نمر", rating: 4.6, initials: "ي" },
-  },
-  {
-    id: "2",
-    title: "كتاب تحليل رياضي",
-    description: "معي كتاب تحليل رياضي للسنة الثانية أريد تبادله بكتاب فيزياء.",
-    category: "كتب",
-    have: "كتاب تحليل رياضي",
-    want: "كتاب فيزياء عامة",
-    owner: { name: "رنا سالم", rating: 4.3, initials: "ر" },
-  },
 ];
 interface ExchangeTabProps {
   showFilter: boolean;
@@ -39,8 +31,16 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
+  const {
+    data: items = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["swaps"],
+    queryFn: getSwapAds,
+  });
   const filtered = useMemo(() => {
-    return MOCK_EXCHANGE.filter((item) => {
+    return items.filter((item) => {
       const matchSearch =
         search === "" ||
         item.title.includes(search) ||
@@ -50,8 +50,22 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
         selectedCategory === "all" || item.category === selectedCategory;
       return matchSearch && matchCategory;
     });
-  }, [search, selectedCategory]);
+  }, [items, search, selectedCategory]);
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={SemanticColors.lightBlue} />
+      </View>
+    );
+  }
 
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>تعذر تحميل البيانات</Text>
+      </View>
+    );
+  }
   return (
     <FlatList
       data={filtered}
@@ -88,5 +102,15 @@ const styles = StyleSheet.create({
   list: {
     paddingTop: Spacing.sm,
     paddingBottom: 100,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorText: {
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    color: Colors.mutedForeground,
   },
 });
