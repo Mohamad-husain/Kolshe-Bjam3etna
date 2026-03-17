@@ -126,7 +126,7 @@ export function EventCard({ data, onPress }: EventCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: "#FFFFFF",
     borderRadius: Dimensions.radiusCard,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,

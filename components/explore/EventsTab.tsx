@@ -1,24 +1,30 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { useEventsQuery } from '@/hooks/queries/use-explore-queries';
+import { useEventsQuery } from "@/hooks/queries/use-explore-queries";
 import {
   Colors,
   FontFamily,
   FontSize,
   SemanticColors,
   Spacing,
-} from '@/styles/ui-theme';
+} from "@/styles/ui-theme";
 
-import { CategoryFilter, type Category } from './CategoryFilter';
-import { EventCard } from './EventCard';
-import { SearchBar } from './SearchBar';
+import { CategoryFilter, type Category } from "./CategoryFilter";
+import { EventCard } from "./EventCard";
+import { SearchBar } from "./SearchBar";
 
 const CATEGORIES: Category[] = [
-  { id: 'all', label: 'الكل' },
-  { id: 'نادي البرمجة', label: 'نادي البرمجة' },
-  { id: 'نادي الروبوتات', label: 'نادي الروبوتات' },
-  { id: 'نادي ريادة الأعمال', label: 'ريادة الأعمال' },
+  { id: "all", label: "الكل" },
+  { id: "نادي البرمجة", label: "نادي البرمجة" },
+  { id: "نادي الروبوتات", label: "نادي الروبوتات" },
+  { id: "نادي ريادة الأعمال", label: "ريادة الأعمال" },
 ];
 
 type EventsTabProps = {
@@ -26,14 +32,18 @@ type EventsTabProps = {
 };
 
 export function EventsTab({ showFilter }: EventsTabProps) {
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useEventsQuery();
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
-      const matchSearch = search === '' || item.title.includes(search) || item.club.includes(search);
-      const matchCategory = selectedCategory === 'all' || item.club === selectedCategory;
+      const matchSearch =
+        search === "" ||
+        item.title.includes(search) ||
+        item.club.includes(search);
+      const matchCategory =
+        selectedCategory === "all" || item.club === selectedCategory;
 
       return matchSearch && matchCategory;
     });
@@ -62,7 +72,11 @@ export function EventsTab({ showFilter }: EventsTabProps) {
       renderItem={({ item }) => <EventCard data={item} />}
       ListHeaderComponent={
         <View>
-          <SearchBar placeholder="ابحث في فعاليات..." value={search} onChangeText={setSearch} />
+          <SearchBar
+            placeholder="ابحث في فعاليات..."
+            value={search}
+            onChangeText={setSearch}
+          />
           {showFilter ? (
             <CategoryFilter
               categories={CATEGORIES}
@@ -90,8 +104,8 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorText: {
     fontFamily: FontFamily.cairo,
