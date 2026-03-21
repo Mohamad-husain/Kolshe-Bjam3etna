@@ -10,7 +10,7 @@ import {
   FontWeight,
   IconSet,
   SemanticColors,
-} from '@src/styles/ui-theme';
+} from '@/styles/ui-theme';
 
 export type Screen = 'home' | 'explore' | 'add-menu' | 'messages' | 'profile';
 
