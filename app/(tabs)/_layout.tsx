@@ -26,6 +26,10 @@ export default function TabsLayout() {
     return <Redirect href="/(auth)" />;
   }
 
+  if (!user.isProfileCompleted) {
+    return <Redirect href="/(auth)/select-university" />;
+  }
+
   return (
     <Tabs tabBar={(props) => <CustomTabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="home" options={{ title: 'الرئيسية' }} />
