@@ -2,11 +2,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query-keys';
 import {
+  completeProfile,
   forgotPassword,
   login,
   register,
   resetPassword,
   verifyResetCode,
+  type CompleteProfileInput,
   type ForgotPasswordInput,
   type LoginInput,
   type RegisterInput,
@@ -56,5 +58,11 @@ export function useVerifyResetCodeMutation() {
 export function useResetPasswordMutation() {
   return useMutation({
     mutationFn: (input: ResetPasswordInput) => resetPassword(input),
+  });
+}
+
+export function useCompleteProfileMutation() {
+  return useMutation({
+    mutationFn: (input: CompleteProfileInput) => completeProfile(input),
   });
 }

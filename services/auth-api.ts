@@ -4,6 +4,12 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  isProfileCompleted: boolean;
+};
+
+export type University = {
+  id: number;
+  name: string;
 };
 
 export type LoginInput = {
@@ -32,6 +38,20 @@ export type ResetPasswordInput = {
   newPassword: string;
 };
 
+export type ProfileImageInput = {
+  uri: string;
+  name?: string | null;
+  type?: string | null;
+  file?: File;
+};
+
+export type CompleteProfileInput = {
+  universityId: number;
+  major: string;
+  bio: string;
+  profileImage: ProfileImageInput;
+};
+
 type ApiLoginResponse = {
   message?: string;
   token?: string | null;
@@ -43,6 +63,15 @@ type ApiRegisterResponse = {
 };
 
 type ApiActionResponse = {
+  message?: string;
+};
+
+type ApiUniversitiesResponse = {
+  message?: string;
+  data?: University[];
+};
+
+type ApiCompleteProfileResponse = {
   message?: string;
 };
 
@@ -60,6 +89,27 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeProfileCompletionStatus(value?: boolean) {
+  return value !== false;
+}
+
+function mapAuthenticatedUser({
+  email,
+  name,
+  isProfileCompleted,
+}: {
+  email: string;
+  name: string;
+  isProfileCompleted?: boolean;
+}): User {
+  return {
+    id: email,
+    name,
+    email,
+    isProfileCompleted: normalizeProfileCompletionStatus(isProfileCompleted),
+  };
+}
+
 async function postJson<TResponse>(
   path: string,
   body: Record<string, unknown>,
@@ -67,6 +117,32 @@ async function postJson<TResponse>(
 ): Promise<TResponse> {
   try {
     const response = await apiClient.post<TResponse>(path, body);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, fallbackMessage));
+  }
+}
+
+async function getRequest<TResponse>(path: string, fallbackMessage: string): Promise<TResponse> {
+  try {
+    const response = await apiClient.get<TResponse>(path);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, fallbackMessage));
+  }
+}
+
+async function postMultipart<TResponse>(
+  path: string,
+  body: FormData,
+  fallbackMessage: string,
+): Promise<TResponse> {
+  try {
+    const response = await apiClient.post<TResponse>(path, body, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, fallbackMessage));
@@ -91,11 +167,11 @@ export async function login(input: LoginInput): Promise<User> {
 
   setAuthToken(response.token);
 
-  return {
-    id: email,
-    name: email.split('@')[0] || 'User',
+  return mapAuthenticatedUser({
     email,
-  };
+    name: email.split('@')[0] || 'User',
+    isProfileCompleted: response.isProfileCompleted,
+  });
 }
 
 export async function register(input: RegisterInput): Promise<User> {
@@ -187,6 +263,59 @@ export async function resetPassword(input: ResetPasswordInput): Promise<string |
     '/api/Account/reset-password',
     { email, code, newPassword },
     'تعذر تغيير كلمة المرور',
+  );
+
+  return response.message ?? null;
+}
+
+export async function getUniversities(): Promise<University[]> {
+  const response = await getRequest<ApiUniversitiesResponse>(
+    '/api/Account/universities',
+    'تعذر تحميل قائمة الجامعات',
+  );
+
+  return response.data ?? [];
+}
+
+export async function completeProfile(input: CompleteProfileInput): Promise<string | null> {
+  const universityId = Number(input.universityId);
+  const major = input.major.trim();
+  const bio = input.bio.trim();
+
+  if (!Number.isFinite(universityId) || universityId <= 0) {
+    throw new Error('يرجى اختيار الجامعة');
+  }
+
+  if (!major) {
+    throw new Error('يرجى إدخال التخصص أو القسم');
+  }
+
+  if (!input.profileImage?.uri) {
+    throw new Error('يرجى اختيار صورة شخصية');
+  }
+
+  const formData = new FormData();
+  formData.append('UniversityId', String(universityId));
+  formData.append('Major', major);
+  formData.append('Bio', bio);
+
+  if (input.profileImage.file) {
+    formData.append('ProfileImageUrl', input.profileImage.file);
+  } else {
+    formData.append(
+      'ProfileImageUrl',
+      {
+        uri: input.profileImage.uri,
+        name: input.profileImage.name ?? `profile-${Date.now()}.jpg`,
+        type: input.profileImage.type ?? 'image/jpeg',
+      } as never,
+    );
+  }
+
+  const response = await postMultipart<ApiCompleteProfileResponse>(
+    '/api/Account/complete-profile',
+    formData,
+    'تعذر إكمال الملف الشخصي',
   );
 
   return response.message ?? null;
