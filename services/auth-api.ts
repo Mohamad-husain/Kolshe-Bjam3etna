@@ -94,6 +94,64 @@ type ApiProfileResponse = {
   data?: AccountProfile;
 };
 
+function decodeJwtPayload(token: string) {
+  try {
+    const [, payload = ''] = token.split('.');
+
+    if (!payload) {
+      return null;
+    }
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      '=',
+    );
+
+    const decoded =
+      typeof atob === 'function'
+        ? atob(paddedPayload)
+        : Buffer.from(paddedPayload, 'base64').toString('utf-8');
+
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function getTokenDisplayName(token?: string | null) {
+  if (!token) {
+    return '';
+  }
+
+  const payload = decodeJwtPayload(token);
+
+  if (!payload) {
+    return '';
+  }
+
+  const fullNameCandidates = [
+    payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+    payload.name,
+    payload.unique_name,
+    payload.fullName,
+    payload.full_name,
+  ];
+
+  for (const candidate of fullNameCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const givenName =
+    typeof payload.given_name === 'string' ? payload.given_name.trim() : '';
+  const familyName =
+    typeof payload.family_name === 'string' ? payload.family_name.trim() : '';
+
+  return `${givenName} ${familyName}`.trim();
+}
+
 function buildUserName(name: string, email: string) {
   const fromEmail = email.split('@')[0]?.trim();
 
@@ -186,9 +244,11 @@ export async function login(input: LoginInput): Promise<User> {
 
   setAuthToken(response.token);
 
+  const tokenDisplayName = getTokenDisplayName(response.token);
+
   return mapAuthenticatedUser({
     email,
-    name: email.split('@')[0] || 'User',
+    name: tokenDisplayName || email.split('@')[0] || 'User',
     isProfileCompleted: response.isProfileCompleted,
   });
 }
