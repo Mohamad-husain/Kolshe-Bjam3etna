@@ -5,35 +5,39 @@ import { BottomNavigation, type Screen } from '@/components/bottom-navigation';
 import { useAuth } from '@/contexts/auth-context';
 
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
-  const currentScreen = (state.routes[state.index]?.name as Screen) ?? 'home';
+    const currentScreen = (state.routes[state.index]?.name as Screen) ?? 'home';
 
-  return (
-    <BottomNavigation
-      currentScreen={currentScreen}
-      onChangeScreen={(screen) => {
-        if (screen === 'home' || screen === 'explore') {
-          navigation.navigate(screen);
-        }
-      }}
-    />
-  );
+    return (
+        <BottomNavigation
+            currentScreen={currentScreen}
+            onChangeScreen={(screen) => {
+                if (screen === 'home' || screen === 'explore' || screen === 'messages') {
+                    navigation.navigate(screen);
+                }
+            }}
+        />
+    );
 }
 
 export default function TabsLayout() {
-  const { user } = useAuth();
+    const { user } = useAuth();
 
-  if (!user) {
-    return <Redirect href="/(auth)" />;
-  }
+    if (!user) {
+        return <Redirect href="/(auth)" />;
+    }
 
-  if (!user.isProfileCompleted) {
-    return <Redirect href="/(auth)/select-university" />;
-  }
+    if (!user.isProfileCompleted) {
+        return <Redirect href="/(auth)/select-university" />;
+    }
 
-  return (
-    <Tabs tabBar={(props) => <CustomTabBar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tabs.Screen name="home" options={{ title: 'الرئيسية' }} />
-      <Tabs.Screen name="explore" options={{ title: 'استكشف' }} />
-    </Tabs>
-  );
+    return (
+        <Tabs
+            tabBar={(props) => <CustomTabBar {...props} />}
+            screenOptions={{ headerShown: false }}
+        >
+            <Tabs.Screen name="home" options={{ title: 'الرئيسية' }} />
+            <Tabs.Screen name="explore" options={{ title: 'استكشف' }} />
+            <Tabs.Screen name="messages" options={{ title: 'الرسائل' }} />
+        </Tabs>
+    );
 }
