@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -56,10 +57,35 @@ const TABS: Tab[] = [
   },
 ];
 
+function parseTabParam(value?: string | string[]): TabId | null {
+  const nextValue = Array.isArray(value) ? value[0] : value;
+
+  if (
+    nextValue === "services" ||
+    nextValue === "marketplace" ||
+    nextValue === "exchange" ||
+    nextValue === "events"
+  ) {
+    return nextValue;
+  }
+
+  return null;
+}
+
 export default function ExploreRoute() {
-  const [activeTab, setActiveTab] = useState<TabId>("services");
+  const params = useLocalSearchParams<{ tab?: string | string[] }>();
+  const [activeTab, setActiveTab] = useState<TabId>(() => parseTabParam(params.tab) ?? "services");
   const [showFilter, setShowFilter] = useState(false);
   const currentTab = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
+
+  useEffect(() => {
+    const requestedTab = parseTabParam(params.tab);
+
+    if (requestedTab) {
+      setActiveTab(requestedTab);
+      setShowFilter(false);
+    }
+  }, [params.tab]);
 
   const handleTabChange = (tab: TabId) => {
     setActiveTab(tab);

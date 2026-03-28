@@ -12,6 +12,20 @@ export type University = {
   name: string;
 };
 
+export type AccountProfile = {
+  fullName: string;
+  email: string;
+  phoneNumber: string | null;
+  bio: string | null;
+  websiteUrl: string | null;
+  profileImageUrl: string | null;
+  universityName: string | null;
+  universityId: number | null;
+  major: string | null;
+  studyYear: string | null;
+  universityNumber: string | null;
+};
+
 export type LoginInput = {
   email: string;
   password: string;
@@ -73,6 +87,11 @@ type ApiUniversitiesResponse = {
 
 type ApiCompleteProfileResponse = {
   message?: string;
+};
+
+type ApiProfileResponse = {
+  message?: string;
+  data?: AccountProfile;
 };
 
 function buildUserName(name: string, email: string) {
@@ -275,6 +294,15 @@ export async function getUniversities(): Promise<University[]> {
   );
 
   return response.data ?? [];
+}
+
+export async function getAccountProfile(): Promise<AccountProfile | null> {
+  const response = await getRequest<ApiProfileResponse>(
+    '/api/Account/profile',
+    'تعذر تحميل الملف الشخصي',
+  );
+
+  return response.data ?? null;
 }
 
 export async function completeProfile(input: CompleteProfileInput): Promise<string | null> {

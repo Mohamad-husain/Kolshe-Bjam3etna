@@ -17,18 +17,30 @@ type ApiEvent = {
 function formatDateTime(dateTimeUtc: string): { date: string; time: string } {
   const date = new Date(dateTimeUtc);
 
-  const dateStr = date.toLocaleDateString("ar-SA", {
-    year: "numeric",
+  const dateStr = date.toLocaleDateString("ar-JO-u-ca-gregory", {
     month: "long",
     day: "numeric",
   });
 
-  const timeStr = date.toLocaleTimeString("ar-SA", {
+  const timeStr = date.toLocaleTimeString("ar-JO-u-ca-gregory", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   });
 
   return { date: dateStr, time: timeStr };
+}
+
+function formatEventType(type: string): string {
+  const normalized = type.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    workshop: 'ورشة',
+    exhibition: 'معرض',
+    seminar: 'ندوة',
+    meetup: 'لقاء',
+  };
+
+  return labels[normalized] ?? type;
 }
 
 function mapToEventCard(item: ApiEvent): EventCardData {
@@ -37,7 +49,7 @@ function mapToEventCard(item: ApiEvent): EventCardData {
     id: String(item.id),
     title: item.title,
     description: item.description ?? item.type,
-    club: item.clubName || item.type,
+    club: item.clubName || formatEventType(item.type),
     date,
     time,
     location: item.location,

@@ -17,6 +17,7 @@ export interface MarketplaceCardData {
   category: string;
   price: number;
   condition: string;
+  imageUrl?: string | null;
   isTrending?: boolean;
   isSold?: boolean;
   owner: {
