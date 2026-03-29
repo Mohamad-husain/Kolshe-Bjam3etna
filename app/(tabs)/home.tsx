@@ -170,8 +170,12 @@ export default function HomeRoute() {
           </View>
         </ScrollView>
 
-        <Pressable style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 86 }, pressed && styles.pressed]} accessibilityLabel="الخدمات">
-          <Ionicons name="briefcase-outline" size={23} color="#ffffff" />
+        <Pressable
+          accessibilityLabel="المساعد الذكي"
+          onPress={() => router.push('/ai-assistant')}
+          style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 86 }, pressed && styles.pressed]}
+        >
+          <Ionicons name="sparkles-outline" size={23} color="#ffffff" />
         </Pressable>
       </View>
     </SafeAreaView>
