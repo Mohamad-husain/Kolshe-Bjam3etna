@@ -6,6 +6,10 @@ export default function IndexScreen() {
   const { user } = useAuth();
 
   if (user) {
+    if (!user.isProfileCompleted) {
+      return <Redirect href="/(auth)/select-university" />;
+    }
+
     return <Redirect href="/(tabs)/home" />;
   }
 

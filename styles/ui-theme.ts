@@ -84,9 +84,13 @@ export const FontWeight = {
 export const FontSize = {
   xxs: 9,
   xs: 10,
+  x11: 11,
   sm: 12,
+  x13: 13,
   md: 14,
+  x15: 15,
   base: 16,
+  x17: 17,
   lg: 20,
   xl: 24,
   hero: 30,
@@ -104,7 +108,7 @@ export const Typography = StyleSheet.create({
     fontFamily: FontFamily.cairo,
   },
   label: {
-    fontSize: FontSize.xs,
+    fontSize: FontSize.x11,
     fontWeight: FontWeight.medium,
     fontFamily: FontFamily.cairo,
   },
