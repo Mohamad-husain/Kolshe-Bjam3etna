@@ -18,4 +18,11 @@ export const queryKeys = {
     swaps: ['explore', 'swaps'] as const,
     events: ['explore', 'events'] as const,
   },
+  profile: {
+    myServices: ['profile', 'my-services'] as const,
+    myAds: ['profile', 'my-ads'] as const,
+    mySwaps: ['profile', 'my-swaps'] as const,
+    incomingOffers: ['profile', 'incoming-offers'] as const,
+    outgoingOffers: ['profile', 'outgoing-offers'] as const,
+  },
 };
