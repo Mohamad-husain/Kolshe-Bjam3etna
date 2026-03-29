@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Pressable, Text, TextInput, View } from 'react-native';
-
 import { styles } from './home-styles';
 
 export function HomeHero({

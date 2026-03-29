@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
-
 import { quickAccess } from './home-utils';
 import { styles } from './home-styles';
 import type { ExploreTab, SectionKey } from './home-types';

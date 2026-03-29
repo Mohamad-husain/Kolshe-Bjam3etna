@@ -1,5 +1,4 @@
 import { StyleSheet } from 'react-native';
-
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 export const styles = StyleSheet.create({

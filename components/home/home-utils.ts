@@ -2,7 +2,6 @@ import type { MarketplaceCardData } from '@/components/explore/MarketplaceCard';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
 import { SemanticColors } from '@/styles/ui-theme';
-
 import type { QuickItem } from './home-types';
 
 export const quickAccess: QuickItem[] = [

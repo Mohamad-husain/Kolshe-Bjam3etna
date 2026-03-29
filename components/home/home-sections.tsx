@@ -1,14 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, Text, View, type ViewProps } from 'react-native';
-
 import type { EventCardData } from '@/components/explore/EventCard';
 import type { MarketplaceCardData } from '@/components/explore/MarketplaceCard';
 import type { ServiceCardData } from '@/components/explore/ServiceCard';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
 import { Colors, SemanticColors } from '@/styles/ui-theme';
-
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';
 import { styles } from './home-styles';
 import { adEmoji, dateParts, newsEmoji, offerMeta, price, serviceAccent } from './home-utils';
