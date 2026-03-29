@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { sendAiChatMessage } from '@/services/ai-api';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -27,6 +28,7 @@ type SuggestedQuestion = {
 type ChatMessage = {
   id: number;
   role: 'assistant' | 'user';
+  state?: 'default' | 'error';
   text: string;
 };
 
@@ -37,32 +39,10 @@ const suggestedQuestions: SuggestedQuestion[] = [
   { icon: 'bulb-outline', text: 'نصائح للدراسة الفعالة', color: '#5ac8fa' },
 ];
 
-function buildAssistantReply(question: string) {
-  const normalized = question.trim().toLowerCase();
-
-  if (normalized.includes('إعلان') || normalized.includes('اعلان')) {
-    return 'لإضافة إعلان جديد افتح قسم المتجر أو الخدمات، ثم اختَر خيار الإضافة وأدخل العنوان والوصف والسعر والصور قبل النشر.';
-  }
-
-  if (normalized.includes('فعال') || normalized.includes('event')) {
-    return 'يمكنك متابعة الفعاليات من تبويب استكشف ثم قسم الفعاليات. إذا أردت، أقدر أوجّهك أيضاً لأقرب فعالية مناسبة.';
-  }
-
-  if (normalized.includes('بائع') || normalized.includes('تواصل') || normalized.includes('رسالة')) {
-    return 'للتواصل مع البائع افتح الإعلان المطلوب ثم استخدم المحادثة أو انتقل إلى تبويب الرسائل لمتابعة جميع المحادثات في مكان واحد.';
-  }
-
-  if (normalized.includes('دراسة') || normalized.includes('مذاكرة') || normalized.includes('تعلم')) {
-    return 'ابدأ بخطة قصيرة وواضحة: حدّد هدفاً واحداً لكل جلسة، ادرس 25 إلى 40 دقيقة، ثم خذ استراحة قصيرة وراجع أهم النقاط في نهاية الجلسة.';
-  }
-
-  return 'أنا جاهز لمساعدتك داخل التطبيق. اسألني عن الإعلانات، الخدمات، الفعاليات، أو طريقة استخدام أي جزء من المنصة.';
-}
-
 export default function AiAssistantScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const replyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
   const messageIdRef = useRef(0);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -85,9 +65,7 @@ export default function AiAssistantScreen() {
 
   useEffect(() => {
     return () => {
-      if (replyTimeoutRef.current) {
-        clearTimeout(replyTimeoutRef.current);
-      }
+      isMountedRef.current = false;
     };
   }, []);
 
@@ -100,7 +78,7 @@ export default function AiAssistantScreen() {
     router.replace('/(tabs)/home');
   };
 
-  const handleSend = (value: string) => {
+  const handleSend = async (value: string) => {
     const trimmed = value.trim();
 
     if (!trimmed || isLoading) {
@@ -118,22 +96,40 @@ export default function AiAssistantScreen() {
     setInput('');
     setIsLoading(true);
 
-    if (replyTimeoutRef.current) {
-      clearTimeout(replyTimeoutRef.current);
-    }
+    try {
+      const reply = await sendAiChatMessage(trimmed);
 
-    replyTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
       setMessages((current) => [
         ...current,
         {
           id: nextMessageId(),
           role: 'assistant',
-          text: buildAssistantReply(trimmed),
+          text: reply,
         },
       ]);
-      setIsLoading(false);
-      replyTimeoutRef.current = null;
-    }, 700);
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: nextMessageId(),
+          role: 'assistant',
+          state: 'error',
+          text: error instanceof Error ? error.message : 'تعذر التواصل مع المساعد الذكي',
+        },
+      ]);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
   };
 
   return (
@@ -198,7 +194,9 @@ export default function AiAssistantScreen() {
                   {suggestedQuestions.map((question) => (
                     <Pressable
                       key={question.text}
-                      onPress={() => handleSend(question.text)}
+                      onPress={() => {
+                        void handleSend(question.text);
+                      }}
                       style={({ pressed }) => [styles.suggestionCard, pressed && styles.pressed]}
                     >
                       <View
@@ -218,6 +216,7 @@ export default function AiAssistantScreen() {
               <View style={styles.chatList}>
                 {messages.map((message) => {
                   const isUser = message.role === 'user';
+                  const isError = message.state === 'error';
 
                   return (
                     <View
@@ -235,8 +234,20 @@ export default function AiAssistantScreen() {
                         />
                       </View>
 
-                      <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-                        <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+                      <View
+                        style={[
+                          styles.messageBubble,
+                          isUser ? styles.userBubble : styles.assistantBubble,
+                          isError && styles.errorBubble,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.messageText,
+                            isUser && styles.userMessageText,
+                            isError && styles.errorMessageText,
+                          ]}
+                        >
                           {message.text}
                         </Text>
                       </View>
@@ -273,7 +284,9 @@ export default function AiAssistantScreen() {
               <Pressable
                 accessibilityLabel="إرسال"
                 disabled={!input.trim() || isLoading}
-                onPress={() => handleSend(input)}
+                onPress={() => {
+                  void handleSend(input);
+                }}
                 style={({ pressed }) => [
                   styles.sendButton,
                   (!input.trim() || isLoading) && styles.sendButtonDisabled,
@@ -299,7 +312,9 @@ export default function AiAssistantScreen() {
                 blurOnSubmit={false}
                 editable={!isLoading}
                 onChangeText={setInput}
-                onSubmitEditing={() => handleSend(input)}
+                onSubmitEditing={() => {
+                  void handleSend(input);
+                }}
                 placeholder="اكتب رسالتك..."
                 placeholderTextColor="rgba(142,142,147,0.7)"
                 returnKeyType="send"
@@ -549,6 +564,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(60,60,67,0.08)',
     borderBottomLeftRadius: 8,
   },
+  errorBubble: {
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderColor: 'rgba(239,68,68,0.25)',
+  },
   messageText: {
     color: Colors.foreground,
     fontFamily: FontFamily.cairo,
@@ -556,6 +575,9 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     lineHeight: 24,
     textAlign: 'right',
+  },
+  errorMessageText: {
+    color: '#b91c1c',
   },
   userMessageText: {
     color: '#ffffff',
