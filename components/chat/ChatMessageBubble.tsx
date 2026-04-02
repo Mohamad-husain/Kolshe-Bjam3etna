@@ -1,32 +1,39 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Image } from "expo-image"
+import { Ionicons } from "@expo/vector-icons"
 
-import ChatAvatar from '@/components/chat/ChatAvatar';
+import ChatAvatar from "@/components/chat/ChatAvatar"
 import {
     formatMessageTime,
     getAvatarColor,
     getDisplayImageUri,
+    getFileLabel,
     getMessageBodyText,
-} from '@/components/chat/chat-ui';
+} from "@/components/chat/chat-ui"
+import type { ChatMessage } from "@/types/chat"
 
 type Props = {
-    message: {
-        content: string
-        imageUrl?: string | null
-        isMine: boolean
-        createdAt?: string
-        senderName?: string
-        senderAvatarUrl?: string | null
-    }
+    message: ChatMessage
     avatarColor?: string
+    onLongPress?: (message: ChatMessage) => void
+    onPressImage?: (imageUri: string) => void
+    onPressFile?: (message: ChatMessage) => void
 }
 
-export default function ChatMessageBubble({ message, avatarColor }: Props) {
+export default function ChatMessageBubble({
+    message,
+    avatarColor,
+    onLongPress,
+    onPressImage,
+    onPressFile,
+}: Props) {
     const formattedTime = formatMessageTime(message.createdAt)
     const senderName = message.senderName?.trim() || ""
-    const resolvedImageUri = getDisplayImageUri(message.imageUrl)
-    const hasImage = !!resolvedImageUri
-    const bodyText = getMessageBodyText(message.content, hasImage)
+    const displayImageUri = getDisplayImageUri(message.imageUrl)
+    const fileLabel = getFileLabel(message.fileName, message.fileUrl)
+    const hasImage = !!displayImageUri
+    const hasFile = !!message.fileUrl?.trim() || !!message.fileName.trim()
+    const bodyText = getMessageBodyText(message.content, hasImage || hasFile)
     const hasText = !!bodyText
 
     return (
@@ -58,26 +65,82 @@ export default function ChatMessageBubble({ message, avatarColor }: Props) {
                     message.isMine ? styles.bubbleWrapMine : styles.bubbleWrapOther,
                 ]}
             >
-                <View
+                <TouchableOpacity
+                    activeOpacity={0.92}
+                    onLongPress={onLongPress ? () => onLongPress(message) : undefined}
+                    delayLongPress={260}
                     style={[
                         styles.container,
-                        hasImage && styles.containerWithImage,
+                        (hasImage || hasFile) && styles.containerWithAttachment,
                         message.isMine ? styles.mine : styles.other,
                     ]}
                 >
                     {hasImage ? (
-                        <Image
-                            source={{ uri: resolvedImageUri || undefined }}
-                            contentFit="cover"
-                            style={styles.messageImage}
-                        />
+                        <TouchableOpacity
+                            activeOpacity={0.88}
+                            onPress={
+                                onPressImage
+                                    ? (event) => {
+                                        event.stopPropagation()
+                                        onPressImage(displayImageUri)
+                                    }
+                                    : undefined
+                            }
+                            style={styles.imageButton}
+                        >
+                            <Image
+                                source={{ uri: displayImageUri }}
+                                contentFit="cover"
+                                style={styles.messageImage}
+                            />
+                        </TouchableOpacity>
+                    ) : null}
+
+                    {hasFile ? (
+                        <TouchableOpacity
+                            activeOpacity={0.88}
+                            style={[
+                                styles.fileCard,
+                                message.isMine ? styles.fileCardMine : styles.fileCardOther,
+                                hasImage && styles.fileCardWithImage,
+                            ]}
+                            onPress={onPressFile ? () => onPressFile(message) : undefined}
+                        >
+                            <View style={styles.fileIconWrap}>
+                                <Ionicons
+                                    name="document-attach-outline"
+                                    size={18}
+                                    color={message.isMine ? "#FFFFFF" : "#2563EB"}
+                                />
+                            </View>
+
+                            <View style={styles.fileTextWrap}>
+                                <Text
+                                    style={[
+                                        styles.fileName,
+                                        message.isMine ? styles.mineText : styles.otherText,
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    {fileLabel}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.fileAction,
+                                        message.isMine ? styles.fileActionMine : styles.fileActionOther,
+                                    ]}
+                                >
+                                    فتح الملف
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
                     ) : null}
 
                     {hasText ? (
                         <Text
                             style={[
                                 styles.text,
-                                hasImage && styles.textWithImage,
+                                (hasImage || hasFile) && styles.textWithAttachment,
                                 message.isMine ? styles.mineText : styles.otherText,
                             ]}
                         >
@@ -95,7 +158,7 @@ export default function ChatMessageBubble({ message, avatarColor }: Props) {
                             {formattedTime}
                         </Text>
                     )}
-                </View>
+                </TouchableOpacity>
             </View>
         </View>
     )
@@ -127,7 +190,7 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     bubbleWrap: {
-        maxWidth: "76%",
+        maxWidth: "78%",
     },
     bubbleWrapMine: {
         alignItems: "flex-end",
@@ -140,7 +203,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 22,
     },
-    containerWithImage: {
+    containerWithAttachment: {
         paddingHorizontal: 8,
         paddingVertical: 8,
     },
@@ -159,7 +222,7 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         textAlign: "right",
     },
-    textWithImage: {
+    textWithAttachment: {
         marginTop: 10,
     },
     mineText: {
@@ -181,10 +244,68 @@ const styles = StyleSheet.create({
         color: "#94A3B8",
         textAlign: "left",
     },
+    imageButton: {
+        overflow: "hidden",
+        width: 220,
+        height: 240,
+    },
     messageImage: {
+        backgroundColor: "#E2E8F0",
         width: 220,
         height: 240,
         borderRadius: 18,
-        backgroundColor: "#E2E8F0",
+    },
+    fileCard: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        width: 220,
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    fileCardWithImage: {
+        marginTop: 10,
+    },
+    fileCardMine: {
+        backgroundColor: "rgba(255,255,255,0.14)",
+    },
+    fileCardOther: {
+        backgroundColor: "#F8FAFC",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    fileIconWrap: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+    },
+    fileTextWrap: {
+        width: 150,
+        overflow: "hidden",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        marginRight: 10,
+    },
+    fileName: {
+        fontSize: 13,
+        fontWeight: "700",
+        textAlign: "right",
+        width: "100%",
+    },
+    fileAction: {
+        marginTop: 2,
+        fontSize: 11,
+        fontWeight: "600",
+        alignSelf: "stretch",
+        textAlign: "right",
+    },
+    fileActionMine: {
+        color: "rgba(255,255,255,0.8)",
+    },
+    fileActionOther: {
+        color: "#2563EB",
     },
 })
