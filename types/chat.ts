@@ -1,33 +1,38 @@
 export type ChatConversationApi = {
-    conversationId?: number
-    otherUserId?: string
-    otherFullName?: string
+    conversationId?: number | string | null
+    otherUserId?: string | null
+    otherFullName?: string | null
     otherProfileImageUrl?: string | null
-    lastMessageText?: string
-    lastMessageAtUtc?: string
-    unreadCount?: number
+    lastMessageText?: string | null
+    lastMessageAtUtc?: string | null
+    unreadCount?: number | null
+}
+
+export type ChatImageApi = {
+    imageUrl?: string | null
+}
+
+export type ChatMessageApi = {
+    id?: number | string | null
+    conversationId?: number | string | null
+    senderId?: string | null
+    text?: string | null
+    images?: ChatImageApi[] | null
+    fileUrl?: string | null
+    fileName?: string | null
+    fileContentType?: string | null
+    sentAtUtc?: string | null
+    isRead?: boolean | null
 }
 
 export type ChatConversation = {
     id: string
     otherUserId: string
     otherUserName: string
-    otherUserUsername: string
     otherUserAvatarUrl: string | null
-    contextLabel: string
     lastMessageText: string
     lastMessageTime: string
     unreadCount: number
-}
-
-export type ChatMessageApi = {
-    id?: number
-    conversationId?: number
-    senderId?: string
-    text?: string | null
-    imageUrl?: string | null
-    sentAtUtc?: string
-    isRead?: boolean
 }
 
 export type ChatMessage = {
@@ -35,21 +40,18 @@ export type ChatMessage = {
     conversationId: string
     content: string
     imageUrl: string | null
+    fileUrl: string | null
+    fileName: string
+    fileMimeType: string
     senderId: string
     senderName: string
-    senderUsername: string
     senderAvatarUrl: string | null
     createdAt: string
     isRead: boolean
     isMine: boolean
 }
 
-export type SendMessageRequest = {
-    conversationId: number
-    text: string
-}
-
-export type SendImageInput = {
+export type ChatUploadInput = {
     uri: string
     previewUrl?: string | null
     name?: string | null
@@ -57,12 +59,14 @@ export type SendImageInput = {
     file?: File
 }
 
-export type SendImageRequest = {
+export type SendChatMessageRequest = {
     conversationId: number
-    caption?: string
-    image: SendImageInput
+    text?: string
+    image?: ChatUploadInput | null
+    file?: ChatUploadInput | null
 }
 
-export type CreateDmResponse = {
-    id: string
+export type UpdateChatMessageRequest = {
+    messageId: string
+    text: string | null
 }

@@ -2,11 +2,12 @@ import { apiClient, getAuthToken } from "../http-client"
 import type {
     ChatConversation,
     ChatConversationApi,
+    ChatImageApi,
     ChatMessage,
     ChatMessageApi,
-    CreateDmResponse,
-    SendImageRequest,
-    SendMessageRequest,
+    ChatUploadInput,
+    SendChatMessageRequest,
+    UpdateChatMessageRequest,
 } from "@/types/chat"
 
 const CHAT_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? "")
@@ -16,23 +17,13 @@ const CHAT_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? "")
 const isWebRuntime =
     typeof window !== "undefined" && typeof document !== "undefined"
 
-const getStringValue = (...values: unknown[]) => {
-    for (const value of values) {
-        if (typeof value === "string" && value.trim()) {
-            return value.trim()
-        }
-    }
+const getTrimmedString = (value?: string | null) => value?.trim() || ""
 
-    return ""
-}
+const toIdString = (value?: string | number | null) =>
+    value === null || value === undefined ? "" : String(value).trim()
 
-const getApiCollection = <T>(value: unknown): T[] => {
-    if (Array.isArray(value)) {
-        return value as T[]
-    }
-
-    return []
-}
+const toApiCollection = <T>(value: unknown): T[] =>
+    Array.isArray(value) ? (value as T[]) : []
 
 const getCurrentUserIdFromToken = () => {
     const token = getAuthToken()?.trim()
@@ -55,52 +46,69 @@ const getCurrentUserIdFromToken = () => {
     }
 }
 
-const mapConversation = (item: ChatConversationApi): ChatConversation | null => {
-    const conversationId = String(item.conversationId ?? "")
+const getMessageImageUrl = (message: ChatMessageApi) => {
+    for (const image of toApiCollection<ChatImageApi>(message.images)) {
+        const imageUrl = getTrimmedString(image.imageUrl)
 
-    if (!conversationId) {
+        if (imageUrl) {
+            return imageUrl
+        }
+    }
+
+    return ""
+}
+
+const mapConversation = (conversation: ChatConversationApi): ChatConversation | null => {
+    const id = toIdString(conversation.conversationId)
+
+    if (!id) {
         return null
     }
 
     return {
-        id: conversationId,
-        otherUserId: getStringValue(item.otherUserId),
-        otherUserName: getStringValue(item.otherFullName),
-        otherUserUsername: "",
-        otherUserAvatarUrl: getStringValue(item.otherProfileImageUrl) || null,
-        contextLabel: "",
-        lastMessageText: getStringValue(item.lastMessageText) || "ابدأ المحادثة الآن",
-        lastMessageTime: getStringValue(item.lastMessageAtUtc),
+        id,
+        otherUserId: getTrimmedString(conversation.otherUserId),
+        otherUserName: getTrimmedString(conversation.otherFullName),
+        otherUserAvatarUrl: getTrimmedString(conversation.otherProfileImageUrl) || null,
+        lastMessageText:
+            getTrimmedString(conversation.lastMessageText) || "ابدأ المحادثة الآن",
+        lastMessageTime: getTrimmedString(conversation.lastMessageAtUtc),
         unreadCount:
-            typeof item.unreadCount === "number" && item.unreadCount > 0
-                ? item.unreadCount
+            typeof conversation.unreadCount === "number" && conversation.unreadCount > 0
+                ? conversation.unreadCount
                 : 0,
     }
 }
 
 const mapMessage = (
-    item: ChatMessageApi,
-    conversationId: string,
+    message: ChatMessageApi,
+    fallbackConversationId: string,
     currentUserId: string
 ): ChatMessage | null => {
-    const messageId = String(item.id ?? "")
-    const senderId = getStringValue(item.senderId)
+    const id = toIdString(message.id)
+    const imageUrl = getMessageImageUrl(message) || null
+    const fileUrl = getTrimmedString(message.fileUrl) || null
+    const content = getTrimmedString(message.text)
 
-    if (!messageId) {
+    if (!id || (!content && !imageUrl && !fileUrl)) {
         return null
     }
 
+    const senderId = getTrimmedString(message.senderId)
+
     return {
-        id: messageId,
-        conversationId: String(item.conversationId ?? conversationId),
-        content: getStringValue(item.text),
-        imageUrl: getStringValue(item.imageUrl) || null,
+        id,
+        conversationId: toIdString(message.conversationId) || fallbackConversationId,
+        content,
+        imageUrl,
+        fileUrl,
+        fileName: getTrimmedString(message.fileName),
+        fileMimeType: getTrimmedString(message.fileContentType),
         senderId,
         senderName: "",
-        senderUsername: "",
         senderAvatarUrl: null,
-        createdAt: getStringValue(item.sentAtUtc),
-        isRead: item.isRead ?? false,
+        createdAt: getTrimmedString(message.sentAtUtc),
+        isRead: Boolean(message.isRead),
         isMine: currentUserId ? senderId === currentUserId : false,
     }
 }
@@ -125,15 +133,30 @@ const parseUnknownResponse = async (response: Response) => {
     }
 }
 
-const createWebImagePart = async (payload: SendImageRequest["image"]) => {
+const getRequestErrorMessage = (value: unknown, fallbackMessage: string) => {
+    if (typeof value === "string" && value.trim()) {
+        return value
+    }
+
+    if (value && typeof value === "object" && "message" in value) {
+        return (
+            getTrimmedString((value as { message?: string | null }).message) ||
+            fallbackMessage
+        )
+    }
+
+    return fallbackMessage
+}
+
+const createWebUploadPart = async (payload: ChatUploadInput) => {
     if (payload.file) {
         return payload.file
     }
 
     const response = await fetch(payload.uri)
     const blob = await response.blob()
-    const fileName = payload.name ?? `chat-image-${Date.now()}.jpg`
-    const mimeType = payload.type ?? blob.type ?? "image/jpeg"
+    const fileName = payload.name ?? `chat-upload-${Date.now()}`
+    const mimeType = payload.type ?? blob.type ?? "application/octet-stream"
 
     if (typeof File !== "undefined") {
         return new File([blob], fileName, { type: mimeType })
@@ -142,59 +165,69 @@ const createWebImagePart = async (payload: SendImageRequest["image"]) => {
     return blob
 }
 
-const buildTextFormData = (payload: SendMessageRequest) => {
-    const formData = new FormData()
-    formData.append("ConversationId", String(payload.conversationId))
-    formData.append("Text", payload.text)
-    return formData
-}
-
-const buildImageFormData = (
-    payload: SendImageRequest,
-    imagePart: Blob | File | null
+const appendUploadField = (
+    formData: FormData,
+    fieldName: "Images" | "File",
+    payload: ChatUploadInput,
+    webPart: Blob | File | null
 ) => {
-    const formData = new FormData()
-    const caption = payload.caption?.trim() || ""
-
-    formData.append("ConversationId", String(payload.conversationId))
-
-    if (caption) {
-        formData.append("Text", caption)
-    }
-
-    if (imagePart) {
-        if (typeof Blob !== "undefined" && imagePart instanceof Blob) {
-            formData.append(
-                "Image",
-                imagePart,
-                payload.image.name ?? `chat-image-${Date.now()}.jpg`
-            )
-        } else {
-            formData.append("Image", imagePart as never)
+    if (webPart) {
+        if (typeof Blob !== "undefined" && webPart instanceof Blob) {
+            formData.append(fieldName, webPart, payload.name ?? `chat-upload-${Date.now()}`)
+            return
         }
 
-        return formData
+        formData.append(fieldName, webPart as never)
+        return
     }
 
     formData.append(
-        "Image",
+        fieldName,
         {
-            uri: payload.image.uri,
-            name: payload.image.name ?? `chat-image-${Date.now()}.jpg`,
-            type: payload.image.type ?? "image/jpeg",
+            uri: payload.uri,
+            name: payload.name ?? `chat-upload-${Date.now()}`,
+            type: payload.type ?? "application/octet-stream",
         } as never
     )
+}
+
+const createSendMessageFormData = (
+    payload: SendChatMessageRequest,
+    webParts?: { image?: Blob | File | null; file?: Blob | File | null }
+) => {
+    const formData = new FormData()
+    const text = payload.text?.trim() || ""
+
+    formData.append("ConversationId", String(payload.conversationId))
+
+    if (text) {
+        formData.append("Text", text)
+    }
+
+    if (payload.image) {
+        appendUploadField(formData, "Images", payload.image, webParts?.image ?? null)
+    }
+
+    if (payload.file) {
+        appendUploadField(formData, "File", payload.file, webParts?.file ?? null)
+    }
 
     return formData
 }
 
-const postWebFormData = async (
-    endpoint: string,
-    formData: FormData,
-    fallbackMessage: string
-) => {
+const postNativeSendMessage = async (formData: FormData) => {
+    const response = await apiClient.post("/api/Chat/send", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    })
+
+    return response.data
+}
+
+const postWebSendMessage = async (formData: FormData, fallbackMessage: string) => {
     const token = getAuthToken()
-    const response = await fetch(`${CHAT_API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${CHAT_API_BASE_URL}/api/Chat/send`, {
         method: "POST",
         headers: token
             ? {
@@ -206,88 +239,82 @@ const postWebFormData = async (
     const data = await parseUnknownResponse(response)
 
     if (!response.ok) {
-        throw new Error(
-            typeof data === "string"
-                ? data
-                : typeof data === "object" &&
-                    data &&
-                    "message" in data &&
-                    typeof data.message === "string"
-                    ? data.message
-                    : fallbackMessage
-        )
+        throw new Error(getRequestErrorMessage(data, fallbackMessage))
     }
 
     return data
 }
 
-const postNativeFormData = async (endpoint: string, formData: FormData) => {
-    const response = await apiClient.post(endpoint, formData, {
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
-    })
+const sendChatFormData = async (
+    payload: SendChatMessageRequest,
+    fallbackMessage: string
+) => {
+    const webParts =
+        isWebRuntime && CHAT_API_BASE_URL
+            ? {
+                image: payload.image ? await createWebUploadPart(payload.image) : null,
+                file: payload.file ? await createWebUploadPart(payload.file) : null,
+            }
+            : undefined
 
-    return response.data
-}
+    const formData = createSendMessageFormData(payload, webParts)
 
-const postChatFormData = (formData: FormData, fallbackMessage: string) => {
     if (isWebRuntime && CHAT_API_BASE_URL) {
-        return postWebFormData("/api/Chat/send", formData, fallbackMessage)
+        return postWebSendMessage(formData, fallbackMessage)
     }
 
-    return postNativeFormData("/api/Chat/send", formData)
+    return postNativeSendMessage(formData)
 }
 
 export const getConversations = async (): Promise<ChatConversation[]> => {
     const response = await apiClient.get("/api/Chat/list")
 
-    return getApiCollection<ChatConversationApi>(response.data)
+    return toApiCollection<ChatConversationApi>(response.data)
         .map(mapConversation)
-        .filter((item): item is ChatConversation => item !== null)
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
 }
 
-export const getMessages = async (
-    conversationId: string
-): Promise<ChatMessage[]> => {
+export const getMessages = async (conversationId: string): Promise<ChatMessage[]> => {
     const response = await apiClient.get(`/api/Chat/${conversationId}/messages`)
     const currentUserId = getCurrentUserIdFromToken()
 
-    return getApiCollection<ChatMessageApi>(response.data)
-        .map((item) => mapMessage(item, conversationId, currentUserId))
-        .filter((item): item is ChatMessage => item !== null)
+    return toApiCollection<ChatMessageApi>(response.data)
+        .map((message) => mapMessage(message, conversationId, currentUserId))
+        .filter((message): message is ChatMessage => message !== null)
 }
 
-export const sendMessage = async (payload: SendMessageRequest) => {
-    return postChatFormData(buildTextFormData(payload), "تعذر إرسال الرسالة")
-}
+export const sendChatMessage = async (
+    payload: SendChatMessageRequest
+): Promise<ChatMessage> => {
+    const response = await sendChatFormData(payload, "تعذر إرسال الرسالة")
+    const currentUserId = getCurrentUserIdFromToken()
+    const message = mapMessage(
+        response as ChatMessageApi,
+        String(payload.conversationId),
+        currentUserId
+    )
 
-export const sendImage = async (payload: SendImageRequest) => {
-    if (isWebRuntime && CHAT_API_BASE_URL) {
-        const imagePart = await createWebImagePart(payload.image)
-
-        return postChatFormData(
-            buildImageFormData(payload, imagePart),
-            "تعذر إرسال الصورة"
-        )
+    if (!message) {
+        throw new Error("تعذر قراءة بيانات الرسالة المرسلة")
     }
 
-    return postChatFormData(
-        buildImageFormData(payload, null),
-        "تعذر إرسال الصورة"
-    )
+    return message
 }
 
-export const createDM = async (
-    otherUserId: string
-): Promise<CreateDmResponse> => {
-    const response = await apiClient.post("/api/Chat/dm", {
-        otherUserId,
+export const deleteMessage = async (messageId: string) => {
+    const response = await apiClient.delete(`/api/Chat/messages/${messageId}`)
+    return response.data
+}
+
+export const updateMessage = async ({
+    messageId,
+    text,
+}: UpdateChatMessageRequest) => {
+    const response = await apiClient.put(`/api/Chat/messages/${messageId}`, {
+        text,
     })
 
-    return {
-        id: String(response.data?.conversationId ?? ""),
-    }
+    return response.data
 }
 
 export const markAsRead = async (conversationId: string) => {

@@ -1,16 +1,17 @@
 import { useState } from "react"
 import {
-    View,
+    Alert,
+    StyleSheet,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    Alert,
+    View,
 } from "react-native"
-import * as ImagePicker from "expo-image-picker"
 import { Ionicons } from "@expo/vector-icons"
+import * as DocumentPicker from "expo-document-picker"
+import * as ImagePicker from "expo-image-picker"
 
-import { useSendImage } from "@/hooks/chat/mutations/use-send-image"
-import { useSendMessage } from "@/hooks/chat/mutations/use-send-message"
+import { useSendChatMessage } from "@/hooks/chat/mutations/use-send-chat-message"
+import type { ChatUploadInput } from "@/types/chat"
 
 type Props = {
     conversationId: string
@@ -39,85 +40,95 @@ const getNumericConversationId = (conversationId: string) => {
 const getMutationErrorMessage = (
     error: MutationError,
     fallbackMessage: string
-) =>
-    error?.response?.data?.message ||
-    error?.message ||
-    fallbackMessage
+) => error?.response?.data?.message || error?.message || fallbackMessage
 
-const getSelectedImagePayload = (asset: ImagePicker.ImagePickerAsset) => {
+const getImageUploadInput = (asset: ImagePicker.ImagePickerAsset): ChatUploadInput => {
     const previewUrl =
         asset.file &&
         typeof URL !== "undefined" &&
         typeof URL.createObjectURL === "function"
             ? URL.createObjectURL(asset.file)
             : asset.uri || ""
-    const normalizedFileName =
-        asset.fileName ||
-        asset.file?.name ||
-        `chat-image-${Date.now()}.jpg`
-    const normalizedMimeType =
-        asset.mimeType ||
-        asset.file?.type ||
-        "image/jpeg"
 
     return {
+        uri: previewUrl || asset.uri,
         previewUrl,
-        image: {
-            uri: previewUrl || asset.uri,
-            previewUrl,
-            name: normalizedFileName,
-            type: normalizedMimeType,
-            file: asset.file,
-        },
+        name: asset.fileName || asset.file?.name || `chat-image-${Date.now()}.jpg`,
+        type: asset.mimeType || asset.file?.type || "image/jpeg",
+        file: asset.file,
     }
 }
 
+const getFileUploadInput = (
+    asset: DocumentPicker.DocumentPickerAsset
+): ChatUploadInput => ({
+    uri: asset.uri,
+    previewUrl: asset.uri,
+    name: asset.name || `chat-file-${Date.now()}`,
+    type: asset.mimeType || "application/octet-stream",
+    file: asset.file,
+})
+
 export default function ChatComposer({ conversationId }: Props) {
     const [text, setText] = useState("")
-    const sendMessageMutation = useSendMessage()
-    const sendImageMutation = useSendImage()
-    const isSending = sendMessageMutation.isPending || sendImageMutation.isPending
-
+    const sendChatMessageMutation = useSendChatMessage()
+    const isSending = sendChatMessageMutation.isPending
     const trimmedText = text.trim()
     const hasText = trimmedText.length > 0
 
-    const handleSend = () => {
-        if (!trimmedText) return
-
+    const submitMessage = ({
+        text: nextText,
+        image,
+        file,
+        errorTitle,
+        fallbackMessage,
+    }: {
+        text?: string
+        image?: ChatUploadInput | null
+        file?: ChatUploadInput | null
+        errorTitle: string
+        fallbackMessage: string
+    }) => {
         const numericConversationId = getNumericConversationId(conversationId)
 
         if (!numericConversationId) {
             return
         }
 
-        sendMessageMutation.mutate(
+        sendChatMessageMutation.mutate(
             {
                 conversationId: numericConversationId,
-                text: trimmedText,
+                text: nextText?.trim() || undefined,
+                image,
+                file,
             },
             {
                 onSuccess: () => {
                     setText("")
                 },
                 onError: (error: MutationError) => {
-                    console.log("sendMessage error:", error?.response?.data || error)
-
                     Alert.alert(
-                        "فشل الإرسال",
-                        getMutationErrorMessage(error, "تعذر إرسال الرسالة")
+                        errorTitle,
+                        getMutationErrorMessage(error, fallbackMessage)
                     )
                 },
             }
         )
     }
 
-    const handlePickImage = async () => {
-        const numericConversationId = getNumericConversationId(conversationId)
-
-        if (!numericConversationId) {
+    const handleSend = () => {
+        if (!trimmedText) {
             return
         }
 
+        submitMessage({
+            text: trimmedText,
+            errorTitle: "فشل الإرسال",
+            fallbackMessage: "تعذر إرسال الرسالة",
+        })
+    }
+
+    const handlePickImage = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
 
         if (!permission.granted) {
@@ -128,6 +139,7 @@ export default function ChatComposer({ conversationId }: Props) {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ["images"],
             allowsEditing: true,
+            allowsMultipleSelection: false,
             quality: 0.9,
         })
 
@@ -135,34 +147,32 @@ export default function ChatComposer({ conversationId }: Props) {
             return
         }
 
-        const selectedImage = result.assets[0]
-        const { previewUrl, image } = getSelectedImagePayload(selectedImage)
+        submitMessage({
+            text: trimmedText,
+            image: getImageUploadInput(result.assets[0]),
+            errorTitle: "فشل إرسال الصورة",
+            fallbackMessage: "تعذر إرسال الصورة",
+        })
+    }
 
-        if (!previewUrl && !selectedImage.file) {
-            Alert.alert("فشل اختيار الصورة", "تعذر تجهيز الصورة للإرسال. جرّب صورة أخرى.")
+    const handlePickFile = async () => {
+        const result = await DocumentPicker.getDocumentAsync({
+            multiple: false,
+            copyToCacheDirectory: true,
+            type: "*/*",
+            base64: false,
+        })
+
+        if (result.canceled || !result.assets?.length) {
             return
         }
 
-        sendImageMutation.mutate(
-            {
-                conversationId: numericConversationId,
-                caption: trimmedText,
-                image,
-            },
-            {
-                onSuccess: () => {
-                    setText("")
-                },
-                onError: (error: MutationError) => {
-                    console.log("sendImage error:", error?.response?.data || error)
-
-                    Alert.alert(
-                        "فشل إرسال الصورة",
-                        getMutationErrorMessage(error, "تعذر إرسال الصورة")
-                    )
-                },
-            }
-        )
+        submitMessage({
+            text: trimmedText,
+            file: getFileUploadInput(result.assets[0]),
+            errorTitle: "فشل إرسال الملف",
+            fallbackMessage: "تعذر إرسال الملف",
+        })
     }
 
     return (
@@ -183,10 +193,18 @@ export default function ChatComposer({ conversationId }: Props) {
 
             <TouchableOpacity
                 activeOpacity={0.85}
-                style={[
-                    styles.utilityButton,
-                    isSending && styles.utilityButtonDisabled,
-                ]}
+                style={[styles.utilityButton, isSending && styles.utilityButtonDisabled]}
+                disabled={isSending}
+                onPress={() => {
+                    void handlePickFile()
+                }}
+            >
+                <Ionicons name="document-attach-outline" size={20} color="#A1A1AA" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                activeOpacity={0.85}
+                style={[styles.utilityButton, isSending && styles.utilityButtonDisabled]}
                 disabled={isSending}
                 onPress={() => {
                     void handlePickImage()
