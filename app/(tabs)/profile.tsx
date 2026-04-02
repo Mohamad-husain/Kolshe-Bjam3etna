@@ -239,9 +239,7 @@ export default function ProfileRoute() {
             onOpenAdmin={() =>
               showSoonAlert('لوحة الإدارة', 'واجهة الإدارة غير مضافة بعد في التطبيق الحالي.')
             }
-            onOpenSettings={() =>
-              showSoonAlert('الإعدادات', 'شاشة الإعدادات سيتم ربطها في خطوة لاحقة.')
-            }
+            onOpenSettings={() => router.push('/settings')}
             onEditProfile={() =>
               showSoonAlert(
                 'تعديل الملف الشخصي',
