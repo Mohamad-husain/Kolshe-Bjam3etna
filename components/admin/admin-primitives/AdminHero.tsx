@@ -1,0 +1,140 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+
+import { adminSections } from '@/lib/admin/admin-config';
+import { getAdminShadow, type AdminTheme } from '@/lib/admin/admin-theme';
+import type { AdminSection } from '@/types/admin';
+
+import { getHovered } from './shared';
+import { styles } from './styles';
+
+export function AdminHero({
+  theme,
+  activeSection,
+  onChangeSection,
+  onBack,
+}: {
+  theme: AdminTheme;
+  activeSection: AdminSection;
+  onChangeSection: (section: AdminSection) => void;
+  onBack: () => void;
+}) {
+  const { width } = useWindowDimensions();
+  const baseTabWidth = width <= 360 ? 72 : width <= 420 ? 82 : 90;
+  const tabsGap = 2;
+
+  return (
+    <View style={styles.heroShell}>
+      <View
+        style={[
+          styles.hero,
+          {
+            backgroundColor: theme.heroBackground,
+          },
+        ]}
+      >
+        <View style={[styles.heroGlow, { backgroundColor: theme.heroEdge }]} />
+        <View style={[styles.heroTint, { backgroundColor: theme.heroTint }]} />
+
+        <Pressable
+          onPress={onBack}
+          style={(state) => {
+            const hovered = getHovered(state);
+            return [
+            styles.backButton,
+            {
+              backgroundColor: hovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.10)',
+              borderColor: 'rgba(255,255,255,0.06)',
+            },
+            hovered && styles.hoveredLift,
+            state.pressed && styles.pressed,
+          ];
+          }}
+        >
+          <Ionicons name="arrow-back" size={23} color="#ffffff" />
+        </Pressable>
+
+        <View style={styles.heroBrandRow}>
+          <View style={styles.heroTextWrap}>
+            <Text style={styles.heroTitle}>لوحة الإدارة</Text>
+            <Text style={[styles.heroSubtitle, { color: 'rgba(255,255,255,0.60)' }]}>
+              إدارة المنصة والمحتوى
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.shieldWrap,
+              {
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                borderColor: 'rgba(255,255,255,0.10)',
+              },
+            ]}
+          >
+            <Ionicons name="shield-checkmark-outline" size={24} color="#ffffff" />
+          </View>
+        </View>
+
+        <View style={[styles.heroCurve, { backgroundColor: theme.heroCurveFill }]} />
+      </View>
+
+      <View style={styles.tabsWrap}>
+        <View
+          style={[
+            styles.tabsRail,
+            {
+              backgroundColor: theme.heroRailBackground,
+              borderColor: theme.heroRailBorder,
+            },
+          ]}
+        >
+          <ScrollView
+            horizontal
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.tabsContent, { gap: tabsGap }]}
+            style={styles.tabsScroller}
+          >
+            {adminSections.map((item) => {
+              const active = item.key === activeSection;
+
+              return (
+                <Pressable
+                  key={item.key}
+                  onPress={() => onChangeSection(item.key)}
+                  style={(state) => {
+                    const hovered = getHovered(state);
+                    return [
+                    styles.tabButton,
+                    {
+                      minWidth: Math.max(baseTabWidth, item.label.length * 11),
+                      backgroundColor: active
+                        ? theme.isDark
+                          ? theme.inputBackground
+                          : theme.cardBackground
+                        : 'transparent',
+                      borderColor: active ? theme.borderStrong : 'transparent',
+                    },
+                    active ? getAdminShadow(theme) : null,
+                    hovered && !active ? styles.tabHovered : null,
+                    state.pressed && styles.pressed,
+                  ];
+                  }}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.tabText,
+                      { color: active ? theme.heading : theme.mutedText },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </View>
+  );
+}

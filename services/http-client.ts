@@ -2,6 +2,38 @@ import axios, { isAxiosError } from 'axios';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
 let authToken: string | null = null;
+const AUTH_TOKEN_STORAGE_KEY = 'kolshe.auth.token';
+
+function readStoredToken() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredToken(token: string | null) {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  try {
+    if (token) {
+      window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+      return;
+    }
+
+    window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  } catch {
+    // Ignore storage issues and keep in-memory auth working.
+  }
+}
+
+authToken = readStoredToken();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -25,6 +57,7 @@ export function getAuthToken() {
 
 export function setAuthToken(token: string | null) {
   authToken = token;
+  writeStoredToken(token);
 }
 
 function parseResponsePayload(payload: unknown) {
