@@ -1,24 +1,30 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { useExchangeQuery } from '@/hooks/queries/use-explore-queries';
+import { useExchangeQuery } from "@/hooks/queries/use-explore-queries";
 import {
   Colors,
   FontFamily,
   FontSize,
   SemanticColors,
   Spacing,
-} from '@/styles/ui-theme';
+} from "@/styles/ui-theme";
 
-import { CategoryFilter, type Category } from './CategoryFilter';
-import { ExchangeCard } from './ExchangeCard';
-import { SearchBar } from './SearchBar';
+import { CategoryFilter, type Category } from "./CategoryFilter";
+import { ExchangeCard } from "./ExchangeCard";
+import { SearchBar } from "./SearchBar";
 
 const CATEGORIES: Category[] = [
-  { id: 'all', label: 'الكل' },
-  { id: 'إلكترونيات', label: 'إلكترونيات' },
-  { id: 'كتب', label: 'كتب' },
-  { id: 'تصميم', label: 'تصميم' },
+  { id: "all", label: "الكل" },
+  { id: "إلكترونيات", label: "إلكترونيات" },
+  { id: "كتب", label: "كتب" },
+  { id: "تصميم", label: "تصميم" },
 ];
 
 type ExchangeTabProps = {
@@ -26,19 +32,27 @@ type ExchangeTabProps = {
 };
 
 export function ExchangeTab({ showFilter }: ExchangeTabProps) {
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useExchangeQuery();
-
+  const [searchError, setSearchError] = useState("");
+  const handleSearch = (text: string) => {
+    setSearch(text);
+    if (text.length > 0 && text.trim() === "") {
+      setSearchError("لا يمكن البحث بمسافات فارغة");
+    } else {
+      setSearchError("");
+    }
+  };
   const filtered = useMemo(() => {
     return items.filter((item) => {
       const matchSearch =
-        search === '' ||
+        search === "" ||
         item.title.includes(search) ||
         item.have.includes(search) ||
         item.want.includes(search);
       const matchCategory =
-        selectedCategory === 'all' || item.category === selectedCategory;
+        selectedCategory === "all" || item.category === selectedCategory;
 
       return matchSearch && matchCategory;
     });
@@ -67,7 +81,12 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
       renderItem={({ item }) => <ExchangeCard data={item} />}
       ListHeaderComponent={
         <View>
-          <SearchBar placeholder="ابحث في تبادل..." value={search} onChangeText={setSearch} />
+          <SearchBar
+            placeholder="ابحث في خدمات..."
+            value={search}
+            onChangeText={handleSearch} // ← بدل setSearch
+            error={searchError} // ← جديد
+          />
           {showFilter ? (
             <CategoryFilter
               categories={CATEGORIES}
@@ -95,8 +114,8 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorText: {
     fontFamily: FontFamily.cairo,
