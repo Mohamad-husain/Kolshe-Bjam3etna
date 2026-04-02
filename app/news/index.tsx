@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { SearchBar } from "@/components/explore/SearchBar";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -71,6 +73,15 @@ export default function NewsScreen() {
   const importantNews = filtered.filter((item) => item.isImportant);
   const otherNews = filtered.filter((item) => !item.isImportant);
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/(tabs)/home");
+  };
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -97,6 +108,20 @@ export default function NewsScreen() {
           ListHeaderComponent={
             <View>
               <View style={styles.header}>
+                <Pressable
+                  accessibilityLabel="back-to-home"
+                  onPress={handleBack}
+                  style={({ pressed }) => [
+                    styles.headerAction,
+                    pressed && styles.headerActionPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name="arrow-forward"
+                    size={18}
+                    color={Colors.foreground}
+                  />
+                </Pressable>
                 <Text style={styles.title}>الأخبار</Text>
                 <Ionicons
                   name="newspaper-outline"
@@ -212,6 +237,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+  },
+  headerAction: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+  },
+  headerActionPressed: {
+    opacity: 0.8,
   },
   title: {
     fontSize: FontSize.xl,
