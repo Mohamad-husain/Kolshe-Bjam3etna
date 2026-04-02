@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 export default function AuthLayout() {
   const { user } = useAuth();
 
-  if (user) {
+  if (user?.isProfileCompleted) {
     return <Redirect href="/(tabs)/home" />;
   }
 

@@ -4,6 +4,26 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  isProfileCompleted: boolean;
+};
+
+export type University = {
+  id: number;
+  name: string;
+};
+
+export type AccountProfile = {
+  fullName: string;
+  email: string;
+  phoneNumber: string | null;
+  bio: string | null;
+  websiteUrl: string | null;
+  profileImageUrl: string | null;
+  universityName: string | null;
+  universityId: number | null;
+  major: string | null;
+  studyYear: string | null;
+  universityNumber: string | null;
 };
 
 export type LoginInput = {
@@ -32,6 +52,20 @@ export type ResetPasswordInput = {
   newPassword: string;
 };
 
+export type ProfileImageInput = {
+  uri: string;
+  name?: string | null;
+  type?: string | null;
+  file?: File;
+};
+
+export type CompleteProfileInput = {
+  universityId: number;
+  major: string;
+  bio: string;
+  profileImage: ProfileImageInput;
+};
+
 type ApiLoginResponse = {
   message?: string;
   token?: string | null;
@@ -45,6 +79,78 @@ type ApiRegisterResponse = {
 type ApiActionResponse = {
   message?: string;
 };
+
+type ApiUniversitiesResponse = {
+  message?: string;
+  data?: University[];
+};
+
+type ApiCompleteProfileResponse = {
+  message?: string;
+};
+
+type ApiProfileResponse = {
+  message?: string;
+  data?: AccountProfile;
+};
+
+function decodeJwtPayload(token: string) {
+  try {
+    const [, payload = ''] = token.split('.');
+
+    if (!payload) {
+      return null;
+    }
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      '=',
+    );
+
+    const decoded =
+      typeof atob === 'function'
+        ? atob(paddedPayload)
+        : Buffer.from(paddedPayload, 'base64').toString('utf-8');
+
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function getTokenDisplayName(token?: string | null) {
+  if (!token) {
+    return '';
+  }
+
+  const payload = decodeJwtPayload(token);
+
+  if (!payload) {
+    return '';
+  }
+
+  const fullNameCandidates = [
+    payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+    payload.name,
+    payload.unique_name,
+    payload.fullName,
+    payload.full_name,
+  ];
+
+  for (const candidate of fullNameCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const givenName =
+    typeof payload.given_name === 'string' ? payload.given_name.trim() : '';
+  const familyName =
+    typeof payload.family_name === 'string' ? payload.family_name.trim() : '';
+
+  return `${givenName} ${familyName}`.trim();
+}
 
 function buildUserName(name: string, email: string) {
   const fromEmail = email.split('@')[0]?.trim();
@@ -60,6 +166,27 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeProfileCompletionStatus(value?: boolean) {
+  return value !== false;
+}
+
+function mapAuthenticatedUser({
+  email,
+  name,
+  isProfileCompleted,
+}: {
+  email: string;
+  name: string;
+  isProfileCompleted?: boolean;
+}): User {
+  return {
+    id: email,
+    name,
+    email,
+    isProfileCompleted: normalizeProfileCompletionStatus(isProfileCompleted),
+  };
+}
+
 async function postJson<TResponse>(
   path: string,
   body: Record<string, unknown>,
@@ -67,6 +194,32 @@ async function postJson<TResponse>(
 ): Promise<TResponse> {
   try {
     const response = await apiClient.post<TResponse>(path, body);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, fallbackMessage));
+  }
+}
+
+async function getRequest<TResponse>(path: string, fallbackMessage: string): Promise<TResponse> {
+  try {
+    const response = await apiClient.get<TResponse>(path);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, fallbackMessage));
+  }
+}
+
+async function postMultipart<TResponse>(
+  path: string,
+  body: FormData,
+  fallbackMessage: string,
+): Promise<TResponse> {
+  try {
+    const response = await apiClient.post<TResponse>(path, body, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, fallbackMessage));
@@ -91,11 +244,13 @@ export async function login(input: LoginInput): Promise<User> {
 
   setAuthToken(response.token);
 
-  return {
-    id: email,
-    name: email.split('@')[0] || 'User',
+  const tokenDisplayName = getTokenDisplayName(response.token);
+
+  return mapAuthenticatedUser({
     email,
-  };
+    name: tokenDisplayName || email.split('@')[0] || 'User',
+    isProfileCompleted: response.isProfileCompleted,
+  });
 }
 
 export async function register(input: RegisterInput): Promise<User> {
@@ -187,6 +342,68 @@ export async function resetPassword(input: ResetPasswordInput): Promise<string |
     '/api/Account/reset-password',
     { email, code, newPassword },
     'تعذر تغيير كلمة المرور',
+  );
+
+  return response.message ?? null;
+}
+
+export async function getUniversities(): Promise<University[]> {
+  const response = await getRequest<ApiUniversitiesResponse>(
+    '/api/Account/universities',
+    'تعذر تحميل قائمة الجامعات',
+  );
+
+  return response.data ?? [];
+}
+
+export async function getAccountProfile(): Promise<AccountProfile | null> {
+  const response = await getRequest<ApiProfileResponse>(
+    '/api/Account/profile',
+    'تعذر تحميل الملف الشخصي',
+  );
+
+  return response.data ?? null;
+}
+
+export async function completeProfile(input: CompleteProfileInput): Promise<string | null> {
+  const universityId = Number(input.universityId);
+  const major = input.major.trim();
+  const bio = input.bio.trim();
+
+  if (!Number.isFinite(universityId) || universityId <= 0) {
+    throw new Error('يرجى اختيار الجامعة');
+  }
+
+  if (!major) {
+    throw new Error('يرجى إدخال التخصص أو القسم');
+  }
+
+  if (!input.profileImage?.uri) {
+    throw new Error('يرجى اختيار صورة شخصية');
+  }
+
+  const formData = new FormData();
+  formData.append('UniversityId', String(universityId));
+  formData.append('Major', major);
+  formData.append('Bio', bio);
+
+  if (input.profileImage.file) {
+    formData.append('ProfileImageUrl', input.profileImage.file);
+  } else {
+    formData.append(
+      'ProfileImageUrl',
+      {
+        uri: input.profileImage.uri,
+        name: input.profileImage.name ?? `profile-${Date.now()}.jpg`,
+        type: input.profileImage.type ?? 'image/jpeg',
+      } as never,
+    );
+  }
+
+  const response = await postMultipart<ApiCompleteProfileResponse>(
+    '/api/Account/complete-profile',
+    formData,
+    'تعذر إكمال الملف الشخصي',
   );
 
   return response.message ?? null;

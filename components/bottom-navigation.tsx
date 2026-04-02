@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
-    minHeight: 74,
+    minHeight: Dimensions.bottomNavigationHeight,
   },
   centerButton: {
     marginTop: -Dimensions.fabLift,
@@ -211,8 +211,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: FontSize.xs,
-    lineHeight: 12,
+    fontSize: FontSize.x11,
+    lineHeight: 14,
     fontFamily: FontFamily.cairo,
     textAlign: 'center',
   },

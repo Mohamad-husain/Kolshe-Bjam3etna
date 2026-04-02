@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 
@@ -9,9 +9,26 @@ import { useAuth } from '@/contexts/auth-context';
 import PasswordRecoveryFlow from './_passwordRecovery/password-screen';
 
 export default function AuthRoute() {
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
   const [view, setView] = useState<'tabs' | 'recovery'>('tabs');
+
+  if (user && !user.isProfileCompleted) {
+    return <Redirect href="/(auth)/select-university" />;
+  }
+
+  function handleAuthenticatedUser() {
+    return (nextUser: Parameters<typeof signIn>[0]) => {
+      signIn(nextUser);
+
+      if (nextUser.isProfileCompleted) {
+        router.replace('/(tabs)/home');
+        return;
+      }
+
+      router.replace('/(auth)/select-university');
+    };
+  }
 
   return (
     <KeyboardAvoidingView
@@ -22,20 +39,14 @@ export default function AuthRoute() {
         <AuthLayout activeTab={activeTab} onTabChange={setActiveTab}>
           {activeTab === 'login' ? (
             <LoginForm
-              onSuccess={(user) => {
-                signIn(user);
-                router.replace('/(tabs)/home');
-              }}
+              onSuccess={handleAuthenticatedUser()}
               onForgotPassword={() => {
                 setView('recovery');
               }}
             />
           ) : (
             <RegisterForm
-              onSuccess={(user) => {
-                signIn(user);
-                router.replace('/(tabs)/home');
-              }}
+              onSuccess={handleAuthenticatedUser()}
             />
           )}
         </AuthLayout>
