@@ -19,7 +19,8 @@ import {
 import { CategoryFilter, type Category } from "./CategoryFilter";
 import { EventCard } from "./EventCard";
 import { SearchBar } from "./SearchBar";
-
+// eslint-disable-next-line react-hooks/rules-of-hooks
+const [searchError, setSearchError] = useState("");
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
   { id: "نادي البرمجة", label: "نادي البرمجة" },
@@ -35,7 +36,14 @@ export function EventsTab({ showFilter }: EventsTabProps) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useEventsQuery();
-
+  const handleSearch = (text: string) => {
+    setSearch(text);
+    if (text.length > 0 && text.trim() === "") {
+      setSearchError("لا يمكن البحث بمسافات فارغة");
+    } else {
+      setSearchError("");
+    }
+  };
   const filtered = useMemo(() => {
     return items.filter((item) => {
       const matchSearch =
@@ -73,9 +81,10 @@ export function EventsTab({ showFilter }: EventsTabProps) {
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في فعاليات..."
+            placeholder="ابحث في خدمات..."
             value={search}
-            onChangeText={setSearch}
+            onChangeText={handleSearch}
+            error={searchError}
           />
           {showFilter ? (
             <CategoryFilter

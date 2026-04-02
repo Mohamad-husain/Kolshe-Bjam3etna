@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
   accentBar: {
     position: "absolute",
     right: 0,
-    top: 16,
-    bottom: 16,
+    top: 0,
+    bottom: 0,
     width: 3,
     borderRadius: 2,
     backgroundColor: SemanticColors.orange,

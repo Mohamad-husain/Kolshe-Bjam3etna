@@ -1,12 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
+import { Colors, FontFamily, FontSize, FontWeight } from "@/styles/ui-theme";
 
 export default function HomeRoute() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>الرئيسية</Text>
-      <Text style={styles.subtitle}>هاي أول شاشة للمستخدم بعد تسجيل الدخول</Text>
+      <Text style={styles.subtitle}>
+        هاي أول شاشة للمستخدم بعد تسجيل الدخول
+      </Text>
     </View>
   );
 }
@@ -14,8 +16,8 @@ export default function HomeRoute() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     backgroundColor: Colors.background,
   },
@@ -24,13 +26,13 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.extrabold,
     color: Colors.foreground,
     fontFamily: FontFamily.cairo,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     marginTop: 8,
     fontSize: FontSize.md,
     color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
