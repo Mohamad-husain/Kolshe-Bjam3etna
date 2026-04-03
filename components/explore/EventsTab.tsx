@@ -19,8 +19,7 @@ import {
 import { CategoryFilter, type Category } from "./CategoryFilter";
 import { EventCard } from "./EventCard";
 import { SearchBar } from "./SearchBar";
-// eslint-disable-next-line react-hooks/rules-of-hooks
-const [searchError, setSearchError] = useState("");
+
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
   { id: "نادي البرمجة", label: "نادي البرمجة" },
@@ -35,6 +34,7 @@ type EventsTabProps = {
 export function EventsTab({ showFilter }: EventsTabProps) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchError, setSearchError] = useState("");
   const { data: items = [], isLoading, error } = useEventsQuery();
   const handleSearch = (text: string) => {
     setSearch(text);
@@ -81,7 +81,7 @@ export function EventsTab({ showFilter }: EventsTabProps) {
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في خدمات..."
+            placeholder="ابحث في فعاليات......"
             value={search}
             onChangeText={handleSearch}
             error={searchError}
