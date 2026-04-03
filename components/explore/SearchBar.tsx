@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { View, TextInput, StyleSheet } from "react-native";
+import { View, TextInput, StyleSheet, Text } from "react-native";
 import {
   Colors,
   Dimensions,
   FontFamily,
   FontSize,
+  SemanticColors,
   Spacing,
 } from "@/styles/ui-theme";
 
@@ -12,28 +13,38 @@ interface SearchBarProps {
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
+  error?: string;
 }
 
 export function SearchBar({
   placeholder,
   value,
   onChangeText,
+  error,
 }: SearchBarProps) {
   return (
-    <View style={styles.container}>
-      <Ionicons
-        name="search-outline"
-        size={18}
-        color={Colors.mutedForeground}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.mutedForeground}
-        value={value}
-        onChangeText={onChangeText}
-        textAlign="right"
-      />
+    <View>
+      <View
+        style={[
+          styles.container,
+          error ? { borderColor: SemanticColors.red } : null,
+        ]}
+      >
+        <Ionicons
+          name="search-outline"
+          size={18}
+          color={error ? SemanticColors.red : Colors.mutedForeground}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          placeholderTextColor={Colors.mutedForeground}
+          value={value}
+          onChangeText={onChangeText}
+          textAlign="right"
+        />
+      </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -57,5 +68,14 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontFamily: FontFamily.cairo,
     color: Colors.foreground,
+  },
+  errorText: {
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.xs,
+    color: SemanticColors.red,
+    textAlign: "right",
+    paddingHorizontal: Spacing.md,
+    marginTop: -4,
+    marginBottom: Spacing.xs,
   },
 });

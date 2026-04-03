@@ -1,24 +1,30 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { useMarketplaceQuery } from '@/hooks/queries/use-explore-queries';
+import { useMarketplaceQuery } from "@/hooks/queries/use-explore-queries";
 import {
   Colors,
   FontFamily,
   FontSize,
   SemanticColors,
   Spacing,
-} from '@/styles/ui-theme';
+} from "@/styles/ui-theme";
 
-import { CategoryFilter, type Category } from './CategoryFilter';
-import { MarketplaceCard } from './MarketplaceCard';
-import { SearchBar } from './SearchBar';
+import { CategoryFilter, type Category } from "./CategoryFilter";
+import { MarketplaceCard } from "./MarketplaceCard";
+import { SearchBar } from "./SearchBar";
 
 const CATEGORIES: Category[] = [
-  { id: 'all', label: 'الكل' },
-  { id: 'كتاب', label: 'كتب' },
-  { id: 'إلكترونيات', label: 'إلكترونيات' },
-  { id: 'تصميم', label: 'تصميم' },
+  { id: "all", label: "الكل" },
+  { id: "كتاب", label: "كتب" },
+  { id: "إلكترونيات", label: "إلكترونيات" },
+  { id: "تصميم", label: "تصميم" },
 ];
 
 type MarketplaceTabProps = {
@@ -26,16 +32,18 @@ type MarketplaceTabProps = {
 };
 
 export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useMarketplaceQuery();
-
+  const [searchError, setSearchError] = useState("");
   const filtered = useMemo(() => {
     return items.filter((item) => {
       const matchSearch =
-        search === '' || item.title.includes(search) || item.description.includes(search);
+        search === "" ||
+        item.title.includes(search) ||
+        item.description.includes(search);
       const matchCategory =
-        selectedCategory === 'all' || item.category === selectedCategory;
+        selectedCategory === "all" || item.category === selectedCategory;
 
       return matchSearch && matchCategory;
     });
@@ -48,7 +56,14 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
       </View>
     );
   }
-
+  const handleSearch = (text: string) => {
+    setSearch(text);
+    if (text.length > 0 && text.trim() === "") {
+      setSearchError("لا يمكن البحث بمسافات فارغة");
+    } else {
+      setSearchError("");
+    }
+  };
   if (error) {
     return (
       <View style={styles.center}>
@@ -64,7 +79,12 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
       renderItem={({ item }) => <MarketplaceCard data={item} />}
       ListHeaderComponent={
         <View>
-          <SearchBar placeholder="ابحث في متجر..." value={search} onChangeText={setSearch} />
+          <SearchBar
+            placeholder="ابحث في متجر..."
+            value={search}
+            onChangeText={handleSearch}
+            error={searchError}
+          />
           {showFilter ? (
             <CategoryFilter
               categories={CATEGORIES}
@@ -92,8 +112,8 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorText: {
     fontFamily: FontFamily.cairo,

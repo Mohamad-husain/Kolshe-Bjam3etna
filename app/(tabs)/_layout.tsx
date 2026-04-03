@@ -11,9 +11,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         <BottomNavigation
             currentScreen={currentScreen}
             onChangeScreen={(screen) => {
-                if (screen === 'home' || screen === 'explore' || screen === 'messages') {
-                    navigation.navigate(screen);
-                }
+                navigation.navigate(screen);
             }}
         />
     );
@@ -37,7 +35,9 @@ export default function TabsLayout() {
         >
             <Tabs.Screen name="home" options={{ title: 'الرئيسية' }} />
             <Tabs.Screen name="explore" options={{ title: 'استكشف' }} />
+            <Tabs.Screen name="add-menu" options={{ title: 'إضافة جديد', href: null }} />
             <Tabs.Screen name="messages" options={{ title: 'الرسائل' }} />
+            <Tabs.Screen name="profile" options={{ title: 'حسابي' }} />
         </Tabs>
     );
 }

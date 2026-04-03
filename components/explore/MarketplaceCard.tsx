@@ -9,6 +9,7 @@ import {
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
+import { getCategoryAccent } from "./explore-colors";
 
 export interface MarketplaceCardData {
   id: string;
@@ -33,23 +34,25 @@ interface MarketplaceCardProps {
 }
 
 export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
+  const accent = getCategoryAccent(data.category);
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
       style={styles.card}
     >
-      <View style={styles.accentBar} />
+      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
       {/* Badges */}
       <View style={styles.badges}>
         <View
           style={[
             styles.badge,
-            { backgroundColor: SemanticColors.orange + "18" },
+            { backgroundColor: accent.strongBg },
           ]}
         >
-          <Text style={[styles.badgeText, { color: SemanticColors.orange }]}>
+          <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
           </Text>
         </View>
@@ -93,8 +96,10 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
       </Text>
 
       <View style={styles.footer}>
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceText}>{data.price} د.أ</Text>
+        <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
+          <Text style={[styles.priceText, { color: accent.color }]}>
+            {data.price} د.أ
+          </Text>
         </View>
 
         <View style={styles.conditionBox}>
@@ -112,7 +117,7 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
             <Ionicons name="star" size={12} color={SemanticColors.orange} />
             <Text style={styles.ratingText}>{data.owner.rating}</Text>
           </View>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: accent.color }]}>
             <Text style={styles.avatarText}>{data.owner.initials}</Text>
           </View>
         </View>
@@ -140,11 +145,10 @@ const styles = StyleSheet.create({
   accentBar: {
     position: "absolute",
     right: 0,
-    top: 16,
-    bottom: 16,
+    top: 0,
+    bottom: 0,
     width: 3,
     borderRadius: 2,
-    backgroundColor: SemanticColors.orange,
   },
   badges: {
     flexDirection: "row-reverse",
@@ -186,7 +190,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   priceBadge: {
-    backgroundColor: SemanticColors.orange + "15",
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: Dimensions.radiusButton,
@@ -195,7 +198,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: SemanticColors.orange,
   },
   conditionBox: {
     flexDirection: "row-reverse",
@@ -223,8 +225,6 @@ const styles = StyleSheet.create({
     width: Dimensions.avatarSm,
     height: Dimensions.avatarSm,
     borderRadius: Dimensions.radiusFull,
-    // أورانج بدل أزرق للأفاتار
-    backgroundColor: SemanticColors.orange,
     alignItems: "center",
     justifyContent: "center",
   },
