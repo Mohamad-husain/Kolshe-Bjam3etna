@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ececf1',
     overflow: 'hidden',
-    direction: 'ltr',
   },
   softOverlay: {
     ...StyleSheet.absoluteFillObject,

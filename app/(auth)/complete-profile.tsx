@@ -89,9 +89,7 @@ export default function CompleteProfileRoute() {
       });
 
       signIn({
-        id: currentUser.id,
-        name: currentUser.name,
-        email: currentUser.email,
+        ...currentUser,
         isProfileCompleted: true,
       });
 
