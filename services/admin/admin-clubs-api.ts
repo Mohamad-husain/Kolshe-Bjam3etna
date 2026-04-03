@@ -1,5 +1,4 @@
 import { getAvatarColor, getAvatarInitial } from '@/components/chat/chat-ui';
-import { adminClubSummaryFixture, adminClubsFixture } from '@/lib/admin/admin-fixtures';
 import { apiClient } from '@/services/http-client';
 import type {
   AdminClubItem,
@@ -8,15 +7,22 @@ import type {
   AdminClubSummary,
   AdminClubUpsertInput,
 } from '@/types/admin';
+
 import {
   ApiRecord,
   getDateField,
-  getFallbackValue,
   getNumberField,
   getRecord,
   getRecords,
   getStringField,
+  throwAdminError,
 } from './admin-utils';
+
+const emptyClubSummary: AdminClubSummary = {
+  active: 0,
+  expiring: 0,
+  expired: 0,
+};
 
 function normalizeSubscriptionType(value: string | null): AdminClubSubscriptionType {
   if (!value) {
@@ -65,18 +71,17 @@ function buildPriceLabel(type: AdminClubSubscriptionType) {
 }
 
 function mapClub(record: ApiRecord): AdminClubItem {
-  const name = getStringField(record, ['name', 'clubName']) ?? 'نادي جديد';
+  const name = getStringField(record, ['name', 'clubName']) ?? '';
   const subscriptionType = normalizeSubscriptionType(
     getStringField(record, ['subscriptionType', 'plan', 'planType']),
   );
   const expiresAt = getDateField(record, ['expiresAt', 'expireDateUtc', 'subscriptionEndDate']);
 
   return {
-    id:
-      String(getNumberField(record, ['id', 'clubId']) ?? getStringField(record, ['id']) ?? name),
+    id: String(getNumberField(record, ['id', 'clubId']) ?? getStringField(record, ['id']) ?? name),
     name,
-    universityName: getStringField(record, ['universityName']) ?? 'جامعة غير محددة',
-    managerName: getStringField(record, ['managerName', 'ownerName']) ?? 'غير محدد',
+    universityName: getStringField(record, ['universityName']) ?? '',
+    managerName: getStringField(record, ['managerName', 'ownerName']) ?? '',
     managerEmail: getStringField(record, ['managerEmail', 'email']) ?? '',
     subscriptionType,
     status: normalizeClubStatus(record, expiresAt),
@@ -91,10 +96,9 @@ function mapClub(record: ApiRecord): AdminClubItem {
 export async function getAdminClubs() {
   try {
     const { data } = await apiClient.get('/api/admin/clubs');
-    const records = getRecords(data);
-    return records.length ? records.map(mapClub) : adminClubsFixture;
+    return getRecords(data).map(mapClub);
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل الأندية', adminClubsFixture);
+    throwAdminError(error, 'تعذر تحميل الأندية');
   }
 }
 
@@ -104,21 +108,16 @@ export async function getAdminClubSummary() {
     const record = getRecord(data);
 
     if (!record) {
-      return adminClubSummaryFixture;
+      return emptyClubSummary;
     }
 
     return {
-      active:
-        getNumberField(record, ['active', 'activeCount', 'activeClubs']) ??
-        adminClubSummaryFixture.active,
-      expiring:
-        getNumberField(record, ['expiring', 'expiringCount', 'expiringSoonCount']) ??
-        adminClubSummaryFixture.expiring,
-      expired:
-        getNumberField(record, ['expired', 'expiredCount']) ?? adminClubSummaryFixture.expired,
+      active: getNumberField(record, ['active', 'activeCount', 'activeClubs']) ?? 0,
+      expiring: getNumberField(record, ['expiring', 'expiringCount', 'expiringSoonCount']) ?? 0,
+      expired: getNumberField(record, ['expired', 'expiredCount']) ?? 0,
     } satisfies AdminClubSummary;
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل ملخص الأندية', adminClubSummaryFixture);
+    throwAdminError(error, 'تعذر تحميل ملخص الأندية');
   }
 }
 
@@ -134,7 +133,7 @@ export async function createAdminClub(input: AdminClubUpsertInput) {
     const record = getRecord(data);
     return record ? mapClub(record) : null;
   } catch (error) {
-    return getFallbackValue(error, 'تعذر إضافة النادي', null);
+    throwAdminError(error, 'تعذر إضافة النادي');
   }
 }
 
@@ -150,7 +149,7 @@ export async function updateAdminClub(id: string, input: AdminClubUpsertInput) {
     const record = getRecord(data);
     return record ? mapClub(record) : null;
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحديث النادي', null);
+    throwAdminError(error, 'تعذر تحديث النادي');
   }
 }
 
@@ -158,9 +157,7 @@ export async function deleteAdminClub(id: string) {
   try {
     await apiClient.delete(`/api/admin/clubs/${id}`);
   } catch (error) {
-    if (typeof __DEV__ === 'undefined' || !__DEV__) {
-      throw error;
-    }
+    throwAdminError(error, 'تعذر حذف النادي');
   }
 }
 
@@ -170,8 +167,6 @@ export async function renewAdminClub(id: string, subscriptionType: AdminClubSubs
       subscriptionType,
     });
   } catch (error) {
-    if (typeof __DEV__ === 'undefined' || !__DEV__) {
-      throw error;
-    }
+    throwAdminError(error, 'تعذر تجديد الاشتراك');
   }
 }

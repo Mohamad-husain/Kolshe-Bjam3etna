@@ -38,6 +38,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    zIndex: 3,
+    elevation: 3,
   },
   heroBrandRow: {
     minHeight: 112,

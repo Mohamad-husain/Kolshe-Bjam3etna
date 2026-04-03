@@ -7,22 +7,24 @@ import {
 } from '@/components/admin/admin-primitives';
 import { getRoleOption, toEnglishDigits } from '@/lib/admin/admin-config';
 import type { AdminTheme } from '@/lib/admin/admin-theme';
-import type { AdminRoleMember } from '@/types/admin';
+import type { AdminRoleMember, AdminRoleOption } from '@/types/admin';
 
 import { styles } from './styles';
 
 export function RoleCard({
   theme,
   item,
+  roleOption,
   onEdit,
   onDelete,
 }: {
   theme: AdminTheme;
   item: AdminRoleMember;
+  roleOption?: AdminRoleOption;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const option = getRoleOption(item.role);
+  const option = roleOption ?? getRoleOption(item.role);
 
   return (
     <AdminCard theme={theme} style={{ paddingTop: 0, overflow: 'hidden' }}>

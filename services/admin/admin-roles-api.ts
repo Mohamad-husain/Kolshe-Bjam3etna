@@ -1,9 +1,4 @@
 import { getAvatarColor, getAvatarInitial } from '@/components/chat/chat-ui';
-import {
-  adminRoleScopeFixture,
-  adminRolesFixture,
-  adminRoleSummaryFixture,
-} from '@/lib/admin/admin-fixtures';
 import { adminRoleOptions, getRoleOption } from '@/lib/admin/admin-config';
 import { apiClient } from '@/services/http-client';
 import type {
@@ -14,15 +9,16 @@ import type {
   AdminRoleUpdateInput,
   AdminRoleValue,
 } from '@/types/admin';
+
 import {
   ApiRecord,
-  getFallbackValue,
   getNestedRecord,
   getNumberField,
   getRecord,
   getRecords,
   getStringField,
   isRecord,
+  throwAdminError,
 } from './admin-utils';
 
 function normalizeRoleValue(value: string | null): AdminRoleValue {
@@ -86,13 +82,13 @@ function mapRoleMember(record: ApiRecord): AdminRoleMember {
   const fullName =
     getStringField(record, ['fullName', 'name', 'userName']) ??
     getStringField(getNestedRecord(record, ['user']) ?? {}, ['fullName', 'name']) ??
-    'مستخدم';
+    '';
   const role = normalizeRoleValue(getStringField(record, ['role', 'roleName']));
   const scope = getRoleScope(record);
   const email =
     getStringField(record, ['email']) ??
     getStringField(getNestedRecord(record, ['user']) ?? {}, ['email']) ??
-    `${fullName}@example.com`;
+    '';
 
   return {
     id: `${email}-${role}-${scope.scopeId ?? 'global'}`,
@@ -102,8 +98,8 @@ function mapRoleMember(record: ApiRecord): AdminRoleMember {
     scopeId: scope.scopeId,
     scopeName: scope.scopeName,
     permissions: getPermissions(record, role),
-    addedAt: getStringField(record, ['assignedAt', 'createdAt', 'createdAtUtc']) ?? '2026-01-01',
-    addedBy: getStringField(record, ['assignedBy', 'createdBy']) ?? 'المدير الأعلى',
+    addedAt: getStringField(record, ['assignedAt', 'createdAt', 'createdAtUtc']) ?? '',
+    addedBy: getStringField(record, ['assignedBy', 'createdBy']) ?? '',
     avatarInitial: getAvatarInitial(fullName),
     avatarColor: getAvatarColor(fullName),
   };
@@ -142,21 +138,18 @@ function mapScopeOption(value: unknown, index: number): AdminRoleScopeOption | n
 export async function getAdminRoles() {
   try {
     const { data } = await apiClient.get('/api/admin/roles');
-    const records = getRecords(data);
-    return records.length ? records.map(mapRoleMember) : adminRolesFixture;
+    return getRecords(data).map(mapRoleMember);
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل الأدوار', adminRolesFixture);
+    throwAdminError(error, 'تعذر تحميل الأدوار');
   }
 }
 
 export async function getAdminRolesSummary() {
   try {
     const { data } = await apiClient.get('/api/admin/roles/summary');
-    const records = getRecords(data);
-    const summary = records.map(mapRoleSummary).filter((item): item is AdminRoleSummary => Boolean(item));
-    return summary.length ? summary : adminRoleSummaryFixture;
+    return getRecords(data).map(mapRoleSummary).filter((item): item is AdminRoleSummary => Boolean(item));
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل ملخص الأدوار', adminRoleSummaryFixture);
+    throwAdminError(error, 'تعذر تحميل ملخص الأدوار');
   }
 }
 
@@ -183,9 +176,9 @@ export async function getAdminAvailableRoles() {
       }
     }
 
-    return adminRoleOptions;
+    return [];
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل الأدوار المتاحة', adminRoleOptions);
+    throwAdminError(error, 'تعذر تحميل الأدوار المتاحة');
   }
 }
 
@@ -202,19 +195,15 @@ export async function getAdminRoleScopes() {
 
     const record = getRecord(data);
 
-    if (record) {
-      const options = Object.values(record)
-        .map((value, index) => mapScopeOption(value, index))
-        .filter((item): item is AdminRoleScopeOption => Boolean(item));
-
-      if (options.length) {
-        return options;
-      }
+    if (!record) {
+      return [];
     }
 
-    return adminRoleScopeFixture;
+    return Object.values(record)
+      .map((value, index) => mapScopeOption(value, index))
+      .filter((item): item is AdminRoleScopeOption => Boolean(item));
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل نطاقات الأدوار', adminRoleScopeFixture);
+    throwAdminError(error, 'تعذر تحميل نطاقات الأدوار');
   }
 }
 
@@ -226,9 +215,7 @@ export async function assignAdminRole(input: AdminRoleAssignInput) {
       clubId: input.scopeId ?? 0,
     });
   } catch (error) {
-    if (typeof __DEV__ === 'undefined' || !__DEV__) {
-      throw error;
-    }
+    throwAdminError(error, 'تعذر إضافة الدور');
   }
 }
 
@@ -240,9 +227,7 @@ export async function updateAdminRole(input: AdminRoleUpdateInput) {
       clubId: input.scopeId ?? 0,
     });
   } catch (error) {
-    if (typeof __DEV__ === 'undefined' || !__DEV__) {
-      throw error;
-    }
+    throwAdminError(error, 'تعذر تحديث الدور');
   }
 }
 
@@ -255,8 +240,6 @@ export async function removeAdminRole(email: string, role: AdminRoleValue) {
       },
     });
   } catch (error) {
-    if (typeof __DEV__ === 'undefined' || !__DEV__) {
-      throw error;
-    }
+    throwAdminError(error, 'تعذر إلغاء الدور');
   }
 }

@@ -1,26 +1,28 @@
-import { adminDashboardFixture } from '@/lib/admin/admin-fixtures';
 import { apiClient } from '@/services/http-client';
 import type { AdminDashboardSummary, AdminMetricPoint } from '@/types/admin';
+
 import {
-  getFallbackValue,
   getNumberField,
   getRecord,
   getRecords,
   getStringField,
+  throwAdminError,
 } from './admin-utils';
 
+const emptyDashboardSummary: AdminDashboardSummary = {
+  usersCount: 0,
+  adsCount: 0,
+  messagesCount: 0,
+  usersGrowth: 0,
+  adsGrowth: 0,
+  messagesGrowth: 0,
+  activityWindowLabel: '',
+  activityPoints: [],
+};
+
 function mapActivityPoints(payload: unknown): AdminMetricPoint[] {
-  const records = getRecords(payload);
-
-  if (!records.length) {
-    return adminDashboardFixture.activityPoints;
-  }
-
-  return records.map((record, index) => ({
-    label:
-      getStringField(record, ['label', 'day', 'name', 'dateLabel']) ??
-      adminDashboardFixture.activityPoints[index]?.label ??
-      `يوم ${index + 1}`,
+  return getRecords(payload).map((record) => ({
+    label: getStringField(record, ['label', 'day', 'name', 'dateLabel']) ?? '',
     value: getNumberField(record, ['value', 'count', 'total', 'messagesCount']) ?? 0,
   }));
 }
@@ -31,35 +33,27 @@ export async function getAdminDashboardSummary(): Promise<AdminDashboardSummary>
     const record = getRecord(data);
 
     if (!record) {
-      return adminDashboardFixture;
+      return emptyDashboardSummary;
     }
 
     return {
-      usersCount:
-        getNumberField(record, ['usersCount', 'totalUsers', 'totalUserCount']) ??
-        adminDashboardFixture.usersCount,
-      adsCount:
-        getNumberField(record, ['adsCount', 'productAdsCount', 'totalAdsCount']) ??
-        adminDashboardFixture.adsCount,
+      usersCount: getNumberField(record, ['usersCount', 'totalUsers', 'totalUserCount']) ?? 0,
+      adsCount: getNumberField(record, ['adsCount', 'productAdsCount', 'totalAdsCount']) ?? 0,
       messagesCount:
-        getNumberField(record, ['messagesCount', 'chatsCount', 'totalMessagesCount']) ??
-        adminDashboardFixture.messagesCount,
+        getNumberField(record, ['messagesCount', 'chatsCount', 'totalMessagesCount']) ?? 0,
       usersGrowth:
-        getNumberField(record, ['usersGrowth', 'usersGrowthPercentage', 'usersGrowthPercent']) ??
-        adminDashboardFixture.usersGrowth,
+        getNumberField(record, ['usersGrowth', 'usersGrowthPercentage', 'usersGrowthPercent']) ?? 0,
       adsGrowth:
-        getNumberField(record, ['adsGrowth', 'adsGrowthPercentage', 'adsGrowthPercent']) ??
-        adminDashboardFixture.adsGrowth,
+        getNumberField(record, ['adsGrowth', 'adsGrowthPercentage', 'adsGrowthPercent']) ?? 0,
       messagesGrowth:
-        getNumberField(record, ['messagesGrowth', 'messagesGrowthPercentage', 'messagesGrowthPercent']) ??
-        adminDashboardFixture.messagesGrowth,
+        getNumberField(record, ['messagesGrowth', 'messagesGrowthPercentage', 'messagesGrowthPercent']) ?? 0,
       activityWindowLabel:
         getStringField(record, ['activityWindowLabel', 'activityPeriodLabel', 'lastPeriodLabel']) ??
-        adminDashboardFixture.activityWindowLabel,
+        '',
       activityPoints:
         mapActivityPoints(record.weeklyActivity ?? record.activityPoints ?? record.activity ?? null),
     };
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل إحصائيات لوحة الإدارة', adminDashboardFixture);
+    throwAdminError(error, 'تعذر تحميل إحصائيات لوحة الإدارة');
   }
 }

@@ -9,16 +9,18 @@ import { styles } from './styles';
 export function OverviewActivityChart({
   theme,
   points,
+  windowLabel,
 }: {
   theme: AdminTheme;
   points: { label: string; value: number }[];
+  windowLabel?: string;
 }) {
   const maxValue = Math.max(...points.map((point) => point.value), 1);
 
   return (
     <AdminCard theme={theme} style={{ minHeight: 210 }}>
       <View style={styles.chartHeader}>
-        <Text style={[styles.chartHint, { color: theme.mutedText }]}>آخر 7 أيام</Text>
+        <Text style={[styles.chartHint, { color: theme.mutedText }]}>{windowLabel || 'آخر 7 أيام'}</Text>
         <View style={styles.chartTitleRow}>
           <Text style={[styles.chartTitle, { color: theme.heading }]}>نشاط المنصة</Text>
           <Ionicons name="trending-up-outline" size={18} color={theme.success} />

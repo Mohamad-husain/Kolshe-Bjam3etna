@@ -33,8 +33,8 @@ export function AdminHero({
           },
         ]}
       >
-        <View style={[styles.heroGlow, { backgroundColor: theme.heroEdge }]} />
-        <View style={[styles.heroTint, { backgroundColor: theme.heroTint }]} />
+        <View pointerEvents="none" style={[styles.heroGlow, { backgroundColor: theme.heroEdge }]} />
+        <View pointerEvents="none" style={[styles.heroTint, { backgroundColor: theme.heroTint }]} />
 
         <Pressable
           onPress={onBack}
@@ -54,7 +54,7 @@ export function AdminHero({
           <Ionicons name="arrow-back" size={23} color="#ffffff" />
         </Pressable>
 
-        <View style={styles.heroBrandRow}>
+        <View pointerEvents="none" style={styles.heroBrandRow}>
           <View style={styles.heroTextWrap}>
             <Text style={styles.heroTitle}>لوحة الإدارة</Text>
             <Text style={[styles.heroSubtitle, { color: 'rgba(255,255,255,0.60)' }]}>
@@ -74,7 +74,7 @@ export function AdminHero({
           </View>
         </View>
 
-        <View style={[styles.heroCurve, { backgroundColor: theme.heroCurveFill }]} />
+        <View pointerEvents="none" style={[styles.heroCurve, { backgroundColor: theme.heroCurveFill }]} />
       </View>
 
       <View style={styles.tabsWrap}>

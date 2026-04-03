@@ -27,6 +27,7 @@ import {
   useUpdateAdminUserMutation,
 } from '@/hooks/mutations/use-admin-mutations';
 import {
+  useAdminRoleSummaryQuery,
   useAdminClubSummaryQuery,
   useAdminClubsQuery,
   useAdminDashboardQuery,
@@ -38,19 +39,11 @@ import {
   useAdminUsersQuery,
 } from '@/hooks/queries/use-admin-queries';
 import { useUniversitiesQuery } from '@/hooks/queries/use-auth-queries';
-import {
-  adminClubsFixture,
-  adminDashboardFixture,
-  adminNewsFixture,
-  adminOffersFixture,
-  adminRoleScopeFixture,
-  adminRolesFixture,
-  adminUsersFixture,
-} from '@/lib/admin/admin-fixtures';
-import { adminRoleOptions, getClubStatusLabel, getRoleOption } from '@/lib/admin/admin-config';
+import { adminRoleOptions, getRoleOption } from '@/lib/admin/admin-config';
 import { useAdminTheme } from '@/lib/admin/admin-theme';
 import type {
   AdminClubItem,
+  AdminClubSummary,
   AdminClubSubscriptionType,
   AdminClubUpsertInput,
   AdminDashboardSummary,
@@ -60,6 +53,8 @@ import type {
   AdminOfferUpsertInput,
   AdminRoleAssignInput,
   AdminRoleMember,
+  AdminRoleOption,
+  AdminRoleSummary,
   AdminRoleScopeOption,
   AdminRoleUpdateInput,
   AdminSection,
@@ -80,10 +75,12 @@ type AdminContextValue = {
   users: AdminUser[];
   news: AdminNewsItem[];
   roles: AdminRoleMember[];
-  roleOptions: typeof adminRoleOptions;
+  roleOptions: AdminRoleOption[];
+  roleSummary: AdminRoleSummary[];
   roleScopes: AdminRoleScopeOption[];
   offers: AdminOfferItem[];
   clubs: AdminClubItem[];
+  clubSummary: AdminClubSummary;
   universities: Awaited<ReturnType<typeof useUniversitiesQuery>>['data'];
   loading: {
     dashboard: boolean;
@@ -108,6 +105,38 @@ type AdminContextValue = {
 };
 
 const AdminContext = createContext<AdminContextValue | null>(null);
+
+const emptyDashboardSummary: AdminDashboardSummary = {
+  usersCount: 0,
+  adsCount: 0,
+  messagesCount: 0,
+  usersGrowth: 0,
+  adsGrowth: 0,
+  messagesGrowth: 0,
+  activityWindowLabel: '',
+  activityPoints: [],
+};
+
+const emptyClubSummary: AdminClubSummary = {
+  active: 0,
+  expiring: 0,
+  expired: 0,
+};
+
+function summarizeRoles(members: AdminRoleMember[]): AdminRoleSummary[] {
+  return adminRoleOptions.map((option) => ({
+    role: option.value,
+    count: members.filter((item) => item.role === option.value).length,
+  }));
+}
+
+function summarizeClubs(clubs: AdminClubItem[]): AdminClubSummary {
+  return {
+    active: clubs.filter((item) => item.status === 'active').length,
+    expiring: clubs.filter((item) => item.status === 'expiring').length,
+    expired: clubs.filter((item) => item.status === 'expired').length,
+  };
+}
 
 function createToast(message: string, tone: AdminToastTone = 'success'): AdminToast {
   return {
@@ -160,7 +189,10 @@ function getClubPriceLabel(type: AdminClubSubscriptionType) {
   return type === 'monthly' ? '15 د.ا' : '120 د.ا';
 }
 
-function buildRoleMemberFallback(input: AdminRoleAssignInput | AdminRoleUpdateInput) {
+function buildRoleMemberFallback(
+  input: AdminRoleAssignInput | AdminRoleUpdateInput,
+  roleScopes: AdminRoleScopeOption[],
+) {
   const fullName = 'fullName' in input ? input.fullName : 'عضو جديد';
   const role = 'newRole' in input ? input.newRole : input.role;
   const option = getRoleOption(role);
@@ -173,7 +205,7 @@ function buildRoleMemberFallback(input: AdminRoleAssignInput | AdminRoleUpdateIn
     scopeId: input.scopeId,
     scopeName:
       input.scopeId !== null
-        ? adminRoleScopeFixture.find((item) => item.id === input.scopeId)?.name ?? null
+        ? roleScopes.find((item) => item.id === input.scopeId)?.name ?? null
         : null,
     permissions: option.permissions,
     addedAt: new Date().toISOString().slice(0, 10),
@@ -223,6 +255,7 @@ export function AdminProvider({ children }: PropsWithChildren) {
   const usersQuery = useAdminUsersQuery();
   const newsQuery = useAdminNewsQuery();
   const rolesQuery = useAdminRolesQuery();
+  const roleSummaryQuery = useAdminRoleSummaryQuery();
   const roleOptionsQuery = useAdminRoleOptionsQuery();
   const roleScopesQuery = useAdminRoleScopesQuery();
   const offersQuery = useAdminOffersQuery();
@@ -248,12 +281,14 @@ export function AdminProvider({ children }: PropsWithChildren) {
   const deleteClubMutation = useDeleteAdminClubMutation();
   const renewClubMutation = useRenewAdminClubMutation();
 
-  const [dashboard, setDashboard] = useState<AdminDashboardSummary>(adminDashboardFixture);
-  const [users, setUsers] = useState<AdminUser[]>(adminUsersFixture);
-  const [news, setNews] = useState<AdminNewsItem[]>(adminNewsFixture);
-  const [roles, setRoles] = useState<AdminRoleMember[]>(adminRolesFixture);
-  const [offers, setOffers] = useState<AdminOfferItem[]>(adminOffersFixture);
-  const [clubs, setClubs] = useState<AdminClubItem[]>(adminClubsFixture);
+  const [dashboard, setDashboard] = useState<AdminDashboardSummary>(emptyDashboardSummary);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [news, setNews] = useState<AdminNewsItem[]>([]);
+  const [roles, setRoles] = useState<AdminRoleMember[]>([]);
+  const [roleSummary, setRoleSummary] = useState<AdminRoleSummary[]>(() => summarizeRoles([]));
+  const [offers, setOffers] = useState<AdminOfferItem[]>([]);
+  const [clubs, setClubs] = useState<AdminClubItem[]>([]);
+  const [clubSummary, setClubSummary] = useState<AdminClubSummary>(emptyClubSummary);
 
   useEffect(() => {
     if (dashboardQuery.data) {
@@ -276,8 +311,17 @@ export function AdminProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (rolesQuery.data) {
       setRoles(rolesQuery.data);
+      if (!roleSummaryQuery.data) {
+        setRoleSummary(summarizeRoles(rolesQuery.data));
+      }
     }
-  }, [rolesQuery.data]);
+  }, [roleSummaryQuery.data, rolesQuery.data]);
+
+  useEffect(() => {
+    if (roleSummaryQuery.data) {
+      setRoleSummary(roleSummaryQuery.data);
+    }
+  }, [roleSummaryQuery.data]);
 
   useEffect(() => {
     if (offersQuery.data) {
@@ -288,8 +332,17 @@ export function AdminProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (clubsQuery.data) {
       setClubs(clubsQuery.data);
+      if (!clubSummaryQuery.data) {
+        setClubSummary(summarizeClubs(clubsQuery.data));
+      }
     }
-  }, [clubsQuery.data]);
+  }, [clubSummaryQuery.data, clubsQuery.data]);
+
+  useEffect(() => {
+    if (clubSummaryQuery.data) {
+      setClubSummary(clubSummaryQuery.data);
+    }
+  }, [clubSummaryQuery.data]);
 
   useEffect(() => {
     if (!toast) {
@@ -315,7 +368,7 @@ export function AdminProvider({ children }: PropsWithChildren) {
     () =>
       Array.isArray(roleScopesQuery.data) && roleScopesQuery.data.length
         ? roleScopesQuery.data
-        : adminRoleScopeFixture,
+        : [],
     [roleScopesQuery.data],
   );
 
@@ -449,11 +502,11 @@ export function AdminProvider({ children }: PropsWithChildren) {
     input: AdminRoleAssignInput | AdminRoleUpdateInput,
   ) => {
     const previous = roles;
-    const fallbackMember = buildRoleMemberFallback(input);
+    const previousSummary = roleSummary;
+    const fallbackMember = buildRoleMemberFallback(input, roleScopes);
 
-    if (member) {
-      setRoles(
-        roles.map((entry) =>
+    const nextRoles = member
+      ? roles.map((entry) =>
           entry.id === member.id
             ? {
                 ...entry,
@@ -463,11 +516,11 @@ export function AdminProvider({ children }: PropsWithChildren) {
                 permissions: getRoleOption(fallbackMember.role).permissions,
               }
             : entry,
-        ),
-      );
-    } else {
-      setRoles([fallbackMember, ...roles]);
-    }
+        )
+      : [fallbackMember, ...roles];
+
+    setRoles(nextRoles);
+    setRoleSummary(summarizeRoles(nextRoles));
 
     try {
       if (member) {
@@ -483,13 +536,16 @@ export function AdminProvider({ children }: PropsWithChildren) {
       }
     } catch (error) {
       setRoles(previous);
+      setRoleSummary(previousSummary);
       showToast(error instanceof Error ? error.message : 'تعذر حفظ الدور', 'error');
     }
   };
 
   const deleteRole = async (member: AdminRoleMember) => {
     const previous = roles;
-    setRoles(roles.filter((entry) => entry.id !== member.id));
+    const nextRoles = roles.filter((entry) => entry.id !== member.id);
+    setRoles(nextRoles);
+    setRoleSummary(summarizeRoles(nextRoles));
 
     try {
       await removeRoleMutation.mutateAsync({ email: member.email, role: member.role });
@@ -566,6 +622,7 @@ export function AdminProvider({ children }: PropsWithChildren) {
 
   const saveClub = async (club: AdminClubItem | null, input: AdminClubUpsertInput) => {
     const previous = clubs;
+    const previousSummary = clubSummary;
     const fallbackClub = club
       ? {
           ...club,
@@ -578,9 +635,12 @@ export function AdminProvider({ children }: PropsWithChildren) {
         }
       : createClubFallback(input);
 
-    setClubs(
-      club ? clubs.map((entry) => (entry.id === club.id ? fallbackClub : entry)) : [fallbackClub, ...clubs],
-    );
+    const nextClubs = club
+      ? clubs.map((entry) => (entry.id === club.id ? fallbackClub : entry))
+      : [fallbackClub, ...clubs];
+
+    setClubs(nextClubs);
+    setClubSummary(summarizeClubs(nextClubs));
 
     try {
       if (club) {
@@ -602,19 +662,24 @@ export function AdminProvider({ children }: PropsWithChildren) {
       }
     } catch (error) {
       setClubs(previous);
+      setClubSummary(previousSummary);
       showToast(error instanceof Error ? error.message : 'تعذر حفظ النادي', 'error');
     }
   };
 
   const deleteClub = async (club: AdminClubItem) => {
     const previous = clubs;
-    setClubs(clubs.filter((entry) => entry.id !== club.id));
+    const previousSummary = clubSummary;
+    const nextClubs = clubs.filter((entry) => entry.id !== club.id);
+    setClubs(nextClubs);
+    setClubSummary(summarizeClubs(nextClubs));
 
     try {
       await deleteClubMutation.mutateAsync(club.id);
       showToast('تم حذف النادي', 'success');
     } catch (error) {
       setClubs(previous);
+      setClubSummary(previousSummary);
       showToast(error instanceof Error ? error.message : 'تعذر حذف النادي', 'error');
     }
   };
@@ -631,19 +696,20 @@ export function AdminProvider({ children }: PropsWithChildren) {
       nextDate.setFullYear(nextDate.getFullYear() + 1);
     }
 
-    setClubs(
-      clubs.map((entry) =>
-        entry.id === club.id
-          ? {
-              ...entry,
-              subscriptionType,
-              expiresAt: nextDate.toISOString().slice(0, 10),
-              status: 'active',
-              priceLabel: getClubPriceLabel(subscriptionType),
-            }
-          : entry,
-      ),
+    const nextClubs = clubs.map((entry) =>
+      entry.id === club.id
+        ? {
+            ...entry,
+            subscriptionType,
+            expiresAt: nextDate.toISOString().slice(0, 10),
+            status: 'active',
+            priceLabel: getClubPriceLabel(subscriptionType),
+          }
+        : entry,
     );
+
+    setClubs(nextClubs);
+    setClubSummary(summarizeClubs(nextClubs));
 
     try {
       await renewClubMutation.mutateAsync({ id: club.id, subscriptionType });
@@ -666,15 +732,17 @@ export function AdminProvider({ children }: PropsWithChildren) {
     news,
     roles,
     roleOptions,
+    roleSummary,
     roleScopes,
     offers,
     clubs,
+    clubSummary,
     universities: universitiesQuery.data,
     loading: {
       dashboard: dashboardQuery.isLoading,
       users: usersQuery.isLoading,
       news: newsQuery.isLoading,
-      roles: rolesQuery.isLoading,
+      roles: rolesQuery.isLoading || roleSummaryQuery.isLoading,
       offers: offersQuery.isLoading,
       clubs: clubsQuery.isLoading || clubSummaryQuery.isLoading,
     },
@@ -706,32 +774,13 @@ export function useAdmin() {
 }
 
 export function useAdminRoleSummary() {
-  const { roles } = useAdmin();
+  const { roles, roleSummary } = useAdmin();
 
-  return useMemo(
-    () =>
-      adminRoleOptions.map((option) => ({
-        role: option.value,
-        count: roles.filter((item) => item.role === option.value).length,
-      })),
-    [roles],
-  );
+  return useMemo(() => (roles.length ? summarizeRoles(roles) : roleSummary), [roleSummary, roles]);
 }
 
 export function useAdminClubSummary() {
-  const { clubs } = useAdmin();
+  const { clubs, clubSummary } = useAdmin();
 
-  return useMemo(
-    () => ({
-      active: clubs.filter((item) => item.status === 'active').length,
-      expiring: clubs.filter((item) => item.status === 'expiring').length,
-      expired: clubs.filter((item) => item.status === 'expired').length,
-      labels: clubs.reduce<Record<string, number>>((accumulator, item) => {
-        const label = getClubStatusLabel(item.status);
-        accumulator[label] = (accumulator[label] ?? 0) + 1;
-        return accumulator;
-      }, {}),
-    }),
-    [clubs],
-  );
+  return useMemo(() => (clubs.length ? summarizeClubs(clubs) : clubSummary), [clubSummary, clubs]);
 }

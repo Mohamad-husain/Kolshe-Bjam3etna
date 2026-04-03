@@ -1,17 +1,17 @@
-import { adminNewsFixture } from '@/lib/admin/admin-fixtures';
 import { formatIsoDate } from '@/lib/admin/admin-config';
 import { apiClient } from '@/services/http-client';
 import type { AdminNewsItem, AdminNewsUpsertInput } from '@/types/admin';
+
 import {
   ApiRecord,
   appendFileToFormData,
   getBooleanField,
   getDateField,
-  getFallbackValue,
-  getNumberField,
   getRecord,
   getRecords,
   getStringField,
+  getNumberField,
+  throwAdminError,
   toAbsoluteImageUrl,
 } from './admin-utils';
 
@@ -23,10 +23,10 @@ function mapNewsItem(record: ApiRecord): AdminNewsItem {
 
   return {
     id: String(getNumberField(record, ['id', 'newsId']) ?? getStringField(record, ['id']) ?? createdAt),
-    title: getStringField(record, ['title']) ?? 'خبر جديد',
+    title: getStringField(record, ['title']) ?? '',
     content: getStringField(record, ['content', 'body', 'description']) ?? '',
-    source: getStringField(record, ['source']) ?? 'إعلان جامعي',
-    category: getStringField(record, ['category']) ?? 'إعلان عام',
+    source: getStringField(record, ['source']) ?? '',
+    category: getStringField(record, ['category']) ?? '',
     imageUrl: toAbsoluteImageUrl(getStringField(record, ['imageUrl', 'image', 'coverImageUrl'])),
     isImportant: getBooleanField(record, ['isImportant', 'important']) ?? false,
     isPublished,
@@ -52,10 +52,9 @@ function buildNewsFormData(input: AdminNewsUpsertInput) {
 export async function getAdminNews() {
   try {
     const { data } = await apiClient.get('/api/admin/news');
-    const records = getRecords(data);
-    return records.length ? records.map(mapNewsItem) : adminNewsFixture;
+    return getRecords(data).map(mapNewsItem);
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحميل الأخبار الإدارية', adminNewsFixture);
+    throwAdminError(error, 'تعذر تحميل الأخبار الإدارية');
   }
 }
 
@@ -69,7 +68,7 @@ export async function createAdminNews(input: AdminNewsUpsertInput) {
     const record = getRecord(data);
     return record ? mapNewsItem(record) : null;
   } catch (error) {
-    return getFallbackValue(error, 'تعذر إنشاء الخبر', null);
+    throwAdminError(error, 'تعذر إنشاء الخبر');
   }
 }
 
@@ -83,7 +82,7 @@ export async function updateAdminNews(id: string, input: AdminNewsUpsertInput) {
     const record = getRecord(data);
     return record ? mapNewsItem(record) : null;
   } catch (error) {
-    return getFallbackValue(error, 'تعذر تحديث الخبر', null);
+    throwAdminError(error, 'تعذر تحديث الخبر');
   }
 }
 
@@ -91,8 +90,6 @@ export async function deleteAdminNews(id: string) {
   try {
     await apiClient.delete(`/api/admin/news/${id}`);
   } catch (error) {
-    if (typeof __DEV__ === 'undefined' || !__DEV__) {
-      throw error;
-    }
+    throwAdminError(error, 'تعذر حذف الخبر');
   }
 }

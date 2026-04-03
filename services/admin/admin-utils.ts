@@ -102,7 +102,7 @@ export function getNestedRecord(record: ApiRecord, keys: string[]) {
 }
 
 export function getDateField(record: ApiRecord, keys: string[]) {
-  return getStringField(record, keys) ?? new Date().toISOString();
+  return getStringField(record, keys) ?? '';
 }
 
 export function toAbsoluteImageUrl(path: string | null) {
@@ -123,19 +123,11 @@ export function toAbsoluteImageUrl(path: string | null) {
   return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function isDevelopmentFallbackEnabled() {
-  return typeof __DEV__ !== 'undefined' ? __DEV__ : true;
-}
-
 export function getAdminErrorMessage(error: unknown, fallbackMessage: string) {
   return getApiErrorMessage(error, fallbackMessage);
 }
 
-export function getFallbackValue<T>(error: unknown, fallbackMessage: string, fallbackValue: T) {
-  if (isDevelopmentFallbackEnabled()) {
-    return fallbackValue;
-  }
-
+export function throwAdminError(error: unknown, fallbackMessage: string): never {
   throw new Error(getAdminErrorMessage(error, fallbackMessage));
 }
 

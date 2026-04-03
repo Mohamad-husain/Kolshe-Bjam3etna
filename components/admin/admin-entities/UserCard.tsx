@@ -5,7 +5,7 @@ import {
   AdminCard,
   AdminIconButton,
 } from '@/components/admin/admin-primitives';
-import { toEnglishDigits } from '@/lib/admin/admin-config';
+import { formatIsoDate, toEnglishDigits } from '@/lib/admin/admin-config';
 import type { AdminTheme } from '@/lib/admin/admin-theme';
 import type { AdminUser } from '@/types/admin';
 
@@ -56,6 +56,9 @@ export function UserCard({
             <Text style={[styles.userMetaSeparator, { color: theme.mutedText }]}>|</Text>
             <Text numberOfLines={2} style={[styles.userMetaText, styles.userUniversityText, { color: theme.mutedText }]}>{user.universityName}</Text>
           </View>
+          <Text numberOfLines={1} style={[styles.userJoinedText, { color: theme.mutedText }]}>
+            انضم {formatIsoDate(user.joinedAt)}
+          </Text>
         </View>
 
         <View style={[styles.avatarSquare, styles.userAvatar, { backgroundColor: user.avatarColor }]}>

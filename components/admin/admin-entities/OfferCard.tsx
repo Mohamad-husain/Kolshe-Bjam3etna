@@ -42,6 +42,18 @@ export function OfferCard({
           <Text style={[styles.offerHeadline, { color: theme.heading }]}>{offer.title}</Text>
           <Text style={[styles.offerDescription, { color: theme.mutedText }]}>{offer.description}</Text>
         </View>
+        <View style={styles.offerUtilityRow}>
+          <View style={styles.offerFlagRow}>
+            {offer.showOnHomePage ? <AdminBadge theme={theme} label="الرئيسية" accent={theme.primary} compact /> : null}
+            {offer.isVerified ? <AdminBadge theme={theme} label="موثق" accent={theme.success} compact /> : null}
+          </View>
+          <View style={styles.offerViewsRow}>
+            <Ionicons name="eye-outline" size={16} color={theme.mutedText} />
+            <Text style={[styles.offerFooterText, { color: theme.mutedText }]}>
+              {toEnglishDigits(offer.viewsCount)} مشاهدة
+            </Text>
+          </View>
+        </View>
         <View style={styles.offerMetaRow}>
           <View style={styles.offerMetaDetails}>
             <Text style={[styles.offerFooterText, { color: theme.mutedText }]}>{offer.location}</Text>

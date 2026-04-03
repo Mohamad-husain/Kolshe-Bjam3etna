@@ -38,11 +38,9 @@ import {
 } from '@/components/admin/admin-entities';
 import { AdminProvider, useAdmin, useAdminClubSummary, useAdminRoleSummary } from '@/contexts/admin-context';
 import {
-  adminRoleOptions,
   adminNewsCategories,
   adminOfferCategories,
   formatCompactNumber,
-  getRoleLabel,
   getRoleOption,
   toEnglishDigits,
 } from '@/lib/admin/admin-config';
@@ -173,7 +171,11 @@ function validateNewsForm(form: AdminNewsUpsertInput): NewsFormErrors {
   };
 }
 
-function validateRoleForm(form: AdminRoleAssignInput, isEditing: boolean): RoleFormErrors {
+function validateRoleForm(
+  form: AdminRoleAssignInput,
+  isEditing: boolean,
+  roleOption = getRoleOption(form.role),
+): RoleFormErrors {
   return {
     fullName: isEditing ? undefined : validateNameField(form.fullName, 'الاسم الكامل', 6, 18),
     email: isEditing
@@ -183,10 +185,7 @@ function validateRoleForm(form: AdminRoleAssignInput, isEditing: boolean): RoleF
         : !isEmailValid(form.email)
           ? 'البريد الجامعي غير صحيح'
           : undefined,
-    scopeId:
-      getRoleOption(form.role).requiresScope && !form.scopeId
-        ? `حقل ${getRoleOption(form.role).scopeLabel ?? 'الفعالية المخصصة'} مطلوب`
-        : undefined,
+    scopeId: roleOption.requiresScope && !form.scopeId ? `حقل ${roleOption.scopeLabel ?? 'الفعالية المخصصة'} مطلوب` : undefined,
   };
 }
 
@@ -346,9 +345,11 @@ function AdminDashboardContent() {
     users,
     news,
     roles,
+    roleOptions,
     roleScopes,
     offers,
     clubs,
+    loading,
     universities,
     saveUser,
     deleteUser,
@@ -366,6 +367,13 @@ function AdminDashboardContent() {
   } = useAdmin();
   const roleSummary = useAdminRoleSummary();
   const clubSummary = useAdminClubSummary();
+  const getRoleOptionByValue = (role: AdminRoleValue) =>
+    roleOptions.find((option) => option.value === role) ?? getRoleOption(role);
+  const rolesLoading = loading.roles && roles.length === 0;
+  const usersLoading = loading.users && users.length === 0;
+  const newsLoading = loading.news && news.length === 0;
+  const offersLoading = loading.offers && offers.length === 0;
+  const clubsLoading = loading.clubs && clubs.length === 0;
   const sectionHorizontalPadding = width <= 340 ? 4 : width <= 380 ? 6 : width <= 430 ? 8 : 10;
 
   const [userSearch, setUserSearch] = useState('');
@@ -395,6 +403,7 @@ function AdminDashboardContent() {
   const [editingRole, setEditingRole] = useState<AdminRoleMember | null>(null);
   const [roleEditorVisible, setRoleEditorVisible] = useState(false);
   const [roleForm, setRoleForm] = useState<AdminRoleAssignInput>(buildRoleForm());
+  const selectedRoleOption = getRoleOptionByValue(roleForm.role);
   const [roleErrors, setRoleErrors] = useState<RoleFormErrors>({});
   const [roleValidationEnabled, setRoleValidationEnabled] = useState(false);
   const [deletingRole, setDeletingRole] = useState<AdminRoleMember | null>(null);
@@ -512,7 +521,7 @@ function AdminDashboardContent() {
     setRoleForm((current) => {
       const next = { ...current, ...changes };
       if (roleValidationEnabled) {
-        setRoleErrors(validateRoleForm(next, Boolean(editingRole)));
+        setRoleErrors(validateRoleForm(next, Boolean(editingRole), getRoleOptionByValue(next.role)));
       }
       return next;
     });
@@ -550,7 +559,7 @@ function AdminDashboardContent() {
 
   const showRoleValidation = () => {
     setRoleValidationEnabled(true);
-    setRoleErrors(validateRoleForm(roleForm, Boolean(editingRole)));
+    setRoleErrors(validateRoleForm(roleForm, Boolean(editingRole), selectedRoleOption));
   };
 
   const showOfferValidation = () => {
@@ -624,7 +633,7 @@ function AdminDashboardContent() {
 
   const handleSaveRole = async () => {
     setRoleValidationEnabled(true);
-    const errors = validateRoleForm(roleForm, Boolean(editingRole));
+    const errors = validateRoleForm(roleForm, Boolean(editingRole), selectedRoleOption);
     setRoleErrors(errors);
 
     if (hasValidationErrors(errors)) {
@@ -717,7 +726,7 @@ function AdminDashboardContent() {
               clearToast();
               startTransition(() => setActiveSection(section));
             }}
-            onBack={() => router.back()}
+            onBack={() => router.replace('/(tabs)/profile')}
           />
           <AdminToastBanner theme={theme} toast={toast} />
           <View style={[styles.sectionWrap, { paddingHorizontal: sectionHorizontalPadding }]}>
@@ -734,7 +743,11 @@ function AdminDashboardContent() {
                 <View style={styles.stack}>
                   <AdminQuickAction theme={theme} icon="document-text-outline" accent={theme.success} label="نشر خبر جديد" onPress={() => openNewsEditor()} />
                   <AdminQuickAction theme={theme} icon="stats-chart-outline" accent={theme.primary} label="تقرير النشاط الأسبوعي" onPress={() => showToast('تم تجهيز التقرير الأسبوعي', 'info')} />
-                  <OverviewActivityChart theme={theme} points={dashboard.activityPoints} />
+                  <OverviewActivityChart
+                    theme={theme}
+                    points={dashboard.activityPoints}
+                    windowLabel={dashboard.activityWindowLabel}
+                  />
                 </View>
               </>
             ) : null}
@@ -743,7 +756,14 @@ function AdminDashboardContent() {
               <>
                 <AdminSearchInput theme={theme} value={userSearch} onChangeText={setUserSearch} placeholder="ابحث عن مستخدم..." />
                 <View style={styles.stack}>
-                  {filteredUsers.length ? (
+                  {usersLoading ? (
+                    <AdminEmptyState
+                      theme={theme}
+                      icon="hourglass-outline"
+                      title="جارٍ تحميل المستخدمين"
+                      description="نقوم بسحب بيانات المستخدمين من لوحة الإدارة الآن."
+                    />
+                  ) : filteredUsers.length ? (
                     filteredUsers.map((item) => (
                       <UserCard key={item.id} theme={theme} user={item} onEdit={() => openUserEditor(item)} onDelete={() => setDeletingUser(item)} onToggleStatus={() => void toggleUserBlocked(item)} />
                     ))
@@ -765,7 +785,14 @@ function AdminDashboardContent() {
                   <Text style={[styles.addDashedText, { color: theme.primary }]}>نشر خبر جديد +</Text>
                 </Pressable>
                 <View style={styles.stack}>
-                  {news.length ? (
+                  {newsLoading ? (
+                    <AdminEmptyState
+                      theme={theme}
+                      icon="hourglass-outline"
+                      title="جارٍ تحميل الأخبار"
+                      description="نقوم بجلب آخر الأخبار الإدارية الآن."
+                    />
+                  ) : news.length ? (
                     news.map((item) => (
                       <NewsCard key={item.id} theme={theme} item={item} onEdit={() => openNewsEditor(item)} onDelete={() => setDeletingNews(item)} onPublish={() => void saveNews(item, { title: item.title, content: item.content, source: item.source, category: item.category, image: null, isImportant: item.isImportant, isPublished: true })} />
                     ))
@@ -785,7 +812,7 @@ function AdminDashboardContent() {
               <>
                 <View style={styles.summaryGrid}>
                   {roleSummary.map((item) => {
-                    const option = getRoleOption(item.role);
+                    const option = getRoleOptionByValue(item.role);
                     return (
                       <View key={item.role} style={styles.summaryCell}>
                         <AdminOutlinedStat
@@ -801,9 +828,16 @@ function AdminDashboardContent() {
                   })}
                 </View>
                 <AdminPrimaryButton theme={theme} label="إضافة دور جديد" icon="git-network-outline" onPress={() => openRoleEditor()} />
-                <AdminPanelHeading theme={theme} title={roleFilter === 'all' ? `\u062c\u0645\u064a\u0639 \u0627\u0644\u0623\u062f\u0648\u0627\u0631 (${toEnglishDigits(roles.length)})` : `${getRoleLabel(roleFilter)} (${toEnglishDigits(filteredRoles.length)})`} actionLabel="عرض الكل" onActionPress={() => setRoleFilter('all')} />
+                <AdminPanelHeading theme={theme} title={roleFilter === 'all' ? `\u062c\u0645\u064a\u0639 \u0627\u0644\u0623\u062f\u0648\u0627\u0631 (${toEnglishDigits(roles.length)})` : `${getRoleOptionByValue(roleFilter).label} (${toEnglishDigits(filteredRoles.length)})`} actionLabel="عرض الكل" onActionPress={() => setRoleFilter('all')} />
                 <View style={styles.stack}>
-                  {filteredRoles.length ? filteredRoles.map((item) => <RoleCard key={item.id} theme={theme} item={item} onEdit={() => openRoleEditor(item)} onDelete={() => setDeletingRole(item)} />) : <AdminEmptyState theme={theme} icon="person-outline" title="لا يوجد أعضاء بهذا الدور" description="اختر دوراً آخر أو أضف عضواً جديداً من نفس اللوحة." />}
+                  {rolesLoading ? (
+                    <AdminEmptyState
+                      theme={theme}
+                      icon="hourglass-outline"
+                      title="جارٍ تحميل الأدوار"
+                      description="نقوم بجلب صلاحيات ولوائح الأدوار من الخادم الآن."
+                    />
+                  ) : filteredRoles.length ? filteredRoles.map((item) => <RoleCard key={item.id} theme={theme} item={item} roleOption={getRoleOptionByValue(item.role)} onEdit={() => openRoleEditor(item)} onDelete={() => setDeletingRole(item)} />) : <AdminEmptyState theme={theme} icon="person-outline" title="لا يوجد أعضاء بهذا الدور" description="اختر دوراً آخر أو أضف عضواً جديداً من نفس اللوحة." />}
                 </View>
               </>
             ) : null}
@@ -834,7 +868,14 @@ function AdminDashboardContent() {
                 </View>
                 <AdminPrimaryButton theme={theme} label="إضافة عرض جديد" icon="megaphone-outline" onPress={() => openOfferEditor()} />
                 <View style={styles.stack}>
-                  {filteredOffers.length ? (
+                  {offersLoading ? (
+                    <AdminEmptyState
+                      theme={theme}
+                      icon="hourglass-outline"
+                      title="جارٍ تحميل العروض"
+                      description="نقوم بتحميل العروض المرتبطة بلوحة الإدارة الآن."
+                    />
+                  ) : filteredOffers.length ? (
                     filteredOffers.map((item) => <OfferCard key={item.id} theme={theme} offer={item} onEdit={() => openOfferEditor(item)} onDelete={() => setDeletingOffer(item)} />)
                   ) : (
                     <AdminEmptyState
@@ -863,7 +904,14 @@ function AdminDashboardContent() {
                 </View>
                 <AdminPrimaryButton theme={theme} label="إضافة نادي جديد" icon="people-outline" onPress={() => openClubEditor()} />
                 <View style={styles.stack}>
-                  {filteredClubs.length ? (
+                  {clubsLoading ? (
+                    <AdminEmptyState
+                      theme={theme}
+                      icon="hourglass-outline"
+                      title="جارٍ تحميل الأندية"
+                      description="نقوم بسحب بيانات الأندية والاشتراكات الآن."
+                    />
+                  ) : filteredClubs.length ? (
                     filteredClubs.map((item) => <ClubCard key={item.id} theme={theme} club={item} onEdit={() => openClubEditor(item)} onDelete={() => setDeletingClub(item)} onRenew={() => { setRenewingClub(item); setRenewType(item.subscriptionType); }} />)
                   ) : (
                     <AdminEmptyState
@@ -1056,36 +1104,36 @@ function AdminDashboardContent() {
           onChange={(value: AdminRoleValue) => {
             syncRoleForm({
               role: value,
-              scopeId: getRoleOption(value).requiresScope ? roleForm.scopeId ?? roleScopes[0]?.id ?? null : null,
+              scopeId: getRoleOptionByValue(value).requiresScope ? roleForm.scopeId ?? roleScopes[0]?.id ?? null : null,
             });
           }}
           columns={2}
-          options={adminRoleOptions.map((option) => ({
+          options={roleOptions.map((option) => ({
             value: option.value,
             label: option.label,
             accent: option.color,
             icon: option.value === 'superAdmin' ? 'shield-checkmark-outline' : option.value === 'newsEditor' ? 'newspaper-outline' : option.value === 'eventOwner' ? 'calendar-outline' : 'shield-outline',
           }))}
         />
-        {getRoleOption(roleForm.role).requiresScope ? (
+        {selectedRoleOption.requiresScope ? (
           <AdminSelectField
             theme={theme}
-            label={getRoleOption(roleForm.role).scopeLabel ?? 'الفعالية المخصصة'}
+            label={selectedRoleOption.scopeLabel ?? 'الفعالية المخصصة'}
             value={String(roleForm.scopeId ?? roleScopes[0]?.id ?? '')}
             onChange={(value: string) => {
               syncRoleForm({ scopeId: Number(value) });
             }}
             options={roleScopes.map((item) => ({ value: String(item.id), label: item.name }))}
             placeholder="اختر الفعالية"
-            accent={getRoleOption(roleForm.role).color}
+            accent={selectedRoleOption.color}
           />
         ) : null}
         {roleErrors.scopeId ? <Text style={[styles.inlineError, { color: theme.danger }]}>{roleErrors.scopeId}</Text> : null}
-        <AdminCard theme={theme} style={[styles.permissionsCard, { backgroundColor: `${getRoleOption(roleForm.role).color}14` }]}>
-          <Text style={[styles.permissionsTitle, { color: getRoleOption(roleForm.role).color }]}>الصلاحيات الممنوحة:</Text>
+        <AdminCard theme={theme} style={[styles.permissionsCard, { backgroundColor: `${selectedRoleOption.color}14` }]}>
+          <Text style={[styles.permissionsTitle, { color: selectedRoleOption.color }]}>الصلاحيات الممنوحة:</Text>
           <View style={styles.permissionsWrapLocal}>
-            {getRoleOption(roleForm.role).permissions.map((permission) => (
-              <Text numberOfLines={1} key={permission} style={[styles.permissionChipText, { color: getRoleOption(roleForm.role).color, backgroundColor: `${getRoleOption(roleForm.role).color}12` }]}>{permission}</Text>
+            {selectedRoleOption.permissions.map((permission) => (
+              <Text numberOfLines={1} key={permission} style={[styles.permissionChipText, { color: selectedRoleOption.color, backgroundColor: `${selectedRoleOption.color}12` }]}>{permission}</Text>
             ))}
           </View>
         </AdminCard>

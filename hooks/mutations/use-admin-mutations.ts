@@ -67,21 +67,26 @@ export function useCreateAdminNewsMutation() {
 
   return useMutation({
     mutationFn: createAdminNews,
-    onSuccess: () => invalidate(queryKeys.admin.dashboard),
+    onSuccess: () => invalidate(queryKeys.admin.news, queryKeys.admin.dashboard),
   });
 }
 
 export function useUpdateAdminNewsMutation() {
+  const invalidate = useAdminInvalidation();
+
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateAdminNews>[1] }) =>
       updateAdminNews(id, input),
+    onSuccess: () => invalidate(queryKeys.admin.news),
   });
 }
 
 export function useDeleteAdminNewsMutation() {
+  const invalidate = useAdminInvalidation();
+
   return useMutation({
     mutationFn: deleteAdminNews,
-    onSuccess: () => Promise.resolve(),
+    onSuccess: () => invalidate(queryKeys.admin.news, queryKeys.admin.dashboard),
   });
 }
 
@@ -128,7 +133,7 @@ export function useCreateAdminOfferMutation() {
 
   return useMutation({
     mutationFn: createAdminOffer,
-    onSuccess: () => invalidate(queryKeys.admin.offers),
+    onSuccess: () => invalidate(queryKeys.admin.offers, queryKeys.admin.dashboard),
   });
 }
 
@@ -138,7 +143,7 @@ export function useUpdateAdminOfferMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateAdminOffer>[1] }) =>
       updateAdminOffer(id, input),
-    onSuccess: () => invalidate(queryKeys.admin.offers),
+    onSuccess: () => invalidate(queryKeys.admin.offers, queryKeys.admin.dashboard),
   });
 }
 
@@ -147,7 +152,7 @@ export function useDeleteAdminOfferMutation() {
 
   return useMutation({
     mutationFn: deleteAdminOffer,
-    onSuccess: () => invalidate(queryKeys.admin.offers),
+    onSuccess: () => invalidate(queryKeys.admin.offers, queryKeys.admin.dashboard),
   });
 }
 
@@ -167,7 +172,8 @@ export function useUpdateAdminClubMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateAdminClub>[1] }) =>
       updateAdminClub(id, input),
-    onSuccess: () => invalidate(queryKeys.admin.clubs, queryKeys.admin.clubSummary),
+    onSuccess: () =>
+      invalidate(queryKeys.admin.clubs, queryKeys.admin.clubSummary, queryKeys.admin.dashboard),
   });
 }
 
@@ -176,7 +182,8 @@ export function useDeleteAdminClubMutation() {
 
   return useMutation({
     mutationFn: deleteAdminClub,
-    onSuccess: () => invalidate(queryKeys.admin.clubs, queryKeys.admin.clubSummary),
+    onSuccess: () =>
+      invalidate(queryKeys.admin.clubs, queryKeys.admin.clubSummary, queryKeys.admin.dashboard),
   });
 }
 
@@ -186,6 +193,7 @@ export function useRenewAdminClubMutation() {
   return useMutation({
     mutationFn: ({ id, subscriptionType }: { id: string; subscriptionType: Parameters<typeof renewAdminClub>[1] }) =>
       renewAdminClub(id, subscriptionType),
-    onSuccess: () => invalidate(queryKeys.admin.clubs, queryKeys.admin.clubSummary),
+    onSuccess: () =>
+      invalidate(queryKeys.admin.clubs, queryKeys.admin.clubSummary, queryKeys.admin.dashboard),
   });
 }

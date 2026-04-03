@@ -76,6 +76,23 @@ export function NewsCard({
       <Text numberOfLines={2} style={[styles.newsTitle, { color: theme.heading }]}>
         {item.title}
       </Text>
+      <Text numberOfLines={2} style={[styles.newsExcerpt, { color: theme.mutedText }]}>
+        {item.content}
+      </Text>
+      <View style={styles.newsMetaRow}>
+        <View style={styles.newsMetaChip}>
+          <Ionicons name="pricetag-outline" size={14} color={theme.primary} />
+          <Text numberOfLines={1} style={[styles.newsMetaText, { color: theme.primary }]}>
+            {item.category}
+          </Text>
+        </View>
+        <View style={styles.newsMetaChip}>
+          <Ionicons name="newspaper-outline" size={14} color={theme.mutedText} />
+          <Text numberOfLines={1} style={[styles.newsMetaText, { color: theme.mutedText }]}>
+            {item.source}
+          </Text>
+        </View>
+      </View>
       <View style={styles.newsFooter}>
         <Text style={[styles.newsDate, { color: theme.mutedText }]}>
           {toEnglishDigits(item.createdAtLabel)}
