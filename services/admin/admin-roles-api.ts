@@ -1,5 +1,5 @@
 import { getAvatarColor, getAvatarInitial } from '@/components/chat/chat-ui';
-import { adminRoleOptions, getRoleOption } from '@/lib/admin/admin-config';
+import { getRoleOption } from '@/lib/admin/admin-config';
 import { apiClient } from '@/services/http-client';
 import type {
   AdminRoleAssignInput,
@@ -14,16 +14,15 @@ import {
   ApiRecord,
   getNestedRecord,
   getNumberField,
-  getRecord,
   getRecords,
   getStringField,
   isRecord,
   throwAdminError,
 } from './admin-utils';
 
-function normalizeRoleValue(value: string | null): AdminRoleValue {
+function normalizeRoleValue(value: string | null): AdminRoleValue | null {
   if (!value) {
-    return 'admin';
+    return null;
   }
 
   const normalized = value.toLowerCase().trim();
@@ -32,11 +31,10 @@ function normalizeRoleValue(value: string | null): AdminRoleValue {
     return 'superAdmin';
   }
 
-  if (normalized.includes('news') || normalized.includes('محرر') || normalized.includes('خبر')) {
-    return 'newsEditor';
-  }
-
   if (
+    normalized.includes('coordinator') ||
+    normalized.includes('coord') ||
+    normalized.includes('منسق') ||
     normalized.includes('event') ||
     normalized.includes('owner') ||
     normalized.includes('مالك') ||
@@ -45,12 +43,11 @@ function normalizeRoleValue(value: string | null): AdminRoleValue {
     return 'eventOwner';
   }
 
-  return 'admin';
-}
+  if (normalized.includes('admin')) {
+    return 'admin';
+  }
 
-function getUniqueRoleOptions(values: AdminRoleValue[]) {
-  const uniqueValues = new Set(values);
-  return adminRoleOptions.filter((option) => uniqueValues.has(option.value));
+  return null;
 }
 
 function getPermissions(record: ApiRecord, role: AdminRoleValue) {
@@ -78,12 +75,15 @@ function getRoleScope(record: ApiRecord) {
   };
 }
 
-function mapRoleMember(record: ApiRecord): AdminRoleMember {
+function mapRoleMember(record: ApiRecord): AdminRoleMember | null {
   const fullName =
     getStringField(record, ['fullName', 'name', 'userName']) ??
     getStringField(getNestedRecord(record, ['user']) ?? {}, ['fullName', 'name']) ??
     '';
   const role = normalizeRoleValue(getStringField(record, ['role', 'roleName']));
+  if (!role) {
+    return null;
+  }
   const scope = getRoleScope(record);
   const email =
     getStringField(record, ['email']) ??
@@ -109,7 +109,7 @@ function mapRoleSummary(record: ApiRecord): AdminRoleSummary | null {
   const role = normalizeRoleValue(getStringField(record, ['role', 'name']));
   const count = getNumberField(record, ['count', 'total', 'membersCount']);
 
-  if (count === null) {
+  if (!role || count === null) {
     return null;
   }
 
@@ -138,7 +138,7 @@ function mapScopeOption(value: unknown, index: number): AdminRoleScopeOption | n
 export async function getAdminRoles() {
   try {
     const { data } = await apiClient.get('/api/admin/roles');
-    return getRecords(data).map(mapRoleMember);
+    return getRecords(data).map(mapRoleMember).filter((item): item is AdminRoleMember => Boolean(item));
   } catch (error) {
     throwAdminError(error, 'تعذر تحميل الأدوار');
   }
@@ -146,8 +146,10 @@ export async function getAdminRoles() {
 
 export async function getAdminRolesSummary() {
   try {
-    const { data } = await apiClient.get('/api/admin/roles/summary');
-    return getRecords(data).map(mapRoleSummary).filter((item): item is AdminRoleSummary => Boolean(item));
+    const { data } = await apiClient.get('/api/admin/roles');
+    return getRecords(data)
+      .map(mapRoleSummary)
+      .filter((item): item is AdminRoleSummary => Boolean(item));
   } catch (error) {
     throwAdminError(error, 'تعذر تحميل ملخص الأدوار');
   }
@@ -155,28 +157,13 @@ export async function getAdminRolesSummary() {
 
 export async function getAdminAvailableRoles() {
   try {
-    const { data } = await apiClient.get('/api/admin/roles/available');
+    const { data } = await apiClient.get('/api/admin/roles');
     const raw = getRecords(data);
+    const values = raw
+      .map((record) => normalizeRoleValue(getStringField(record, ['role', 'roleName'])))
+      .filter((value): value is AdminRoleValue => Boolean(value));
 
-    if (raw.length) {
-      return getUniqueRoleOptions(
-        raw.map((record) => normalizeRoleValue(getStringField(record, ['value', 'name', 'role']))),
-      );
-    }
-
-    const record = getRecord(data);
-
-    if (record) {
-      const entries = Object.values(record)
-        .map((value, index) => mapScopeOption(value, index))
-        .filter((item): item is AdminRoleScopeOption => Boolean(item));
-
-      if (entries.length) {
-        return getUniqueRoleOptions(entries.map((item) => normalizeRoleValue(item.name)));
-      }
-    }
-
-    return [];
+    return Array.from(new Set(values)).map((value) => getRoleOption(value));
   } catch (error) {
     throwAdminError(error, 'تعذر تحميل الأدوار المتاحة');
   }
@@ -184,23 +171,19 @@ export async function getAdminAvailableRoles() {
 
 export async function getAdminRoleScopes() {
   try {
-    const { data } = await apiClient.get('/api/admin/roles/clubs');
+    const { data } = await apiClient.get('/api/admin/roles');
     const payload = getRecords(data);
 
-    if (payload.length) {
-      return payload
-        .map((value, index) => mapScopeOption(value, index))
-        .filter((item): item is AdminRoleScopeOption => Boolean(item));
-    }
+    return payload
+      .map((value, index) => {
+        const scope = getRoleScope(value);
 
-    const record = getRecord(data);
+        if (scope.scopeId !== null && scope.scopeName) {
+          return { id: scope.scopeId, name: scope.scopeName };
+        }
 
-    if (!record) {
-      return [];
-    }
-
-    return Object.values(record)
-      .map((value, index) => mapScopeOption(value, index))
+        return mapScopeOption(value, index);
+      })
       .filter((item): item is AdminRoleScopeOption => Boolean(item));
   } catch (error) {
     throwAdminError(error, 'تعذر تحميل نطاقات الأدوار');

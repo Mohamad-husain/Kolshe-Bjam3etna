@@ -45,27 +45,19 @@ export const adminRoleOptions: AdminRoleOption[] = [
     requiresScope: false,
   },
   {
-    value: 'newsEditor',
-    label: 'محرر أخبار',
-    description: 'إنشاء الأخبار وتعديلها ونشرها.',
-    color: '#ff9500',
-    permissions: ['نشر الأخبار', 'تعديل الأخبار'],
-    requiresScope: false,
-  },
-  {
     value: 'eventOwner',
-    label: 'مالك فعالية',
+    label: 'مالك الفعالية',
     description: 'إدارة فعالية أو نادٍ محدد.',
     color: '#b45af6',
-    permissions: ['إنشاء الفعاليات', 'تعديل فعالياته', 'عرض المسجلين'],
+    permissions: ['إنشاء الفعاليات', 'تعديل الفعاليات', 'عرض المسجلين'],
     requiresScope: true,
-    scopeLabel: 'الفعالية المخصصة',
+    scopeLabel: 'النادي أو الفعالية المخصصة',
   },
 ];
 
 const clubStatusLabels: Record<AdminClubStatus, string> = {
   active: 'نشط',
-  expiring: 'ينتهي قريباً',
+  expiring: 'ينتهي قريبًا',
   expired: 'منتهي',
 };
 

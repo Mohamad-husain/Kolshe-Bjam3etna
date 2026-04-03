@@ -63,7 +63,7 @@ import type {
 
 type UserFormErrors = Partial<Record<'fullName' | 'email' | 'universityName', string>>;
 type NewsFormErrors = Partial<Record<'title' | 'source' | 'content', string>>;
-type RoleFormErrors = Partial<Record<'fullName' | 'email' | 'scopeId', string>>;
+type RoleFormErrors = Partial<Record<'email' | 'scopeId', string>>;
 type OfferFormErrors = Partial<
   Record<'partnerName' | 'title' | 'description' | 'location' | 'phone' | 'email' | 'expireDateUtc' | 'discountPercent', string>
 >;
@@ -177,7 +177,6 @@ function validateRoleForm(
   roleOption = getRoleOption(form.role),
 ): RoleFormErrors {
   return {
-    fullName: isEditing ? undefined : validateNameField(form.fullName, 'الاسم الكامل', 6, 18),
     email: isEditing
       ? undefined
       : !normalizeText(form.email)
@@ -276,7 +275,7 @@ function buildNewsForm(item?: AdminNewsItem | null): AdminNewsUpsertInput {
 
 function buildRoleForm(member?: AdminRoleMember | null): AdminRoleAssignInput {
   return {
-    fullName: normalizeText(member?.fullName ?? ''),
+    fullName: '',
     email: normalizeText(member?.email ?? '').toLowerCase(),
     role: member?.role ?? 'admin',
     scopeId: member?.scopeId ?? null,
@@ -341,6 +340,7 @@ function AdminDashboardContent() {
     setActiveSection,
     toast,
     clearToast,
+    accessDeniedMessage,
     dashboard,
     users,
     news,
@@ -456,6 +456,15 @@ function AdminDashboardContent() {
     () => clubs.filter((item) => (clubFilter === 'all' ? true : item.status === clubFilter)),
     [clubFilter, clubs],
   );
+
+  if (accessDeniedMessage) {
+    return (
+      <AdminAccessState
+        title="تعذر فتح لوحة الإدارة"
+        message={accessDeniedMessage}
+      />
+    );
+  }
 
   const openUserEditor = (user: AdminUser) => {
     setEditingUser(user);
@@ -651,7 +660,7 @@ function AdminDashboardContent() {
     } else {
       await saveRole(null, {
         ...roleForm,
-        fullName: normalizeText(roleForm.fullName),
+        fullName: '',
         email: normalizeText(roleForm.email).toLowerCase(),
       });
     }
@@ -1093,10 +1102,7 @@ function AdminDashboardContent() {
         }}
       >
         {!editingRole ? (
-          <>
-            <AdminTextField theme={theme} label="الاسم الكامل" error={roleErrors.fullName} value={roleForm.fullName} onChangeText={(value: string) => { syncRoleForm({ fullName: value }); }} onBlur={showRoleValidation} placeholder="مثال: سارة محمد" maxLength={18} />
             <AdminTextField theme={theme} label="البريد الجامعي" error={roleErrors.email} value={roleForm.email} keyboardType="email-address" autoCapitalize="none" onChangeText={(value: string) => { syncRoleForm({ email: value }); }} onBlur={showRoleValidation} placeholder="example@ju.edu.jo" />
-          </>
         ) : null}
         <AdminSegmentedOptions
           theme={theme}
@@ -1112,7 +1118,12 @@ function AdminDashboardContent() {
             value: option.value,
             label: option.label,
             accent: option.color,
-            icon: option.value === 'superAdmin' ? 'shield-checkmark-outline' : option.value === 'newsEditor' ? 'newspaper-outline' : option.value === 'eventOwner' ? 'calendar-outline' : 'shield-outline',
+            icon:
+              option.value === 'superAdmin'
+                ? 'shield-checkmark-outline'
+                : option.value === 'eventOwner'
+                  ? 'calendar-outline'
+                  : 'shield-outline',
           }))}
         />
         {selectedRoleOption.requiresScope ? (
@@ -1331,9 +1342,97 @@ function AdminDashboardScreen() {
   );
 }
 
+function AdminAccessState({
+  title,
+  message,
+}: {
+  title: string;
+  message: string;
+}) {
+  return (
+    <SafeAreaView style={[styles.safeArea, styles.accessStateScreen]}>
+      <StatusBar style="dark" />
+      <View style={styles.accessStateContainer}>
+        <View style={styles.accessStateCard}>
+          <Text style={styles.accessStateEyebrow}>لوحة الإدارة</Text>
+          <Text style={styles.accessStateTitle}>{title}</Text>
+          <Text style={styles.accessStateMessage}>{message}</Text>
+          <Pressable
+            onPress={() => router.replace('/(tabs)/profile')}
+            style={({ pressed }) => [styles.accessStateButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.accessStateButtonText}>العودة إلى الملف الشخصي</Text>
+          </Pressable>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  accessStateScreen: {
+    backgroundColor: '#f3f5fb',
+  },
+  accessStateContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accessStateCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 30,
+    paddingHorizontal: 22,
+    paddingVertical: 26,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.06)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 6,
+    gap: 12,
+  },
+  accessStateEyebrow: {
+    color: '#8a94a6',
+    textAlign: 'right',
+    fontFamily: 'Cairo',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  accessStateTitle: {
+    color: '#111827',
+    textAlign: 'right',
+    fontFamily: 'Cairo',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  accessStateMessage: {
+    color: '#475569',
+    textAlign: 'right',
+    fontFamily: 'Cairo',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 28,
+  },
+  accessStateButton: {
+    minHeight: 52,
+    marginTop: 4,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2f67ea',
+  },
+  accessStateButtonText: {
+    color: '#ffffff',
+    fontFamily: 'Cairo',
+    fontSize: 15,
+    fontWeight: '800',
   },
   root: {
     flex: 1,
@@ -1504,6 +1603,17 @@ export default function AdminDashboardRoute() {
     return <Redirect href="/(auth)/select-university" />;
   }
 
+  if (!user.canAccessAdmin) {
+    return (
+      <AdminAccessState
+        title="هذه الصفحة مخصصة للإدارة فقط"
+        message="الحساب الحالي لا يحمل صلاحية إدارة داخل الجلسة الحالية. إذا تمت إضافتك كمسؤول مؤخرًا، سجّل الخروج ثم الدخول مرة أخرى لتحديث التوكن."
+      />
+    );
+  }
+
   return <AdminDashboardScreen />;
 }
+
+
 

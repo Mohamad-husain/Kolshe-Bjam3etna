@@ -27,15 +27,12 @@ import {
   useUpdateAdminUserMutation,
 } from '@/hooks/mutations/use-admin-mutations';
 import {
-  useAdminRoleSummaryQuery,
   useAdminClubSummaryQuery,
   useAdminClubsQuery,
   useAdminDashboardQuery,
   useAdminNewsQuery,
   useAdminOffersQuery,
-  useAdminRoleOptionsQuery,
   useAdminRolesQuery,
-  useAdminRoleScopesQuery,
   useAdminUsersQuery,
 } from '@/hooks/queries/use-admin-queries';
 import { useUniversitiesQuery } from '@/hooks/queries/use-auth-queries';
@@ -71,6 +68,7 @@ type AdminContextValue = {
   toast: AdminToast | null;
   showToast: (message: string, tone?: AdminToastTone) => void;
   clearToast: () => void;
+  accessDeniedMessage: string | null;
   dashboard: AdminDashboardSummary;
   users: AdminUser[];
   news: AdminNewsItem[];
@@ -138,12 +136,33 @@ function summarizeClubs(clubs: AdminClubItem[]): AdminClubSummary {
   };
 }
 
+function buildRoleScopesFromClubs(clubs: AdminClubItem[]): AdminRoleScopeOption[] {
+  return clubs
+    .map((club, index) => {
+      const numericId = Number(club.id);
+
+      return {
+        id: Number.isFinite(numericId) && numericId > 0 ? numericId : index + 1,
+        name: club.name,
+      };
+    })
+    .filter((item, index, collection) => collection.findIndex((entry) => entry.id === item.id) === index);
+}
+
 function createToast(message: string, tone: AdminToastTone = 'success'): AdminToast {
   return {
     id: `${Date.now()}`,
     message,
     tone,
   };
+}
+
+function isAdminAccessDeniedMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.message.includes('لا تملك صلاحية الوصول إلى لوحة الإدارة');
 }
 
 function createNewsDraftFallback(input: AdminNewsUpsertInput) {
@@ -193,7 +212,12 @@ function buildRoleMemberFallback(
   input: AdminRoleAssignInput | AdminRoleUpdateInput,
   roleScopes: AdminRoleScopeOption[],
 ) {
-  const fullName = 'fullName' in input ? input.fullName : 'عضو جديد';
+  const derivedName =
+    input.email.split('@')[0]?.trim().replace(/[._-]+/g, ' ') || 'New member';
+  const fullName =
+    'fullName' in input && typeof input.fullName === 'string' && input.fullName.trim().length
+      ? input.fullName.trim()
+      : derivedName;
   const role = 'newRole' in input ? input.newRole : input.role;
   const option = getRoleOption(role);
 
@@ -255,9 +279,6 @@ export function AdminProvider({ children }: PropsWithChildren) {
   const usersQuery = useAdminUsersQuery();
   const newsQuery = useAdminNewsQuery();
   const rolesQuery = useAdminRolesQuery();
-  const roleSummaryQuery = useAdminRoleSummaryQuery();
-  const roleOptionsQuery = useAdminRoleOptionsQuery();
-  const roleScopesQuery = useAdminRoleScopesQuery();
   const offersQuery = useAdminOffersQuery();
   const clubsQuery = useAdminClubsQuery();
   const clubSummaryQuery = useAdminClubSummaryQuery();
@@ -311,17 +332,9 @@ export function AdminProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (rolesQuery.data) {
       setRoles(rolesQuery.data);
-      if (!roleSummaryQuery.data) {
-        setRoleSummary(summarizeRoles(rolesQuery.data));
-      }
+      setRoleSummary(summarizeRoles(rolesQuery.data));
     }
-  }, [roleSummaryQuery.data, rolesQuery.data]);
-
-  useEffect(() => {
-    if (roleSummaryQuery.data) {
-      setRoleSummary(roleSummaryQuery.data);
-    }
-  }, [roleSummaryQuery.data]);
+  }, [rolesQuery.data]);
 
   useEffect(() => {
     if (offersQuery.data) {
@@ -356,21 +369,33 @@ export function AdminProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const roleOptions = useMemo(
-    () =>
-      Array.isArray(roleOptionsQuery.data) && roleOptionsQuery.data.length
-        ? roleOptionsQuery.data
-        : adminRoleOptions,
-    [roleOptionsQuery.data],
-  );
+  const roleOptions = useMemo(() => adminRoleOptions, []);
 
-  const roleScopes = useMemo(
-    () =>
-      Array.isArray(roleScopesQuery.data) && roleScopesQuery.data.length
-        ? roleScopesQuery.data
-        : [],
-    [roleScopesQuery.data],
-  );
+  const roleScopes = useMemo(() => buildRoleScopesFromClubs(clubs), [clubs]);
+
+  const accessDeniedMessage = useMemo(() => {
+    const queryErrors = [
+      dashboardQuery.error,
+      usersQuery.error,
+      newsQuery.error,
+      rolesQuery.error,
+      offersQuery.error,
+      clubsQuery.error,
+      clubSummaryQuery.error,
+    ];
+
+    const deniedError = queryErrors.find(isAdminAccessDeniedMessage);
+
+    return deniedError instanceof Error ? deniedError.message : null;
+  }, [
+    clubSummaryQuery.error,
+    clubsQuery.error,
+    dashboardQuery.error,
+    newsQuery.error,
+    offersQuery.error,
+    rolesQuery.error,
+    usersQuery.error,
+  ]);
 
   const showToast = (message: string, tone: AdminToastTone = 'success') => {
     setToast(createToast(message, tone));
@@ -696,13 +721,13 @@ export function AdminProvider({ children }: PropsWithChildren) {
       nextDate.setFullYear(nextDate.getFullYear() + 1);
     }
 
-    const nextClubs = clubs.map((entry) =>
+    const nextClubs: AdminClubItem[] = clubs.map((entry) =>
       entry.id === club.id
         ? {
             ...entry,
             subscriptionType,
             expiresAt: nextDate.toISOString().slice(0, 10),
-            status: 'active',
+            status: 'active' as const,
             priceLabel: getClubPriceLabel(subscriptionType),
           }
         : entry,
@@ -725,6 +750,7 @@ export function AdminProvider({ children }: PropsWithChildren) {
     activeSection,
     setActiveSection,
     toast,
+    accessDeniedMessage,
     showToast,
     clearToast: () => setToast(null),
     dashboard,
@@ -742,7 +768,7 @@ export function AdminProvider({ children }: PropsWithChildren) {
       dashboard: dashboardQuery.isLoading,
       users: usersQuery.isLoading,
       news: newsQuery.isLoading,
-      roles: rolesQuery.isLoading || roleSummaryQuery.isLoading,
+      roles: rolesQuery.isLoading,
       offers: offersQuery.isLoading,
       clubs: clubsQuery.isLoading || clubSummaryQuery.isLoading,
     },
@@ -784,3 +810,4 @@ export function useAdminClubSummary() {
 
   return useMemo(() => (clubs.length ? summarizeClubs(clubs) : clubSummary), [clubSummary, clubs]);
 }
+

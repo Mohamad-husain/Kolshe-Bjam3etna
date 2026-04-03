@@ -236,6 +236,7 @@ export default function ProfileRoute() {
               avatarColor: getAvatarColor(fullName),
             }}
             onOpenExploreTab={openExploreTab}
+            showAdminAction={Boolean(user?.canAccessAdmin)}
             onOpenAdmin={() => router.push('/admin-dashboard')}
             onOpenSettings={() =>
               showSoonAlert('الإعدادات', 'شاشة الإعدادات سيتم ربطها في خطوة لاحقة.')

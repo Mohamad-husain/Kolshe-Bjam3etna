@@ -1,10 +1,13 @@
 import { apiClient, getApiErrorMessage, setAuthToken } from '@/services/http-client';
+import { getTokenDisplayName, getTokenRoles, hasAdminPanelRoles } from '@/lib/auth/admin-access';
 
 export type User = {
   id: string;
   name: string;
   email: string;
   isProfileCompleted: boolean;
+  roles: string[];
+  canAccessAdmin: boolean;
 };
 
 export type University = {
@@ -70,6 +73,7 @@ type ApiLoginResponse = {
   message?: string;
   token?: string | null;
   isProfileCompleted?: boolean;
+  roles?: unknown;
 };
 
 type ApiRegisterResponse = {
@@ -94,64 +98,6 @@ type ApiProfileResponse = {
   data?: AccountProfile;
 };
 
-function decodeJwtPayload(token: string) {
-  try {
-    const [, payload = ''] = token.split('.');
-
-    if (!payload) {
-      return null;
-    }
-
-    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const paddedPayload = normalizedPayload.padEnd(
-      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      '=',
-    );
-
-    const decoded =
-      typeof atob === 'function'
-        ? atob(paddedPayload)
-        : Buffer.from(paddedPayload, 'base64').toString('utf-8');
-
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function getTokenDisplayName(token?: string | null) {
-  if (!token) {
-    return '';
-  }
-
-  const payload = decodeJwtPayload(token);
-
-  if (!payload) {
-    return '';
-  }
-
-  const fullNameCandidates = [
-    payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
-    payload.name,
-    payload.unique_name,
-    payload.fullName,
-    payload.full_name,
-  ];
-
-  for (const candidate of fullNameCandidates) {
-    if (typeof candidate === 'string' && candidate.trim().length > 0) {
-      return candidate.trim();
-    }
-  }
-
-  const givenName =
-    typeof payload.given_name === 'string' ? payload.given_name.trim() : '';
-  const familyName =
-    typeof payload.family_name === 'string' ? payload.family_name.trim() : '';
-
-  return `${givenName} ${familyName}`.trim();
-}
-
 function buildUserName(name: string, email: string) {
   const fromEmail = email.split('@')[0]?.trim();
 
@@ -170,20 +116,38 @@ function normalizeProfileCompletionStatus(value?: boolean) {
   return value !== false;
 }
 
+function normalizeRoles(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter((entry): entry is string => Boolean(entry)),
+    ),
+  );
+}
+
 function mapAuthenticatedUser({
   email,
   name,
   isProfileCompleted,
+  roles,
 }: {
   email: string;
   name: string;
   isProfileCompleted?: boolean;
+  roles?: string[];
 }): User {
   return {
     id: email,
     name,
     email,
     isProfileCompleted: normalizeProfileCompletionStatus(isProfileCompleted),
+    roles: roles ?? [],
+    canAccessAdmin: hasAdminPanelRoles(roles ?? []),
   };
 }
 
@@ -245,11 +209,15 @@ export async function login(input: LoginInput): Promise<User> {
   setAuthToken(response.token);
 
   const tokenDisplayName = getTokenDisplayName(response.token);
+  const tokenRoles = getTokenRoles(response.token);
+  const responseRoles = normalizeRoles(response.roles);
+  const resolvedRoles = Array.from(new Set([...responseRoles, ...tokenRoles]));
 
   return mapAuthenticatedUser({
     email,
     name: tokenDisplayName || email.split('@')[0] || 'User',
     isProfileCompleted: response.isProfileCompleted,
+    roles: resolvedRoles,
   });
 }
 

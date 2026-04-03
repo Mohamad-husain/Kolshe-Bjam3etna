@@ -81,7 +81,7 @@ export type AdminNewsUpsertInput = {
   isPublished: boolean;
 };
 
-export type AdminRoleValue = 'admin' | 'superAdmin' | 'newsEditor' | 'eventOwner';
+export type AdminRoleValue = 'admin' | 'superAdmin' | 'eventOwner';
 
 export type AdminRoleSummary = {
   role: AdminRoleValue;
@@ -119,7 +119,7 @@ export type AdminRoleMember = {
 
 export type AdminRoleAssignInput = {
   email: string;
-  fullName: string;
+  fullName?: string;
   role: AdminRoleValue;
   scopeId: number | null;
 };

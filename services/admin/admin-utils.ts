@@ -1,3 +1,5 @@
+import { isAxiosError } from 'axios';
+
 import { getApiErrorMessage } from '@/services/http-client';
 
 export type ApiRecord = Record<string, unknown>;
@@ -124,6 +126,10 @@ export function toAbsoluteImageUrl(path: string | null) {
 }
 
 export function getAdminErrorMessage(error: unknown, fallbackMessage: string) {
+  if (isAxiosError(error) && error.response?.status === 403) {
+    return 'لا تملك صلاحية الوصول إلى لوحة الإدارة. إذا تمت إضافة دورك مؤخرًا، سجّل الخروج ثم الدخول مجددًا لتحديث الجلسة.';
+  }
+
   return getApiErrorMessage(error, fallbackMessage);
 }
 

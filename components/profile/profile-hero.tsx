@@ -25,6 +25,7 @@ type ProfileHeroProps = {
     avatarColor: string;
   };
   onOpenExploreTab: (tab: 'services' | 'marketplace' | 'exchange' | 'events') => void;
+  showAdminAction?: boolean;
   onOpenAdmin: () => void;
   onOpenSettings: () => void;
   onEditProfile: () => void;
@@ -34,6 +35,7 @@ export function ProfileHero({
   topInset,
   summary,
   onOpenExploreTab,
+  showAdminAction = false,
   onOpenAdmin,
   onOpenSettings,
   onEditProfile,
@@ -54,11 +56,13 @@ export function ProfileHero({
             icon="calendar-outline"
             onPress={() => onOpenExploreTab('events')}
           />
-          <ProfileActionChip
+          {showAdminAction ? (
+            <ProfileActionChip
             label="الإدارة"
             icon="shield-checkmark-outline"
             onPress={onOpenAdmin}
-          />
+            />
+          ) : null}
           <Pressable
             onPress={onOpenSettings}
             style={({ pressed }) => [styles.circleIconButton, pressed && styles.pressed]}
