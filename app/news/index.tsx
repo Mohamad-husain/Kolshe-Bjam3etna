@@ -14,6 +14,7 @@ import {
   CategoryFilter,
   type Category,
 } from "@/components/explore/CategoryFilter";
+import { getNewsAccent } from "@/components/news/news_colors";
 
 import { NewsCard } from "@/components/news/NewsCard";
 import { getNews } from "@/services/news-api";
@@ -26,7 +27,6 @@ import {
   SemanticColors,
   Spacing,
 } from "@/styles/ui-theme";
-
 const NEWS_CATEGORIES: Category[] = [
   { id: "الكل", label: "الكل" },
   { id: "أكاديمي", label: "أكاديمي" },
@@ -34,12 +34,22 @@ const NEWS_CATEGORIES: Category[] = [
   { id: "منح", label: "منح" },
   { id: "إدارة", label: "إدارة" },
   { id: "تقنية", label: "تقنية" },
+  { id: "إعلان عام", label: "إعلان عام" },
 ];
 
 export default function NewsScreen() {
   const [searchError, setSearchError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("الكل");
+  const activeAccent =
+    selectedCategory === "الكل"
+      ? {
+          color: SemanticColors.blue,
+          softBg: `${SemanticColors.blue}12`,
+          strongBg: `${SemanticColors.blue}20`,
+        }
+      : getNewsAccent(selectedCategory);
+
   const {
     data: items = [],
     isLoading,
@@ -144,8 +154,8 @@ export default function NewsScreen() {
                 categories={NEWS_CATEGORIES}
                 selected={selectedCategory}
                 onSelect={setSelectedCategory}
-                accentColor={SemanticColors.blue}
-                accentBg={SemanticColors.blue + "12"}
+                accentColor={activeAccent.color}
+                accentBg={activeAccent.softBg}
                 icon="newspaper-outline"
                 title="الأخبار"
                 count={filtered.length}
