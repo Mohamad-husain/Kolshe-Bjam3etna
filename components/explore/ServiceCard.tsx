@@ -9,6 +9,7 @@ import {
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
+import { getCategoryAccent } from "./explore-colors";
 
 export interface ServiceCardData {
   id: string;
@@ -32,23 +33,25 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ data, onPress }: ServiceCardProps) {
+  const accent = getCategoryAccent(data.category);
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
       style={styles.card}
     >
-      <View style={styles.accentBar} />
+      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
       {/* Badges */}
       <View style={styles.badges}>
         <View
           style={[
             styles.badge,
-            { backgroundColor: SemanticColors.blue + "18" },
+            { backgroundColor: accent.strongBg },
           ]}
         >
-          <Text style={[styles.badgeText, { color: SemanticColors.blue }]}>
+          <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
           </Text>
         </View>
@@ -97,8 +100,10 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
       {/* Footer */}
       <View style={styles.footer}>
         {/* Price */}
-        <View style={[styles.priceBadge]}>
-          <Text style={styles.priceText}>{data.pricePerHour} د.أ/ساعة</Text>
+        <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
+          <Text style={[styles.priceText, { color: accent.color }]}>
+            {data.pricePerHour} د.أ/ساعة
+          </Text>
         </View>
 
         {/* Deadline */}
@@ -118,7 +123,7 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
             <Ionicons name="star" size={12} color={SemanticColors.orange} />
             <Text style={styles.ratingText}>{data.owner.rating}</Text>
           </View>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: accent.color }]}>
             <Text style={styles.avatarText}>{data.owner.initials}</Text>
           </View>
         </View>
@@ -150,7 +155,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 3,
     borderRadius: 2,
-    backgroundColor: SemanticColors.blue,
   },
   badges: {
     flexDirection: "row-reverse",
@@ -192,7 +196,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   priceBadge: {
-    backgroundColor: SemanticColors.blue + "15",
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: Dimensions.radiusButton,
@@ -201,7 +204,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: SemanticColors.blue,
   },
   deadlineBox: {
     flexDirection: "row-reverse",
@@ -229,7 +231,6 @@ const styles = StyleSheet.create({
     width: Dimensions.avatarSm,
     height: Dimensions.avatarSm,
     borderRadius: Dimensions.radiusFull,
-    backgroundColor: SemanticColors.blue,
     alignItems: "center",
     justifyContent: "center",
   },

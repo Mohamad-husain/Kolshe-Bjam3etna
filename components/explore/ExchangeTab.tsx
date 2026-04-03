@@ -84,8 +84,8 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
           <SearchBar
             placeholder="ابحث في خدمات..."
             value={search}
-            onChangeText={handleSearch} // ← بدل setSearch
-            error={searchError} // ← جديد
+            onChangeText={handleSearch}
+            error={searchError}
           />
           {showFilter ? (
             <CategoryFilter

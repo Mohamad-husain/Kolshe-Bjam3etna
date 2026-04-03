@@ -1,6 +1,3 @@
-import { StyleSheet, Text } from "react-native";
-
-import { Colors, FontFamily, FontSize, FontWeight } from "@/styles/ui-theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMemo, useRef, useState } from "react";
@@ -136,6 +133,10 @@ export default function HomeRoute() {
     router.push({ pathname: "/(tabs)/explore", params: { tab } });
   };
 
+  const openNewsScreen = () => {
+    router.push("/news");
+  };
+
   const onSection = (key: SectionKey) => {
     scrollRef.current?.scrollTo({
       y: Math.max(positions.current[key] - 8, 0),
@@ -147,8 +148,8 @@ export default function HomeRoute() {
     positions.current[key] = event.nativeEvent.layout.y;
   };
 
-  const openNewsCard = (item: NewsItem) => {
-    Alert.alert(item.title, `${item.source}\n${item.timeAgo}`);
+  const openNewsCard = (_item: NewsItem) => {
+    openNewsScreen();
   };
 
   const openOfferCard = (item: PartnerOffer) => {
@@ -187,8 +188,8 @@ export default function HomeRoute() {
               isLoading={newsQuery.isLoading}
               isError={newsQuery.isError}
               news={news}
-              onPressTicker={() => onSection("news")}
-              onPressMore={() => onSection("news")}
+              onPressTicker={openNewsScreen}
+              onPressMore={openNewsScreen}
               onPressCard={openNewsCard}
               onLayout={register("news")}
             />
