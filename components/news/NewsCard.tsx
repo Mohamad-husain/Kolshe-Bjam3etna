@@ -9,36 +9,31 @@ import {
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
-import type { MappedNewsItem } from "@/services/news-api";
+import { getNewsAccent } from "./news_colors";
 
-interface NewsCardProps {
-  data: MappedNewsItem;
-  isBookmarked?: boolean;
-  onPress?: () => void;
-  onBookmark?: () => void;
+interface NewsCardData {
+  id: string;
+  title: string;
+  category: string;
+  isImportant: boolean;
+  source: string;
+  timeAgo: string;
 }
 
-function getCategoryColor(category: string): string {
-  const map: Record<string, string> = {
-    أكاديمي: SemanticColors.blue,
-    تسجيل: SemanticColors.orange,
-    منح: SemanticColors.green,
-    إدارة: SemanticColors.violet,
-    تقنية: SemanticColors.lightBlue,
-  };
-  return map[category] ?? SemanticColors.blue;
+interface NewsCardProps {
+  data: NewsCardData;
+  onPress?: () => void;
 }
 
 export function NewsCard({ data, onPress }: NewsCardProps) {
-  const categoryColor = getCategoryColor(data.category);
-
+  const accent = getNewsAccent(data.category);
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
       style={styles.card}
     >
-      <View style={[styles.accentBar, { backgroundColor: categoryColor }]} />
+      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
       <View style={styles.badges}>
         {data.isImportant && (
@@ -54,8 +49,8 @@ export function NewsCard({ data, onPress }: NewsCardProps) {
             </Text>
           </View>
         )}
-        <View style={[styles.badge, { backgroundColor: categoryColor + "18" }]}>
-          <Text style={[styles.badgeText, { color: categoryColor }]}>
+        <View style={[styles.badge, { backgroundColor: accent.softBg }]}>
+          <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
           </Text>
         </View>
