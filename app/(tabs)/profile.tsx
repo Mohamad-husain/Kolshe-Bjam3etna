@@ -236,11 +236,10 @@ export default function ProfileRoute() {
               avatarColor: getAvatarColor(fullName),
             }}
             onOpenExploreTab={openExploreTab}
-            showAdminAction={Boolean(user?.canAccessAdmin)}
-            onOpenAdmin={() => router.push('/admin-dashboard')}
-            onOpenSettings={() =>
-              showSoonAlert('الإعدادات', 'شاشة الإعدادات سيتم ربطها في خطوة لاحقة.')
+            onOpenAdmin={() =>
+              showSoonAlert('لوحة الإدارة', 'واجهة الإدارة غير مضافة بعد في التطبيق الحالي.')
             }
+            onOpenSettings={() => router.push('/settings')}
             onEditProfile={() =>
               showSoonAlert(
                 'تعديل الملف الشخصي',

@@ -45,11 +45,14 @@ function formatEventType(type: string): string {
 
 function mapToEventCard(item: ApiEvent): EventCardData {
   const { date, time } = formatDateTime(item.dateTimeUtc);
+  const eventType = formatEventType(item.type);
+
   return {
     id: String(item.id),
     title: item.title,
     description: item.description ?? item.type,
-    club: item.clubName || formatEventType(item.type),
+    club: item.clubName || eventType,
+    eventType,
     date,
     time,
     location: item.location,

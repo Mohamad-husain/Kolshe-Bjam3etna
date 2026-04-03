@@ -1,21 +1,18 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
-import ChatAvatar from '@/components/chat/ChatAvatar';
+import ChatAvatar from "@/components/chat/ChatAvatar"
 import {
     formatConversationTimestamp,
     getAvatarColor,
     getMessagePreviewText,
-} from '@/components/chat/chat-ui';
+} from "@/components/chat/chat-ui"
 
 type Props = {
     item: {
         name: string
-        username?: string
         message: string
         unread: number
         time?: string
-        label?: string
-        color?: string
         imageUrl?: string | null
     }
     onPress: () => void
@@ -24,11 +21,8 @@ type Props = {
 export default function ConversationListItem({ item, onPress }: Props) {
     const timestamp = formatConversationTimestamp(item.time)
     const hasUnread = item.unread > 0
-    const displayUsername = item.username?.trim().replace(/^@+/, "") || ""
-    const displayName = item.name?.trim() || displayUsername
-    const displayLabel = item.label?.trim() || ""
+    const displayName = item.name?.trim() || ""
     const displayMessage = getMessagePreviewText(item.message) || "لا توجد رسائل بعد"
-    const avatarName = displayName || displayUsername
 
     return (
         <TouchableOpacity activeOpacity={0.88} style={styles.row} onPress={onPress}>
@@ -36,9 +30,9 @@ export default function ConversationListItem({ item, onPress }: Props) {
                 <View style={styles.avatarWrapper}>
                     <ChatAvatar
                         size={58}
-                        name={avatarName}
+                        name={displayName}
                         imageUrl={item.imageUrl}
-                        color={item.color || getAvatarColor(avatarName)}
+                        color={getAvatarColor(displayName)}
                     />
 
                     {hasUnread && (
@@ -49,30 +43,12 @@ export default function ConversationListItem({ item, onPress }: Props) {
                 </View>
 
                 <View style={styles.content}>
-                    {!!displayName && (
-                        <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
-                            {displayName}
-                        </Text>
-                    )}
-
-                    {!!displayUsername && (
-                        <Text style={styles.username} numberOfLines={1}>
-                            @{displayUsername}
-                        </Text>
-                    )}
-
-                    {!!displayLabel && (
-                        <Text style={styles.label} numberOfLines={1}>
-                            {displayLabel}
-                        </Text>
-                    )}
+                    <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
+                        {displayName}
+                    </Text>
 
                     <Text
-                        style={[
-                            styles.message,
-                            !displayName && !displayLabel && !displayUsername && styles.messageCompact,
-                            hasUnread && styles.messageUnread,
-                        ]}
+                        style={[styles.message, hasUnread && styles.messageUnread]}
                         numberOfLines={1}
                     >
                         {displayMessage}
@@ -154,26 +130,6 @@ const styles = StyleSheet.create({
     nameUnread: {
         color: "#0F172A",
     },
-    label: {
-        alignSelf: "flex-end",
-        marginTop: 4,
-        fontSize: 11,
-        lineHeight: 17,
-        color: "#2563EB",
-        backgroundColor: "#EFF6FF",
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 999,
-        overflow: "hidden",
-    },
-    username: {
-        width: "100%",
-        marginTop: 4,
-        color: "#2563EB",
-        fontSize: 12,
-        fontWeight: "700",
-        textAlign: "right",
-    },
     message: {
         marginTop: 7,
         fontSize: 13,
@@ -181,9 +137,6 @@ const styles = StyleSheet.create({
         color: "#64748B",
         textAlign: "right",
         width: "100%",
-    },
-    messageCompact: {
-        marginTop: 0,
     },
     messageUnread: {
         color: "#1E293B",
