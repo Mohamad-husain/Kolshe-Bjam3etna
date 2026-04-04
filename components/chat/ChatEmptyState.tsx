@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 28,
     },
     containerCompact: {
-        marginTop: 40,
+        marginTop: 72,
         flex: 0,
         paddingHorizontal: 24,
     },
