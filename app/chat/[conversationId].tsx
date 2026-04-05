@@ -335,7 +335,7 @@ export default function ChatScreen() {
                             <ChatEmptyState
                                 iconName="chatbubble-ellipses-outline"
                                 title="ابدأ المحادثة الآن"
-                                description="أول رسالة ستظهر هنا بشكل مرتب مع اسم وصورة الطرف الآخر."
+                                description="أرسل أول رسالة للتواصل ومناقشة التفاصيل بسهولة."
                             />
                         }
                     />
