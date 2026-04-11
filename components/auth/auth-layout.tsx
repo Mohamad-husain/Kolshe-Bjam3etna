@@ -3,6 +3,7 @@ import { type PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AUTH_COPY } from '@/lib/auth/auth-copy';
 import {
   Colors,
   Dimensions,
@@ -16,6 +17,11 @@ type AuthLayoutProps = PropsWithChildren<{
   activeTab: AuthTab;
   onTabChange: (tab: AuthTab) => void;
 }>;
+
+const AUTH_TABS: { label: string; value: AuthTab }[] = [
+  { label: AUTH_COPY.loginTab, value: 'login' },
+  { label: AUTH_COPY.registerTab, value: 'register' },
+];
 
 export function AuthLayout({ activeTab, onTabChange, children }: AuthLayoutProps) {
   const insets = useSafeAreaInsets();
@@ -40,47 +46,30 @@ export function AuthLayout({ activeTab, onTabChange, children }: AuthLayoutProps
           <Ionicons name="school-outline" size={37} color="#ffffff" />
         </View>
 
-        <Text style={styles.title}>كلشي بجامعتنا</Text>
-        <Text style={styles.subtitle}>منصتك الجامعية الشاملة للخدمات والتواصل.</Text>
+        <Text style={styles.title}>{AUTH_COPY.appTitle}</Text>
+        <Text style={styles.subtitle}>{AUTH_COPY.appSubtitle}</Text>
 
         <View style={styles.segment}>
-          <Pressable
-            onPress={() => onTabChange('login')}
-            style={[styles.segmentButton, activeTab === 'login' && styles.segmentButtonActive]}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                activeTab === 'login' && styles.segmentTextActive,
-              ]}
-            >
-              تسجيل الدخول
-            </Text>
-          </Pressable>
+          {AUTH_TABS.map((tab) => {
+            const isActive = activeTab === tab.value;
 
-          <Pressable
-            onPress={() => onTabChange('register')}
-            style={[
-              styles.segmentButton,
-              activeTab === 'register' && styles.segmentButtonActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                activeTab === 'register' && styles.segmentTextActive,
-              ]}
-            >
-              إنشاء حساب
-            </Text>
-          </Pressable>
+            return (
+              <Pressable
+                key={tab.value}
+                onPress={() => onTabChange(tab.value)}
+                style={[styles.segmentButton, isActive && styles.segmentButtonActive]}
+              >
+                <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <View style={styles.formCard}>{children}</View>
 
-        <Text style={styles.terms}>
-          بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية
-        </Text>
+        <Text style={styles.terms}>{AUTH_COPY.termsAgreement}</Text>
       </View>
     </View>
   );
@@ -146,9 +135,10 @@ const styles = StyleSheet.create({
   title: {
     color: Colors.foreground,
     fontFamily: FontFamily.cairo,
-    fontSize: 42 / 2,
+    fontSize: 21,
     fontWeight: FontWeight.bold,
     textAlign: 'center',
+    writingDirection: 'rtl',
     marginBottom: 6,
     letterSpacing: -0.3,
   },
@@ -157,6 +147,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
     fontSize: 14,
     textAlign: 'center',
+    writingDirection: 'rtl',
     marginBottom: 26,
   },
   segment: {
@@ -189,6 +180,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
     fontSize: 14,
     fontWeight: FontWeight.semibold,
+    writingDirection: 'rtl',
   },
   segmentTextActive: {
     color: Colors.foreground,
@@ -205,6 +197,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
     fontSize: 12,
     lineHeight: 18,
+    writingDirection: 'rtl',
     opacity: 0.9,
   },
 });
