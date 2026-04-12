@@ -1,3 +1,5 @@
+import type { AdminSection } from '@/types/admin';
+
 const displayNameClaimKeys = [
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
   'name',
@@ -41,6 +43,9 @@ function getStringValues(value: unknown): string[] {
 function normalizeRole(value: string) {
   return value.trim().toLowerCase().replace(/[\s_-]+/g, '');
 }
+
+const fullAdminSections: AdminSection[] = ['overview', 'users', 'news', 'roles', 'offers', 'clubs'];
+const limitedAdminSections: AdminSection[] = ['overview', 'news', 'offers'];
 
 export function decodeJwtPayload(token?: string | null) {
   if (!token) {
@@ -109,6 +114,25 @@ export function hasAdminPanelRoles(roles: string[]) {
       normalizedRole === 'eventowner'
     );
   });
+}
+
+export function hasSuperAdminRole(roles: string[]) {
+  return roles.some((role) => {
+    const normalizedRole = normalizeRole(role);
+    return normalizedRole === 'superadmin' || normalizedRole === 'superadministrator';
+  });
+}
+
+export function getAllowedAdminSections(roles: string[]) {
+  if (hasSuperAdminRole(roles)) {
+    return [...fullAdminSections];
+  }
+
+  if (hasAdminPanelRoles(roles)) {
+    return [...limitedAdminSections];
+  }
+
+  return [] as AdminSection[];
 }
 
 export function hasAdminPanelAccess(token?: string | null) {

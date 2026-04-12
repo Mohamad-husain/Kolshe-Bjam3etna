@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 
+import { useAuth } from '@/contexts/auth-context';
 import {
   useAssignAdminRoleMutation,
   useBlockAdminUserMutation,
@@ -38,6 +39,7 @@ import {
 import { useUniversitiesQuery } from '@/hooks/queries/use-auth-queries';
 import { adminRoleOptions, getRoleOption } from '@/lib/admin/admin-config';
 import { useAdminTheme } from '@/lib/admin/admin-theme';
+import { getAllowedAdminSections } from '@/lib/auth/admin-access';
 import type {
   AdminClubItem,
   AdminClubSummary,
@@ -65,6 +67,7 @@ type AdminContextValue = {
   theme: ReturnType<typeof useAdminTheme>;
   activeSection: AdminSection;
   setActiveSection: (section: AdminSection) => void;
+  allowedSections: AdminSection[];
   toast: AdminToast | null;
   showToast: (message: string, tone?: AdminToastTone) => void;
   clearToast: () => void;
@@ -182,6 +185,10 @@ function createNewsDraftFallback(input: AdminNewsUpsertInput) {
   } satisfies AdminNewsItem;
 }
 
+function isLocalDraftNewsId(id: string) {
+  return id.startsWith('draft-');
+}
+
 function createOfferFallback(input: AdminOfferUpsertInput) {
   return {
     id: `offer-${Date.now()}`,
@@ -265,23 +272,31 @@ function createClubFallback(input: AdminClubUpsertInput) {
 
 function mergeNewsCollection(current: AdminNewsItem[], incoming: AdminNewsItem[]) {
   const incomingIds = new Set(incoming.map((item) => item.id));
-  const localOnly = current.filter((item) => !incomingIds.has(item.id));
+  const localOnly = current.filter((item) => !incomingIds.has(item.id) && !isLocalDraftNewsId(item.id));
 
   return [...localOnly, ...incoming];
 }
 
 export function AdminProvider({ children }: PropsWithChildren) {
   const theme = useAdminTheme();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
   const [toast, setToast] = useState<AdminToast | null>(null);
+  const allowedSections = useMemo(() => getAllowedAdminSections(user?.roles ?? []), [user?.roles]);
+  const canAccessUsers = allowedSections.includes('users');
+  const canAccessRoles = allowedSections.includes('roles');
+  const canAccessClubs = allowedSections.includes('clubs');
+  const canAccessNews = allowedSections.includes('news');
+  const canAccessOffers = allowedSections.includes('offers');
+  const fallbackSection = allowedSections[0] ?? 'overview';
 
   const dashboardQuery = useAdminDashboardQuery();
-  const usersQuery = useAdminUsersQuery();
-  const newsQuery = useAdminNewsQuery();
-  const rolesQuery = useAdminRolesQuery();
-  const offersQuery = useAdminOffersQuery();
-  const clubsQuery = useAdminClubsQuery();
-  const clubSummaryQuery = useAdminClubSummaryQuery();
+  const usersQuery = useAdminUsersQuery({ enabled: canAccessUsers });
+  const newsQuery = useAdminNewsQuery({ enabled: canAccessNews });
+  const rolesQuery = useAdminRolesQuery({ enabled: canAccessRoles });
+  const offersQuery = useAdminOffersQuery({ enabled: canAccessOffers });
+  const clubsQuery = useAdminClubsQuery({ enabled: canAccessClubs });
+  const clubSummaryQuery = useAdminClubSummaryQuery({ enabled: canAccessClubs });
   const universitiesQuery = useUniversitiesQuery();
 
   const updateUserMutation = useUpdateAdminUserMutation();
@@ -312,6 +327,12 @@ export function AdminProvider({ children }: PropsWithChildren) {
   const [clubSummary, setClubSummary] = useState<AdminClubSummary>(emptyClubSummary);
 
   useEffect(() => {
+    if (!allowedSections.includes(activeSection)) {
+      setActiveSection(fallbackSection);
+    }
+  }, [activeSection, allowedSections, fallbackSection]);
+
+  useEffect(() => {
     if (dashboardQuery.data) {
       setDashboard(dashboardQuery.data);
     }
@@ -322,6 +343,12 @@ export function AdminProvider({ children }: PropsWithChildren) {
       setUsers(usersQuery.data);
     }
   }, [usersQuery.data]);
+
+  useEffect(() => {
+    if (!canAccessUsers) {
+      setUsers([]);
+    }
+  }, [canAccessUsers]);
 
   useEffect(() => {
     if (newsQuery.data) {
@@ -335,6 +362,13 @@ export function AdminProvider({ children }: PropsWithChildren) {
       setRoleSummary(summarizeRoles(rolesQuery.data));
     }
   }, [rolesQuery.data]);
+
+  useEffect(() => {
+    if (!canAccessRoles) {
+      setRoles([]);
+      setRoleSummary(summarizeRoles([]));
+    }
+  }, [canAccessRoles]);
 
   useEffect(() => {
     if (offersQuery.data) {
@@ -356,6 +390,13 @@ export function AdminProvider({ children }: PropsWithChildren) {
       setClubSummary(clubSummaryQuery.data);
     }
   }, [clubSummaryQuery.data]);
+
+  useEffect(() => {
+    if (!canAccessClubs) {
+      setClubs([]);
+      setClubSummary(emptyClubSummary);
+    }
+  }, [canAccessClubs]);
 
   useEffect(() => {
     if (!toast) {
@@ -468,6 +509,13 @@ export function AdminProvider({ children }: PropsWithChildren) {
   const saveNews = async (item: AdminNewsItem | null, input: AdminNewsUpsertInput) => {
     const previous = news;
     const nextStatus: AdminNewsItem['status'] = input.isPublished ? 'published' : 'draft';
+    const syncNewsWithServer = async () => {
+      const result = await newsQuery.refetch();
+
+      if (result.data) {
+        setNews((current) => mergeNewsCollection(current, result.data));
+      }
+    };
     const fallbackItem: AdminNewsItem = item
       ? {
           ...item,
@@ -486,6 +534,13 @@ export function AdminProvider({ children }: PropsWithChildren) {
 
     try {
       if (item) {
+        if (isLocalDraftNewsId(item.id)) {
+          setNews(previous);
+          await syncNewsWithServer();
+          showToast('جاري مزامنة الخبر، حاول تعديل الخبر مرة أخرى بعد لحظات', 'warning');
+          return;
+        }
+
         const remote = await updateNewsMutation.mutateAsync({ id: item.id, input });
 
         if (remote) {
@@ -500,6 +555,9 @@ export function AdminProvider({ children }: PropsWithChildren) {
 
       if (created) {
         setNews((current) => current.map((entry) => (entry.id === fallbackItem.id ? created : entry)));
+      } else {
+        setNews(previous);
+        await syncNewsWithServer();
       }
 
       showToast(input.isPublished ? 'تم نشر الخبر بنجاح' : 'تم حفظ الخبر كمسودة', input.isPublished ? 'success' : 'warning');
@@ -510,6 +568,17 @@ export function AdminProvider({ children }: PropsWithChildren) {
   };
 
   const deleteNews = async (item: AdminNewsItem) => {
+    if (isLocalDraftNewsId(item.id)) {
+      const result = await newsQuery.refetch();
+
+      if (result.data) {
+        setNews((current) => mergeNewsCollection(current, result.data));
+      }
+
+      showToast('جاري مزامنة الخبر، حاول حذفه مرة أخرى بعد لحظات', 'warning');
+      return;
+    }
+
     const previous = news;
     setNews(news.filter((entry) => entry.id !== item.id));
 
@@ -749,6 +818,7 @@ export function AdminProvider({ children }: PropsWithChildren) {
     theme,
     activeSection,
     setActiveSection,
+    allowedSections,
     toast,
     accessDeniedMessage,
     showToast,

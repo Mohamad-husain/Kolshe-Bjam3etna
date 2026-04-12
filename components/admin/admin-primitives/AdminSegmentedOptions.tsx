@@ -16,9 +16,10 @@ export function AdminSegmentedOptions<T extends string>({
   value: T;
   options: { value: T; label: string; accent?: string; icon?: keyof typeof Ionicons.glyphMap }[];
   onChange: (value: T) => void;
-  columns?: 1 | 2;
+  columns?: 1 | 2 | 3;
 }) {
   const itemWidth = columns === 2 ? '47.2%' : '100%';
+  const isThreeColumnLayout = columns === 3;
 
   return (
     <View style={[styles.segmentedWrap, { gap: 10 }]}>
@@ -33,9 +34,11 @@ export function AdminSegmentedOptions<T extends string>({
             style={({ pressed }) => [
               styles.segmentOption,
               {
-                width: itemWidth,
-                maxWidth: itemWidth,
-                flexBasis: itemWidth,
+                width: isThreeColumnLayout ? undefined : itemWidth,
+                maxWidth: isThreeColumnLayout ? undefined : itemWidth,
+                flexBasis: isThreeColumnLayout ? 0 : itemWidth,
+                flexGrow: isThreeColumnLayout ? 1 : 0,
+                minWidth: isThreeColumnLayout ? 0 : undefined,
                 backgroundColor: active ? `${accent}14` : theme.trackBackground,
                 borderColor: active ? accent : theme.border,
               },

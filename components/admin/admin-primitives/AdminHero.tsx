@@ -11,17 +11,20 @@ import { styles } from './styles';
 export function AdminHero({
   theme,
   activeSection,
+  sections = adminSections,
   onChangeSection,
   onBack,
 }: {
   theme: AdminTheme;
   activeSection: AdminSection;
+  sections?: { key: AdminSection; label: string }[];
   onChangeSection: (section: AdminSection) => void;
   onBack: () => void;
 }) {
   const { width } = useWindowDimensions();
   const baseTabWidth = width <= 360 ? 72 : width <= 420 ? 82 : 90;
   const tabsGap = 2;
+  const isCompactTabs = sections.length <= 3;
 
   return (
     <View style={styles.heroShell}>
@@ -90,11 +93,19 @@ export function AdminHero({
           <ScrollView
             horizontal
             bounces={false}
+            scrollEnabled={!isCompactTabs}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.tabsContent, { gap: tabsGap }]}
+            contentContainerStyle={[
+              styles.tabsContent,
+              {
+                gap: tabsGap,
+                justifyContent: isCompactTabs ? 'space-between' : 'flex-start',
+              },
+              isCompactTabs ? styles.tabsContentCompact : null,
+            ]}
             style={styles.tabsScroller}
           >
-            {adminSections.map((item) => {
+            {sections.map((item) => {
               const active = item.key === activeSection;
 
               return (
@@ -106,7 +117,8 @@ export function AdminHero({
                     return [
                     styles.tabButton,
                     {
-                      minWidth: Math.max(baseTabWidth, item.label.length * 11),
+                      minWidth: isCompactTabs ? undefined : Math.max(baseTabWidth, item.label.length * 11),
+                      flex: isCompactTabs ? 1 : undefined,
                       backgroundColor: active
                         ? theme.isDark
                           ? theme.inputBackground
