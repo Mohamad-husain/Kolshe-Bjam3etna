@@ -1,18 +1,16 @@
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 
 import { AuthInput } from '@/components/auth/auth-input';
-import { useLoginMutation } from '@/hooks/mutations/use-auth-mutations';
-import type { User } from '@/services/auth-api';
 import {
-  Colors,
-  FontFamily,
-  FontSize,
-  FontWeight,
-  Spacing,
-} from '@/styles/ui-theme';
+  AuthErrorText,
+  authFormStyles,
+  AuthSubmitButton,
+} from '@/components/auth/auth-form-shared';
+import { useLoginMutation } from '@/hooks/mutations/use-auth-mutations';
+import { AUTH_COPY, AUTH_VALIDATION } from '@/lib/auth/auth-copy';
+import type { User } from '@/services/auth-api';
 
 type LoginFormProps = {
   onSuccess: (user: User) => void;
@@ -40,151 +38,82 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
     mode: 'onChange',
   });
 
-  const onLogin = handleSubmit(async (values) => {
+  const handleLogin = handleSubmit(async (values) => {
     setServerError('');
 
     try {
       const user = await loginMutation.mutateAsync(values);
       onSuccess(user);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'تعذر تسجيل الدخول';
-      setServerError(message);
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : AUTH_COPY.loginFailed);
     }
   });
 
   return (
-    <View style={styles.container}>
+    <View style={authFormStyles.container}>
       <Controller
         control={control}
         name="email"
-        rules={{
-          required: 'يرجى إدخال البريد الجامعي',
-          pattern: {
-            value: /^\S+@\S+\.\S+$/,
-            message: 'صيغة البريد غير صحيحة',
-          },
-        }}
+        rules={AUTH_VALIDATION.email}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
-            icon="mail-outline"
-            value={value}
-            onBlur={() => onBlur()}
-            onChangeText={(text) => onChange(text)}
-            placeholder="البريد الجامعي"
             autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect={false}
+            icon="mail-outline"
+            keyboardType="email-address"
+            onBlur={onBlur}
+            onChangeText={onChange}
+            placeholder={AUTH_COPY.universityEmailPlaceholder}
+            textContentType="username"
+            value={value}
           />
         )}
       />
-      {!!errors.email?.message ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
+      <AuthErrorText message={errors.email?.message} />
 
       <Controller
         control={control}
         name="password"
-        rules={{
-          required: 'يرجى إدخال كلمة المرور',
-          minLength: {
-            value: 6,
-            message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
-          },
-        }}
+        rules={AUTH_VALIDATION.loginPassword}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="password"
             icon="lock-closed-outline"
-            value={value}
-            onBlur={() => onBlur()}
-            onChangeText={(text) => onChange(text)}
-            placeholder="كلمة المرور"
+            onBlur={onBlur}
+            onChangeText={onChange}
+            placeholder={AUTH_COPY.passwordPlaceholder}
             secureTextEntry={!showPassword}
+            textContentType="password"
             trailingIcon={showPassword ? 'eye-outline' : 'eye-off-outline'}
-            onTrailingIconPress={() => setShowPassword((prev) => !prev)}
+            onTrailingIconPress={() => setShowPassword((currentValue) => !currentValue)}
+            value={value}
           />
         )}
       />
-      {!!errors.password?.message ? (
-        <Text style={styles.errorText}>{errors.password.message}</Text>
-      ) : null}
+      <AuthErrorText message={errors.password?.message} />
 
       <Pressable
-        onPress={onForgotPassword}
+        accessibilityRole="button"
         disabled={!onForgotPassword}
-        style={styles.inlineButton}
+        onPress={onForgotPassword}
+        style={authFormStyles.inlineButton}
       >
-        <Text style={styles.inlineButtonText}>نسيت كلمة المرور؟</Text>
+        <Text style={authFormStyles.inlineButtonText}>{AUTH_COPY.forgotPassword}</Text>
       </Pressable>
 
-      {!!serverError ? <Text style={styles.errorText}>{serverError}</Text> : null}
+      <AuthErrorText message={serverError} />
 
-      <Pressable
-        disabled={loginMutation.isPending}
+      <AuthSubmitButton
+        isPending={loginMutation.isPending}
+        label={AUTH_COPY.loginButton}
         onPress={() => {
-          void onLogin();
+          void handleLogin();
         }}
-        style={({ pressed }) => [
-          styles.submitButton,
-          pressed && styles.submitButtonPressed,
-          loginMutation.isPending && styles.submitButtonDisabled,
-        ]}
-      >
-        <View style={styles.submitContent}>
-          <Ionicons name="arrow-back" size={20} color="#ffffff" />
-          <Text style={styles.submitButtonText}>
-            {loginMutation.isPending ? 'جاري الدخول...' : 'دخول'}
-          </Text>
-        </View>
-      </Pressable>
+        pendingLabel={AUTH_COPY.loginButtonPending}
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: Spacing.sm,
-  },
-  inlineButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  inlineButtonText: {
-    color: Colors.primary,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-  },
-  errorText: {
-    color: Colors.destructive,
-    textAlign: 'right',
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-  },
-  submitButton: {
-    marginTop: 8,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  submitButtonPressed: {
-    transform: [{ scale: 0.98 }],
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontFamily: FontFamily.cairo,
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-  },
-  submitContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-});

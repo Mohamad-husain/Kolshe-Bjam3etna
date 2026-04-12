@@ -8,26 +8,25 @@ import RegisterForm from '@/components/auth/register-form';
 import { useAuth } from '@/contexts/auth-context';
 import PasswordRecoveryFlow from './_passwordRecovery/password-screen';
 
+type AuthView = 'tabs' | 'recovery';
+
 export default function AuthRoute() {
   const { signIn, user } = useAuth();
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
-  const [view, setView] = useState<'tabs' | 'recovery'>('tabs');
+  const [view, setView] = useState<AuthView>('tabs');
 
   if (user && !user.isProfileCompleted) {
     return <Redirect href="/(auth)/select-university" />;
   }
 
-  function handleAuthenticatedUser() {
-    return (nextUser: Parameters<typeof signIn>[0]) => {
-      signIn(nextUser);
+  function handleAuthenticatedUser(nextUser: Parameters<typeof signIn>[0]) {
+    signIn(nextUser);
+    router.replace(nextUser.isProfileCompleted ? '/(tabs)/home' : '/(auth)/select-university');
+  }
 
-      if (nextUser.isProfileCompleted) {
-        router.replace('/(tabs)/home');
-        return;
-      }
-
-      router.replace('/(auth)/select-university');
-    };
+  function handlePasswordRecoveryDone() {
+    setView('tabs');
+    setActiveTab('login');
   }
 
   return (
@@ -39,24 +38,17 @@ export default function AuthRoute() {
         <AuthLayout activeTab={activeTab} onTabChange={setActiveTab}>
           {activeTab === 'login' ? (
             <LoginForm
-              onSuccess={handleAuthenticatedUser()}
               onForgotPassword={() => {
                 setView('recovery');
               }}
+              onSuccess={handleAuthenticatedUser}
             />
           ) : (
-            <RegisterForm
-              onSuccess={handleAuthenticatedUser()}
-            />
+            <RegisterForm onSuccess={handleAuthenticatedUser} />
           )}
         </AuthLayout>
       ) : (
-        <PasswordRecoveryFlow
-          onDone={() => {
-            setView('tabs');
-            setActiveTab('login');
-          }}
-        />
+        <PasswordRecoveryFlow onDone={handlePasswordRecoveryDone} />
       )}
     </KeyboardAvoidingView>
   );
