@@ -1,7 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { markAsRead } from "@/services/chat/chat-api"
-import type { ChatConversation, ChatMessage } from "@/types/chat"
 import { queryKeys } from "@/lib/query-keys"
+import {
+    cancelChatQueries,
+    getChatMutationSnapshot,
+    invalidateChatQueries,
+    restoreChatMutationSnapshot,
+} from "@/hooks/chat/mutations/chat-mutation-utils"
+import type { ChatMessage } from "@/types/chat"
 
 export const useMarkRead = () => {
     const queryClient = useQueryClient()
@@ -9,19 +15,10 @@ export const useMarkRead = () => {
     return useMutation({
         mutationFn: (conversationId: string) => markAsRead(conversationId),
         onMutate: async (conversationId) => {
-            await queryClient.cancelQueries({ queryKey: queryKeys.chat.conversations })
-            await queryClient.cancelQueries({
-                queryKey: queryKeys.chat.messages(conversationId),
-            })
+            await cancelChatQueries(queryClient, conversationId)
+            const snapshot = getChatMutationSnapshot(queryClient, conversationId)
 
-            const previousConversations =
-                queryClient.getQueryData<ChatConversation[]>(queryKeys.chat.conversations) || []
-            const previousMessages =
-                queryClient.getQueryData<ChatMessage[]>(
-                    queryKeys.chat.messages(conversationId)
-                ) || []
-
-            queryClient.setQueryData<ChatConversation[]>(
+            queryClient.setQueryData(
                 queryKeys.chat.conversations,
                 (old = []) =>
                     old.map((conversation) =>
@@ -36,25 +33,13 @@ export const useMarkRead = () => {
                 (old = []) => old.map((message) => ({ ...message, isRead: true }))
             )
 
-            return { previousConversations, previousMessages }
+            return snapshot
         },
         onError: (_error, conversationId, context) => {
-            queryClient.setQueryData(
-                queryKeys.chat.conversations,
-                context?.previousConversations || []
-            )
-            queryClient.setQueryData(
-                queryKeys.chat.messages(conversationId),
-                context?.previousMessages || []
-            )
+            restoreChatMutationSnapshot(queryClient, conversationId, context)
         },
         onSuccess: (_, conversationId) => {
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.conversations,
-            })
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.messages(conversationId),
-            })
+            invalidateChatQueries(queryClient, conversationId)
         },
     })
 }

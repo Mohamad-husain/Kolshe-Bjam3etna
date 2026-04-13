@@ -9,6 +9,7 @@ import {
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
+import { getCategoryAccent } from "./explore-colors";
 
 export interface ExchangeCardData {
   id: string;
@@ -30,28 +31,30 @@ interface ExchangeCardProps {
 }
 
 export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
+  const accent = getCategoryAccent(data.category);
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
       style={styles.card}
     >
-      <View style={styles.accentBar} />
+      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
       <View style={styles.badges}>
         <View
           style={[
             styles.badge,
-            { backgroundColor: SemanticColors.lightBlue + "25" },
+            { backgroundColor: accent.strongBg },
           ]}
         >
-          <Text style={[styles.badgeText, { color: SemanticColors.lightBlue }]}>
+          <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
           </Text>
         </View>
       </View>
 
-      <View style={styles.exchangeRow}>
+      <View style={[styles.exchangeRow, { backgroundColor: accent.softBg }]}>
         <View style={styles.exchangeBox}>
           <Text style={styles.exchangeLabel}>أملك</Text>
           <Text style={styles.exchangeValue} numberOfLines={2}>
@@ -59,11 +62,13 @@ export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
           </Text>
         </View>
 
-        <View style={styles.exchangeIcon}>
+        <View
+          style={[styles.exchangeIcon, { backgroundColor: accent.strongBg }]}
+        >
           <Ionicons
             name="swap-horizontal"
             size={18}
-            color={SemanticColors.lightBlue}
+            color={accent.color}
           />
         </View>
 
@@ -81,13 +86,17 @@ export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
       </Text>
 
       <View style={styles.footer}>
-        <View style={styles.exchangeBadge}>
+        <View
+          style={[styles.exchangeBadge, { backgroundColor: accent.softBg }]}
+        >
           <Ionicons
             name="swap-horizontal"
             size={13}
-            color={SemanticColors.lightBlue}
+            color={accent.color}
           />
-          <Text style={styles.exchangeBadgeText}>تبادل</Text>
+          <Text style={[styles.exchangeBadgeText, { color: accent.color }]}>
+            تبادل
+          </Text>
         </View>
 
         <View style={styles.owner}>
@@ -96,7 +105,7 @@ export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
             <Ionicons name="star" size={12} color={SemanticColors.orange} />
             <Text style={styles.ratingText}>{data.owner.rating}</Text>
           </View>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: accent.color }]}>
             <Text style={styles.avatarText}>{data.owner.initials}</Text>
           </View>
         </View>
@@ -124,11 +133,10 @@ const styles = StyleSheet.create({
   accentBar: {
     position: "absolute",
     right: 0,
-    top: 16,
-    bottom: 16,
+    top: 0,
+    bottom: 0,
     width: 3,
     borderRadius: 2,
-    backgroundColor: SemanticColors.lightBlue,
   },
   badges: {
     flexDirection: "row-reverse",
@@ -147,7 +155,6 @@ const styles = StyleSheet.create({
   exchangeRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: SemanticColors.lightBlue + "12",
     borderRadius: Dimensions.radiusButton,
     padding: Spacing.sm,
     marginBottom: Spacing.sm,
@@ -174,7 +181,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: Dimensions.radiusFull,
-    backgroundColor: SemanticColors.lightBlue + "25",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -203,7 +209,6 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 3,
-    backgroundColor: SemanticColors.lightBlue + "15",
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: Dimensions.radiusButton,
@@ -212,7 +217,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: SemanticColors.lightBlue,
   },
   owner: {
     flexDirection: "row-reverse",
@@ -225,7 +229,6 @@ const styles = StyleSheet.create({
     width: Dimensions.avatarSm,
     height: Dimensions.avatarSm,
     borderRadius: Dimensions.radiusFull,
-    backgroundColor: SemanticColors.lightBlue,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -9,12 +9,14 @@ import {
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
+import { getEventAccent } from "./explore-colors";
 
 export interface EventCardData {
   id: string;
   title: string;
   description: string;
   club: string;
+  eventType: string;
   date: string;
   time: string;
   location: string;
@@ -30,6 +32,7 @@ interface EventCardProps {
 export function EventCard({ data, onPress }: EventCardProps) {
   const progress = data.registeredCount / data.maxCount;
   const isFull = data.registeredCount >= data.maxCount;
+  const accent = getEventAccent(data.eventType);
 
   return (
     <TouchableOpacity
@@ -37,22 +40,27 @@ export function EventCard({ data, onPress }: EventCardProps) {
       activeOpacity={0.85}
       style={styles.card}
     >
-      <View style={styles.accentBar} />
+      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
       <View style={styles.header}>
-        <Text style={styles.club}>{data.club}</Text>
-        <View style={styles.calendarIcon}>
-          <Ionicons
-            name="calendar-outline"
-            size={20}
-            color={SemanticColors.violet}
-          />
+        <View style={styles.headerText}>
+          <Text
+            style={[
+              styles.eventTypeBadge,
+              { color: accent.color, backgroundColor: accent.softBg },
+            ]}
+          >
+            {data.eventType}
+          </Text>
+          <Text style={styles.club}>{data.club}</Text>
+        </View>
+        <View style={[styles.calendarIcon, { backgroundColor: accent.softBg }]}>
+          <Ionicons name="calendar-outline" size={20} color={accent.color} />
         </View>
       </View>
 
       <Text style={styles.title}>{data.title}</Text>
 
-      {/* Description */}
       <Text style={styles.description} numberOfLines={2}>
         {data.description}
       </Text>
@@ -91,7 +99,7 @@ export function EventCard({ data, onPress }: EventCardProps) {
           <Text
             style={[
               styles.progressCount,
-              { color: isFull ? SemanticColors.red : SemanticColors.violet },
+              { color: isFull ? SemanticColors.red : accent.color },
             ]}
           >
             {data.registeredCount}/{data.maxCount}
@@ -112,9 +120,7 @@ export function EventCard({ data, onPress }: EventCardProps) {
               styles.progressFill,
               {
                 width: `${progress * 100}%`,
-                backgroundColor: isFull
-                  ? SemanticColors.red
-                  : SemanticColors.violet,
+                backgroundColor: isFull ? SemanticColors.red : accent.color,
               },
             ]}
           />
@@ -143,11 +149,10 @@ const styles = StyleSheet.create({
   accentBar: {
     position: "absolute",
     right: 0,
-    top: 16,
-    bottom: 16,
+    top: 0,
+    bottom: 0,
     width: 3,
     borderRadius: 2,
-    backgroundColor: SemanticColors.violet,
   },
   header: {
     flexDirection: "row-reverse",
@@ -155,11 +160,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: Spacing.sm,
   },
+  headerText: {
+    alignItems: "flex-end",
+    gap: Spacing.xs,
+  },
   calendarIcon: {
     width: 36,
     height: 36,
     borderRadius: Dimensions.radiusButton,
-    backgroundColor: SemanticColors.violet + "15",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -167,7 +175,10 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
     color: Colors.mutedForeground,
-    backgroundColor: Colors.secondary,
+  },
+  eventTypeBadge: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.cairo,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: Dimensions.radiusFull,

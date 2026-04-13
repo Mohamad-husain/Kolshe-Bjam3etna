@@ -1,99 +1,86 @@
-import React, { useEffect, useMemo, useRef } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
-    Text,
-    TouchableOpacity,
     View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router, useLocalSearchParams } from "expo-router"
-import { Ionicons } from "@expo/vector-icons"
 
-import ChatAvatar from "@/components/chat/ChatAvatar"
 import ChatComposer from "@/components/chat/ChatComposer"
+import ChatDateBadge from "@/components/chat/ChatDateBadge"
+import ChatEditMessageModal from "@/components/chat/ChatEditMessageModal"
+import ChatEmptyState from "@/components/chat/ChatEmptyState"
+import ChatHeader from "@/components/chat/ChatHeader"
+import ChatImagePreviewModal from "@/components/chat/ChatImagePreviewModal"
+import ChatMessageActionsModal, {
+    type ChatMessageActionItem,
+} from "@/components/chat/ChatMessageActionsModal"
 import ChatMessageBubble from "@/components/chat/ChatMessageBubble"
-import { formatChatDateLabel, getAvatarColor } from "@/components/chat/chat-ui"
+import {
+    getChatDateLabel,
+    getMessageActionSubtitle,
+    getMessageActionsState,
+    hasMessageActions,
+    resolveMessageOwnership,
+} from "@/components/chat/chat-message-helpers"
+import {
+    downloadChatAsset,
+    getAvatarColor,
+    getFileLabel,
+    openChatAsset,
+} from "@/components/chat/chat-ui"
 import { useAuth } from "@/contexts/auth-context"
+import { useDeleteMessage } from "@/hooks/chat/mutations/use-delete-message"
 import { useMarkRead } from "@/hooks/chat/mutations/use-mark-read"
+import { useUpdateMessage } from "@/hooks/chat/mutations/use-update-message"
 import { useChatConversations } from "@/hooks/chat/queries/use-chat-conversations"
 import { useChatMessages } from "@/hooks/chat/queries/use-chat-messages"
 import type { ChatMessage } from "@/types/chat"
 
-const resolveMessageOwnership = ({
-    message,
-    otherUserId,
-    headerTitle,
-    currentUserName,
-    otherUserAvatarUrl,
-}: {
-    message: ChatMessage
-    otherUserId?: string
-    headerTitle: string
-    currentUserName: string
-    otherUserAvatarUrl: string | null
-}) => {
-    const isMine =
-        otherUserId && message.senderId
-            ? message.senderId.trim() !== otherUserId
-            : message.isMine
+const EMPTY_MESSAGES: ChatMessage[] = []
 
-    return {
-        ...message,
-        isMine,
-        senderName: isMine ? currentUserName : headerTitle,
-        senderAvatarUrl: isMine
-            ? null
-            : message.senderAvatarUrl || otherUserAvatarUrl,
-    }
-}
-
-const getChatDateLabel = (messages: ChatMessage[]) => {
-    if (messages.length === 0) {
-        return ""
-    }
-
-    return (
-        formatChatDateLabel(messages[0]?.createdAt) ||
-        formatChatDateLabel(messages[messages.length - 1]?.createdAt)
-    )
+const scrollMessagesToEnd = (listRef: React.RefObject<FlatList>) => {
+    setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true })
+    }, 100)
 }
 
 export default function ChatScreen() {
     const params = useLocalSearchParams<{
         conversationId: string
         otherUserName?: string
-        otherUserUsername?: string
         otherUserAvatarUrl?: string
     }>()
+    const flatListRef = useRef<FlatList>(null)
+    const { user } = useAuth()
 
     const conversationId = params.conversationId || ""
     const passedOtherUserName = params.otherUserName || ""
-    const passedOtherUserUsername = params.otherUserUsername || ""
     const passedAvatarUrl = params.otherUserAvatarUrl || ""
-    const { user } = useAuth()
 
     const { data: messagesData, isLoading: isMessagesLoading } = useChatMessages(conversationId)
     const { data: conversationsData, isLoading: isConversationsLoading } = useChatConversations()
     const markReadMutation = useMarkRead()
-    const flatListRef = useRef<FlatList>(null)
+    const deleteMessageMutation = useDeleteMessage()
+    const updateMessageMutation = useUpdateMessage()
 
-    const messages = useMemo(() => messagesData ?? [], [messagesData])
-    const conversations = useMemo(() => conversationsData ?? [], [conversationsData])
+    const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null)
+    const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
+    const [editedText, setEditedText] = useState("")
+    const [previewImageUri, setPreviewImageUri] = useState<string | null>(null)
 
-    const currentConversation = useMemo(
-        () => conversations.find((item) => String(item.id) === String(conversationId)),
-        [conversations, conversationId]
+    const messages = messagesData ?? EMPTY_MESSAGES
+    const conversations = conversationsData ?? []
+    const currentConversation = conversations.find(
+        (conversation) => conversation.id === conversationId
     )
 
-    const headerTitle =
-        currentConversation?.otherUserName || passedOtherUserName
-    const headerUsername =
-        currentConversation?.otherUserUsername || passedOtherUserUsername
-
+    const headerTitle = currentConversation?.otherUserName || passedOtherUserName
     const avatarColor = getAvatarColor(headerTitle)
     const otherUserAvatarUrl =
         currentConversation?.otherUserAvatarUrl || passedAvatarUrl || null
@@ -118,10 +105,8 @@ export default function ChatScreen() {
             otherUserAvatarUrl,
         ]
     )
-    const chatDateLabel = useMemo(
-        () => getChatDateLabel(resolvedMessages),
-        [resolvedMessages]
-    )
+
+    const chatDateLabel = getChatDateLabel(resolvedMessages)
 
     useEffect(() => {
         if (conversationId && (currentConversation?.unreadCount ?? 1) > 0) {
@@ -131,11 +116,180 @@ export default function ChatScreen() {
 
     useEffect(() => {
         if (messages.length > 0) {
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true })
-            }, 100)
+            scrollMessagesToEnd(flatListRef)
         }
-    }, [messages])
+    }, [messages.length])
+
+    const closeActionsModal = () => setSelectedMessage(null)
+    const closeEditModal = () => {
+        setEditingMessage(null)
+        setEditedText("")
+    }
+
+    const handleOpenMessageActions = (message: ChatMessage) => {
+        if (!hasMessageActions(message)) {
+            return
+        }
+
+        setSelectedMessage(message)
+    }
+
+    const handlePreviewImage = (imageUri: string) => {
+        if (!imageUri) {
+            Alert.alert("تعذر فتح الصورة", "لم نتمكن من عرض الصورة حالياً.")
+            return
+        }
+
+        setPreviewImageUri(imageUri)
+    }
+
+    const handleDownloadImage = async (message: ChatMessage) => {
+        const downloaded = await downloadChatAsset(
+            message.imageUrl,
+            `chat-image-${message.id}`
+        )
+
+        if (!downloaded) {
+            Alert.alert("تعذر التنزيل", "لم نتمكن من فتح الصورة أو تنزيلها.")
+        }
+
+        closeActionsModal()
+    }
+
+    const handleDownloadFile = async (message: ChatMessage) => {
+        const downloaded = await downloadChatAsset(
+            message.fileUrl,
+            getFileLabel(message.fileName, message.fileUrl),
+            message.fileMimeType
+        )
+
+        if (!downloaded) {
+            Alert.alert("تعذر التنزيل", "لم نتمكن من فتح الملف أو تنزيله.")
+        }
+
+        closeActionsModal()
+    }
+
+    const handleOpenFile = async (message: ChatMessage) => {
+        const opened = await openChatAsset(message.fileUrl)
+
+        if (!opened) {
+            Alert.alert("تعذر فتح الملف", "لم نتمكن من فتح الملف حالياً.")
+        }
+    }
+
+    const handleStartEdit = (message: ChatMessage) => {
+        setEditingMessage(message)
+        setEditedText(message.content)
+        closeActionsModal()
+    }
+
+    const handleSaveEdit = () => {
+        if (!editingMessage) {
+            return
+        }
+
+        const nextText = editedText.trim()
+        const currentText = editingMessage.content.trim()
+
+        if (nextText === currentText) {
+            closeEditModal()
+            return
+        }
+
+        updateMessageMutation.mutate(
+            {
+                conversationId,
+                messageId: editingMessage.id,
+                text: nextText || null,
+            },
+            {
+                onSuccess: closeEditModal,
+                onError: () => {
+                    Alert.alert("فشل التعديل", "تعذر تعديل الرسالة حالياً.")
+                },
+            }
+        )
+    }
+
+    const handleDeleteMessage = (message: ChatMessage) => {
+        Alert.alert("حذف الرسالة", "هل تريد حذف هذه الرسالة نهائياً؟", [
+            { text: "إلغاء", style: "cancel" },
+            {
+                text: "حذف",
+                style: "destructive",
+                onPress: () => {
+                    deleteMessageMutation.mutate(
+                        { conversationId, messageId: message.id },
+                        {
+                            onError: () => {
+                                Alert.alert("فشل الحذف", "تعذر حذف الرسالة حالياً.")
+                            },
+                        }
+                    )
+                },
+            },
+        ])
+
+        closeActionsModal()
+    }
+
+    const selectedMessageActions: ChatMessageActionItem[] = selectedMessage
+        ? (() => {
+            const actionState = getMessageActionsState(selectedMessage)
+            const actions: ChatMessageActionItem[] = []
+
+            if (actionState.canEdit) {
+                actions.push({
+                    key: "edit",
+                    label: "تعديل الرسالة",
+                    icon: "create-outline",
+                    color: "#2563EB",
+                    textStyle: styles.actionText,
+                    onPress: () => handleStartEdit(selectedMessage),
+                })
+            }
+
+            if (actionState.canDownloadImage) {
+                actions.push({
+                    key: "download-image",
+                    label: "تنزيل الصورة",
+                    icon: "download-outline",
+                    color: "#0F172A",
+                    textStyle: styles.actionText,
+                    onPress: () => {
+                        void handleDownloadImage(selectedMessage)
+                    },
+                })
+            }
+
+            if (actionState.canDownloadFile) {
+                actions.push({
+                    key: "download-file",
+                    label: "تنزيل الملف",
+                    icon: "download-outline",
+                    color: "#0F172A",
+                    textStyle: styles.actionText,
+                    onPress: () => {
+                        void handleDownloadFile(selectedMessage)
+                    },
+                })
+            }
+
+            if (actionState.canDelete) {
+                actions.push({
+                    key: "delete",
+                    label: "حذف الرسالة",
+                    icon: "trash-bin-outline",
+                    color: "#DC2626",
+                    textStyle: styles.deleteText,
+                    onPress: () => handleDeleteMessage(selectedMessage),
+                })
+            }
+
+            return actions
+        })()
+        : []
 
     if (isMessagesLoading || isConversationsLoading) {
         return (
@@ -153,45 +307,12 @@ export default function ChatScreen() {
                 keyboardVerticalOffset={Platform.OS === "ios" ? 6 : 0}
             >
                 <View style={styles.container}>
-                    <View style={styles.header}>
-                        <View style={styles.actions}>
-                            <TouchableOpacity activeOpacity={0.85} style={styles.headerButton}>
-                                <Ionicons name="videocam-outline" size={20} color="#2563EB" />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.85} style={styles.headerButton}>
-                                <Ionicons name="call-outline" size={20} color="#2563EB" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.userInfo}>
-                            <ChatAvatar
-                                size={52}
-                                name={headerTitle}
-                                imageUrl={otherUserAvatarUrl}
-                                color={avatarColor}
-                            />
-
-                            <View style={styles.userCopy}>
-                                <Text style={styles.name} numberOfLines={1}>
-                                    {headerTitle}
-                                </Text>
-                                {!!headerUsername && (
-                                    <Text style={styles.username} numberOfLines={1}>
-                                        @{headerUsername.replace(/^@+/, "")}
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            style={styles.backButton}
-                            onPress={() => router.back()}
-                        >
-                            <Text style={styles.backLabel}>الرسائل</Text>
-                            <Ionicons name="chevron-forward" size={20} color="#2563EB" />
-                        </TouchableOpacity>
-                    </View>
+                    <ChatHeader
+                        title={headerTitle}
+                        avatarUrl={otherUserAvatarUrl}
+                        avatarColor={avatarColor}
+                        onBack={() => router.back()}
+                    />
 
                     <FlatList
                         ref={flatListRef}
@@ -200,41 +321,54 @@ export default function ChatScreen() {
                             <ChatMessageBubble
                                 message={item}
                                 avatarColor={avatarColor}
+                                onLongPress={handleOpenMessageActions}
+                                onPressImage={handlePreviewImage}
+                                onPressFile={handleOpenFile}
                             />
                         )}
-                        keyExtractor={(item) => String(item.id)}
+                        keyExtractor={(item) => item.id}
                         contentContainerStyle={styles.messages}
                         showsVerticalScrollIndicator={false}
-                        onContentSizeChange={() =>
-                            flatListRef.current?.scrollToEnd({ animated: true })
-                        }
-                        ListHeaderComponent={
-                            chatDateLabel ? (
-                                <View style={styles.dateWrap}>
-                                    <Text style={styles.date}>{chatDateLabel}</Text>
-                                </View>
-                            ) : null
-                        }
+                        onContentSizeChange={() => scrollMessagesToEnd(flatListRef)}
+                        ListHeaderComponent={<ChatDateBadge label={chatDateLabel} />}
                         ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIcon}>
-                                    <Ionicons
-                                        name="chatbubble-ellipses-outline"
-                                        size={26}
-                                        color="#2563EB"
-                                    />
-                                </View>
-                                <Text style={styles.emptyTitle}>ابدأ المحادثة الآن</Text>
-                                <Text style={styles.emptyText}>
-                                    أول رسالة ستظهر هنا بشكل مرتب مع اسم وصورة الطرف الآخر.
-                                </Text>
-                            </View>
+                            <ChatEmptyState
+                                iconName="chatbubble-ellipses-outline"
+                                title="ابدأ المحادثة الآن"
+                                description="أرسل أول رسالة للتواصل ومناقشة التفاصيل بسهولة."
+                            />
                         }
                     />
 
                     <ChatComposer conversationId={conversationId} />
                 </View>
             </KeyboardAvoidingView>
+
+            <ChatImagePreviewModal
+                imageUri={previewImageUri}
+                onClose={() => setPreviewImageUri(null)}
+            />
+
+            <ChatMessageActionsModal
+                visible={!!selectedMessage}
+                title="إجراءات الرسالة"
+                subtitle={
+                    selectedMessage
+                        ? getMessageActionSubtitle(selectedMessage)
+                        : "اختر الإجراء المناسب لهذه الرسالة"
+                }
+                actions={selectedMessageActions}
+                onClose={closeActionsModal}
+            />
+
+            <ChatEditMessageModal
+                visible={!!editingMessage}
+                value={editedText}
+                isSaving={updateMessageMutation.isPending}
+                onChangeText={setEditedText}
+                onSave={handleSaveEdit}
+                onClose={closeEditModal}
+            />
         </SafeAreaView>
     )
 }
@@ -257,106 +391,21 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "#F8FAFC",
     },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
-    },
-    backButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    backLabel: {
-        color: "#2563EB",
-        fontSize: 17,
-        fontWeight: "700",
-    },
-    headerButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#F8FAFC",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    userInfo: {
-        flex: 1,
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 10,
-    },
-    userCopy: {
-        alignItems: "center",
-        marginTop: 6,
-    },
-    name: {
-        fontSize: 16,
-        fontWeight: "800",
-        color: "#0F172A",
-        textAlign: "center",
-    },
-    username: {
-        color: "#2563EB",
-        fontSize: 12,
-        fontWeight: "700",
-        marginTop: 3,
-    },
-    actions: {
-        flexDirection: "row",
-        gap: 8,
-    },
-    dateWrap: {
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    date: {
-        backgroundColor: "#E2E8F0",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 14,
-        fontSize: 12,
-        color: "#475569",
-        fontWeight: "700",
-    },
     messages: {
         padding: 16,
         paddingBottom: 24,
         flexGrow: 1,
     },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 28,
-    },
-    emptyIcon: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: "#DBEAFE",
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 14,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: "800",
+    actionText: {
+        fontSize: 15,
+        fontWeight: "700",
         color: "#0F172A",
-        marginBottom: 8,
+        textAlign: "center",
     },
-    emptyText: {
-        color: "#64748B",
-        fontSize: 14,
-        lineHeight: 22,
+    deleteText: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#DC2626",
         textAlign: "center",
     },
 })

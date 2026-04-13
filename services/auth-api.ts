@@ -1,10 +1,42 @@
+import { AUTH_COPY } from '@/lib/auth/auth-copy';
+import {
+  getTokenDisplayName,
+  getTokenRoles,
+  hasAdminPanelRoles,
+} from '@/lib/auth/admin-access';
 import { apiClient, getApiErrorMessage, setAuthToken } from '@/services/http-client';
+
+const AUTH_ENDPOINTS = {
+  login: '/api/Account/login',
+  register: '/api/Account/register',
+  forgotPassword: '/api/Account/forgot-password',
+  verifyResetCode: '/api/Account/verify-reset-code',
+  resetPassword: '/api/Account/reset-password',
+  universities: '/api/Account/universities',
+  profile: '/api/Account/profile',
+  completeProfile: '/api/Account/complete-profile',
+} as const;
+
+const AUTH_ERROR_MESSAGES = {
+  forgotPasswordFailed: 'تعذر إرسال رمز التحقق',
+  verificationCodeRequired: 'يرجى إدخال رمز التحقق',
+  invalidVerificationCode: 'رمز التحقق غير صحيح',
+  resetPasswordFailed: 'تعذر تغيير كلمة المرور',
+  universitiesFailed: 'تعذر تحميل قائمة الجامعات',
+  profileFailed: 'تعذر تحميل الملف الشخصي',
+  universityRequired: 'يرجى اختيار الجامعة',
+  majorRequired: 'يرجى إدخال التخصص أو القسم',
+  profileImageRequired: 'يرجى اختيار صورة شخصية',
+  completeProfileFailed: 'تعذر إكمال الملف الشخصي',
+} as const;
 
 export type User = {
   id: string;
   name: string;
   email: string;
   isProfileCompleted: boolean;
+  roles: string[];
+  canAccessAdmin: boolean;
 };
 
 export type University = {
@@ -66,125 +98,143 @@ export type CompleteProfileInput = {
   profileImage: ProfileImageInput;
 };
 
-type ApiLoginResponse = {
+type ApiMessageResponse = {
   message?: string;
+};
+
+type ApiLoginResponse = ApiMessageResponse & {
   token?: string | null;
   isProfileCompleted?: boolean;
+  roles?: unknown;
 };
 
-type ApiRegisterResponse = {
-  message?: string;
-};
-
-type ApiActionResponse = {
-  message?: string;
-};
-
-type ApiUniversitiesResponse = {
-  message?: string;
+type ApiUniversitiesResponse = ApiMessageResponse & {
   data?: University[];
 };
 
-type ApiCompleteProfileResponse = {
-  message?: string;
-};
+type ApiCompleteProfileResponse = ApiMessageResponse;
 
-type ApiProfileResponse = {
-  message?: string;
+type ApiProfileResponse = ApiMessageResponse & {
   data?: AccountProfile;
 };
 
-function decodeJwtPayload(token: string) {
-  try {
-    const [, payload = ''] = token.split('.');
+type AuthenticatedUserParams = {
+  email: string;
+  name: string;
+  isProfileCompleted?: boolean;
+  roles?: string[];
+};
 
-    if (!payload) {
-      return null;
-    }
+function trimValue(value: string) {
+  return value.trim();
+}
 
-    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const paddedPayload = normalizedPayload.padEnd(
-      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      '=',
-    );
+function requireValue(value: string, errorMessage: string) {
+  if (!value) {
+    throw new Error(errorMessage);
+  }
 
-    const decoded =
-      typeof atob === 'function'
-        ? atob(paddedPayload)
-        : Buffer.from(paddedPayload, 'base64').toString('utf-8');
+  return value;
+}
 
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
+function requireTrimmedValue(value: string, errorMessage: string) {
+  return requireValue(trimValue(value), errorMessage);
+}
+
+function assertMinTrimmedLength(value: string, minLength: number, errorMessage: string) {
+  if (trimValue(value).length < minLength) {
+    throw new Error(errorMessage);
   }
 }
 
-function getTokenDisplayName(token?: string | null) {
-  if (!token) {
-    return '';
+function normalizeEmail(email: string) {
+  return trimValue(email).toLowerCase();
+}
+
+function normalizeRequiredEmail(email: string) {
+  return requireValue(normalizeEmail(email), AUTH_COPY.emailRequired);
+}
+
+function normalizeRequiredCode(code: string) {
+  return requireTrimmedValue(code, AUTH_ERROR_MESSAGES.verificationCodeRequired);
+}
+
+function normalizePositiveNumber(value: number, errorMessage: string) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    throw new Error(errorMessage);
   }
 
-  const payload = decodeJwtPayload(token);
-
-  if (!payload) {
-    return '';
-  }
-
-  const fullNameCandidates = [
-    payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
-    payload.name,
-    payload.unique_name,
-    payload.fullName,
-    payload.full_name,
-  ];
-
-  for (const candidate of fullNameCandidates) {
-    if (typeof candidate === 'string' && candidate.trim().length > 0) {
-      return candidate.trim();
-    }
-  }
-
-  const givenName =
-    typeof payload.given_name === 'string' ? payload.given_name.trim() : '';
-  const familyName =
-    typeof payload.family_name === 'string' ? payload.family_name.trim() : '';
-
-  return `${givenName} ${familyName}`.trim();
+  return numericValue;
 }
 
 function buildUserName(name: string, email: string) {
-  const fromEmail = email.split('@')[0]?.trim();
+  const emailPrefix = email.split('@')[0]?.trim();
 
-  if (fromEmail) {
-    return fromEmail;
+  if (emailPrefix) {
+    return emailPrefix;
   }
 
   return name.replace(/\s+/g, '').toLowerCase() || `user${Date.now()}`;
 }
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+function resolveAuthenticatedUserName(token: string, email: string) {
+  return getTokenDisplayName(token) || email.split('@')[0] || 'User';
 }
 
 function normalizeProfileCompletionStatus(value?: boolean) {
   return value !== false;
 }
 
+function normalizeRoles(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter((entry): entry is string => Boolean(entry)),
+    ),
+  );
+}
+
+function mergeRoles(primaryRoles: string[], secondaryRoles: string[]) {
+  return Array.from(new Set([...primaryRoles, ...secondaryRoles]));
+}
+
 function mapAuthenticatedUser({
   email,
   name,
   isProfileCompleted,
-}: {
-  email: string;
-  name: string;
-  isProfileCompleted?: boolean;
-}): User {
+  roles = [],
+}: AuthenticatedUserParams): User {
   return {
     id: email,
     name,
     email,
     isProfileCompleted: normalizeProfileCompletionStatus(isProfileCompleted),
+    roles,
+    canAccessAdmin: hasAdminPanelRoles(roles),
   };
+}
+
+function appendProfileImage(formData: FormData, profileImage: ProfileImageInput) {
+  if (profileImage.file) {
+    formData.append('ProfileImageUrl', profileImage.file);
+    return;
+  }
+
+  formData.append(
+    'ProfileImageUrl',
+    {
+      uri: profileImage.uri,
+      name: profileImage.name ?? `profile-${Date.now()}.jpg`,
+      type: profileImage.type ?? 'image/jpeg',
+    } as never,
+  );
 }
 
 async function postJson<TResponse>(
@@ -226,54 +276,59 @@ async function postMultipart<TResponse>(
   }
 }
 
+async function submitMessageAction(
+  path: string,
+  body: Record<string, unknown>,
+  fallbackMessage: string,
+) {
+  const response = await postJson<ApiMessageResponse>(path, body, fallbackMessage);
+  return response.message ?? null;
+}
+
 export async function login(input: LoginInput): Promise<User> {
   const email = normalizeEmail(input.email);
 
   const response = await postJson<ApiLoginResponse>(
-    '/api/Account/login',
+    AUTH_ENDPOINTS.login,
     {
       email,
       password: input.password,
     },
-    'تعذر تسجيل الدخول',
+    AUTH_COPY.loginFailed,
   );
 
   if (!response.token) {
-    throw new Error(response.message ?? 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    throw new Error(response.message ?? AUTH_COPY.invalidCredentials);
   }
 
-  setAuthToken(response.token);
+  const token = response.token;
+  const roles = mergeRoles(normalizeRoles(response.roles), getTokenRoles(token));
 
-  const tokenDisplayName = getTokenDisplayName(response.token);
+  setAuthToken(token);
 
   return mapAuthenticatedUser({
     email,
-    name: tokenDisplayName || email.split('@')[0] || 'User',
+    name: resolveAuthenticatedUserName(token, email),
     isProfileCompleted: response.isProfileCompleted,
+    roles,
   });
 }
 
 export async function register(input: RegisterInput): Promise<User> {
   const email = normalizeEmail(input.email);
-  const name = input.name.trim();
+  const name = requireTrimmedValue(input.name, AUTH_COPY.fullNameRequired);
 
-  if (!name) {
-    throw new Error('يرجى إدخال الاسم الكامل');
-  }
+  assertMinTrimmedLength(input.password, 8, AUTH_COPY.registerPasswordMinLength);
 
-  if (input.password.trim().length < 8) {
-    throw new Error('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
-  }
-
-  await postJson<ApiRegisterResponse>(
-    '/api/Account/register',
+  await postJson<ApiMessageResponse>(
+    AUTH_ENDPOINTS.register,
     {
       fullName: name,
       userName: buildUserName(name, email),
       email,
       password: input.password,
     },
-    'تعذر إنشاء الحساب',
+    AUTH_COPY.registerFailed,
   );
 
   const user = await login({
@@ -285,72 +340,47 @@ export async function register(input: RegisterInput): Promise<User> {
 }
 
 export async function forgotPassword(input: ForgotPasswordInput): Promise<string | null> {
-  const email = normalizeEmail(input.email);
+  const email = normalizeRequiredEmail(input.email);
 
-  if (!email) {
-    throw new Error('يرجى إدخال البريد الجامعي');
-  }
-
-  const response = await postJson<ApiActionResponse>(
-    '/api/Account/forgot-password',
+  return submitMessageAction(
+    AUTH_ENDPOINTS.forgotPassword,
     { email },
-    'تعذر إرسال رمز التحقق',
+    AUTH_ERROR_MESSAGES.forgotPasswordFailed,
   );
-
-  return response.message ?? null;
 }
 
 export async function verifyResetCode(input: VerifyResetCodeInput): Promise<string | null> {
-  const email = normalizeEmail(input.email);
-  const code = input.code.trim();
+  const email = normalizeRequiredEmail(input.email);
+  const code = normalizeRequiredCode(input.code);
 
-  if (!email) {
-    throw new Error('يرجى إدخال البريد الجامعي');
-  }
-
-  if (!code) {
-    throw new Error('يرجى إدخال رمز التحقق');
-  }
-
-  const response = await postJson<ApiActionResponse>(
-    '/api/Account/verify-reset-code',
+  return submitMessageAction(
+    AUTH_ENDPOINTS.verifyResetCode,
     { email, code },
-    'رمز التحقق غير صحيح',
+    AUTH_ERROR_MESSAGES.invalidVerificationCode,
   );
-
-  return response.message ?? null;
 }
 
 export async function resetPassword(input: ResetPasswordInput): Promise<string | null> {
-  const email = normalizeEmail(input.email);
-  const code = input.code.trim();
-  const newPassword = input.newPassword.trim();
+  const email = normalizeRequiredEmail(input.email);
+  const code = normalizeRequiredCode(input.code);
 
-  if (!email) {
-    throw new Error('يرجى إدخال البريد الجامعي');
-  }
+  assertMinTrimmedLength(input.newPassword, 8, AUTH_COPY.registerPasswordMinLength);
 
-  if (!code) {
-    throw new Error('يرجى إدخال رمز التحقق');
-  }
-
-  if (newPassword.length < 8) {
-    throw new Error('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
-  }
-
-  const response = await postJson<ApiActionResponse>(
-    '/api/Account/reset-password',
-    { email, code, newPassword },
-    'تعذر تغيير كلمة المرور',
+  return submitMessageAction(
+    AUTH_ENDPOINTS.resetPassword,
+    {
+      email,
+      code,
+      newPassword: input.newPassword.trim(),
+    },
+    AUTH_ERROR_MESSAGES.resetPasswordFailed,
   );
-
-  return response.message ?? null;
 }
 
 export async function getUniversities(): Promise<University[]> {
   const response = await getRequest<ApiUniversitiesResponse>(
-    '/api/Account/universities',
-    'تعذر تحميل قائمة الجامعات',
+    AUTH_ENDPOINTS.universities,
+    AUTH_ERROR_MESSAGES.universitiesFailed,
   );
 
   return response.data ?? [];
@@ -358,52 +388,37 @@ export async function getUniversities(): Promise<University[]> {
 
 export async function getAccountProfile(): Promise<AccountProfile | null> {
   const response = await getRequest<ApiProfileResponse>(
-    '/api/Account/profile',
-    'تعذر تحميل الملف الشخصي',
+    AUTH_ENDPOINTS.profile,
+    AUTH_ERROR_MESSAGES.profileFailed,
   );
 
   return response.data ?? null;
 }
 
 export async function completeProfile(input: CompleteProfileInput): Promise<string | null> {
-  const universityId = Number(input.universityId);
-  const major = input.major.trim();
-  const bio = input.bio.trim();
-
-  if (!Number.isFinite(universityId) || universityId <= 0) {
-    throw new Error('يرجى اختيار الجامعة');
-  }
-
-  if (!major) {
-    throw new Error('يرجى إدخال التخصص أو القسم');
-  }
-
-  if (!input.profileImage?.uri) {
-    throw new Error('يرجى اختيار صورة شخصية');
-  }
+  const universityId = normalizePositiveNumber(
+    input.universityId,
+    AUTH_ERROR_MESSAGES.universityRequired,
+  );
+  const major = requireTrimmedValue(input.major, AUTH_ERROR_MESSAGES.majorRequired);
+  const profileImageUri = requireValue(
+    trimValue(input.profileImage?.uri ?? ''),
+    AUTH_ERROR_MESSAGES.profileImageRequired,
+  );
 
   const formData = new FormData();
   formData.append('UniversityId', String(universityId));
   formData.append('Major', major);
-  formData.append('Bio', bio);
-
-  if (input.profileImage.file) {
-    formData.append('ProfileImageUrl', input.profileImage.file);
-  } else {
-    formData.append(
-      'ProfileImageUrl',
-      {
-        uri: input.profileImage.uri,
-        name: input.profileImage.name ?? `profile-${Date.now()}.jpg`,
-        type: input.profileImage.type ?? 'image/jpeg',
-      } as never,
-    );
-  }
+  formData.append('Bio', trimValue(input.bio));
+  appendProfileImage(formData, {
+    ...input.profileImage,
+    uri: profileImageUri,
+  });
 
   const response = await postMultipart<ApiCompleteProfileResponse>(
-    '/api/Account/complete-profile',
+    AUTH_ENDPOINTS.completeProfile,
     formData,
-    'تعذر إكمال الملف الشخصي',
+    AUTH_ERROR_MESSAGES.completeProfileFailed,
   );
 
   return response.message ?? null;
