@@ -1,0 +1,155 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { Pressable, ScrollView, StyleSheet, Text, View, type ViewProps } from 'react-native';
+
+import type { NewsItem } from '@/services/news-api';
+import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
+
+import { HomeSectionHeader, HomeStateBlock } from './home-shared';
+import { newsEmoji } from './home-utils';
+
+type HomeNewsSectionProps = {
+  tickerTitle: string;
+  isLoading: boolean;
+  isError: boolean;
+  news: NewsItem[];
+  onPressTicker: () => void;
+  onPressMore: () => void;
+  onPressCard: (item: NewsItem) => void;
+  onLayout?: ViewProps['onLayout'];
+};
+
+export function HomeNewsSection({
+  tickerTitle,
+  isLoading,
+  isError,
+  news,
+  onPressTicker,
+  onPressMore,
+  onPressCard,
+  onLayout,
+}: HomeNewsSectionProps) {
+  return (
+    <View onLayout={onLayout}>
+      <Pressable onPress={onPressTicker} style={({ pressed }) => [styles.ticker, pressed && styles.pressed]}>
+        <Ionicons name="chevron-back" size={16} color="rgba(255,149,0,0.5)" />
+        <View style={styles.tickerIn}>
+          <Text numberOfLines={1} style={styles.tickerTitle}>
+            {tickerTitle}
+          </Text>
+          <Ionicons name="megaphone-outline" size={16} color={SemanticColors.orange} />
+        </View>
+      </Pressable>
+
+      <View style={styles.sec}>
+        <HomeSectionHeader title="آخر الأخبار" icon="newspaper-outline" color={SemanticColors.green} bg="rgba(52,199,89,0.1)" onPress={onPressMore} />
+        {isLoading ? (
+          <HomeStateBlock color={SemanticColors.green} loading empty="لا توجد أخبار حالياً" />
+        ) : isError ? (
+          <HomeStateBlock color={SemanticColors.green} error empty="لا توجد أخبار حالياً" />
+        ) : news.length === 0 ? (
+          <HomeStateBlock color={SemanticColors.green} empty="لا توجد أخبار حالياً" />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rtlScroll} contentContainerStyle={styles.hList}>
+            {news.map((item) => (
+              <Pressable key={item.id} onPress={() => onPressCard(item)} style={({ pressed }) => [styles.card, styles.newsCard, styles.mirrorX, styles.hCard, pressed && styles.mirrorPressed]}>
+                <View style={styles.newsTop}>
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.newsImage} contentFit="cover" contentPosition="center" />
+                  ) : (
+                    <Text style={styles.emoji}>{newsEmoji(item)}</Text>
+                  )}
+                </View>
+                <View style={styles.newsBody}>
+                  {item.isImportant ? (
+                    <View style={styles.imp}>
+                      <Text style={styles.impTxt}>مهم</Text>
+                    </View>
+                  ) : null}
+                  <Text numberOfLines={2} style={styles.cardTitle}>
+                    {item.title}
+                  </Text>
+                  <View style={styles.newsFoot}>
+                    <Text style={styles.smallMuted}>{item.timeAgo}</Text>
+                    <Text numberOfLines={1} style={styles.smallStrong}>
+                      {item.source}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  ticker: {
+    minHeight: 56, borderRadius: 18, paddingHorizontal: 16, backgroundColor: '#fff8ed', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
+  },
+  tickerIn: {
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 10, flex: 1
+  },
+  tickerTitle: {
+    flex: 1, color: '#c27200', fontFamily: FontFamily.cairo, fontSize: FontSize.md, fontWeight: FontWeight.bold, textAlign: 'right'
+  },
+  sec: {
+    paddingTop: 20
+  },
+  rtlScroll: {
+    transform: [{ scaleX: -1 }]
+  },
+  mirrorX: {
+    transform: [{ scaleX: -1 }]
+  },
+  mirrorPressed: {
+    transform: [{ scaleX: -1 }, { scale: 0.97 }]
+  },
+  hList: {
+    paddingHorizontal: 6
+  },
+  hCard: {
+    marginHorizontal: 6
+  },
+  card: {
+    borderRadius: 24, backgroundColor: Colors.card
+  },
+  newsCard: {
+    width: 210, overflow: 'hidden'
+  },
+  newsTop: {
+    height: 92, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 8
+  },
+  newsImage: {
+    ...StyleSheet.absoluteFillObject
+  },
+  emoji: {
+    fontSize: 30
+  },
+  newsBody: {
+    paddingHorizontal: 14, paddingVertical: 14
+  },
+  imp: {
+    alignSelf: 'flex-end', borderRadius: 8, backgroundColor: 'rgba(255,59,48,0.1)', paddingHorizontal: 6, paddingVertical: 2, marginBottom: 8
+  },
+  impTxt: {
+    color: SemanticColors.red, fontFamily: FontFamily.cairo, fontSize: FontSize.xxs, fontWeight: FontWeight.bold
+  },
+  cardTitle: {
+    color: Colors.foreground, fontFamily: FontFamily.cairo, fontSize: FontSize.md, fontWeight: FontWeight.bold, textAlign: 'right', lineHeight: 22
+  },
+  newsFoot: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10
+  },
+  smallMuted: {
+    color: 'rgba(142,142,147,0.7)', fontFamily: FontFamily.cairo, fontSize: FontSize.xxs
+  },
+  smallStrong: {
+    color: Colors.mutedForeground, fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.medium
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }]
+  },
+});

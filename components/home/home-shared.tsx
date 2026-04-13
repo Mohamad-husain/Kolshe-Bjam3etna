@@ -1,9 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors } from '@/styles/ui-theme';
-
-import { styles } from './home-styles';
+import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export function HomeSectionHeader({
   title,
@@ -54,3 +52,61 @@ export function HomeStateBlock({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  hRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  moreBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 2,
+  },
+  moreTxt: {
+    color: Colors.primary,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.x11,
+    fontWeight: FontWeight.semibold,
+  },
+  titleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  titleTxt: {
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.x17,
+    fontWeight: FontWeight.bold,
+  },
+  titleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  state: {
+    minHeight: 112,
+    borderRadius: 24,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 18,
+  },
+  stateTxt: {
+    color: Colors.mutedForeground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    textAlign: 'center',
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }],
+  },
+});

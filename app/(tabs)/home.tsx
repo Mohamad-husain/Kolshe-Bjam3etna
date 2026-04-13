@@ -1,20 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, View, type LayoutChangeEvent } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HomeHero } from '@/components/home/home-hero';
+import { HomeAdsSection } from '@/components/home/home-ads-section';
+import { HomeEventsSection } from '@/components/home/home-events-section';
+import { HomeNewsSection } from '@/components/home/home-news-section';
+import { HomeOffersSection } from '@/components/home/home-offers-section';
 import { HomeQuickAccess } from '@/components/home/home-quick-access';
-import {
-  HomeAdsSection,
-  HomeEventsSection,
-  HomeNewsSection,
-  HomeOffersSection,
-  HomeServicesSection,
-} from '@/components/home/home-sections';
-import { styles } from '@/components/home/home-styles';
+import { HomeServicesSection } from '@/components/home/home-services-section';
 import type { ExploreTab, SectionKey } from '@/components/home/home-types';
 import { hasText } from '@/components/home/home-utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -23,6 +20,18 @@ import { useEventsQuery, useMarketplaceQuery, useServicesQuery } from '@/hooks/q
 import { useNewsQuery, usePartnerOffersQuery } from '@/hooks/queries/use-home-queries';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
+import { Colors } from '@/styles/ui-theme';
+
+function filterHomeItems<T>(
+  items: T[] | undefined,
+  query: string,
+  values: (item: T) => string[],
+  limit: number,
+) {
+  return (items ?? [])
+    .filter((item) => !query || values(item).some((value) => hasText(value, query)))
+    .slice(0, limit);
+}
 
 export default function HomeRoute() {
   const { user } = useAuth();
@@ -41,38 +50,23 @@ export default function HomeRoute() {
   const q = search.trim().toLowerCase();
 
   const news = useMemo(
-    () =>
-      (newsQuery.data ?? [])
-        .filter((item) => !q || [item.title, item.source, item.category].some((value) => hasText(value, q)))
-        .slice(0, 3),
+    () => filterHomeItems(newsQuery.data, q, (item) => [item.title, item.source, item.category], 3),
     [newsQuery.data, q],
   );
   const services = useMemo(
-    () =>
-      (servicesQuery.data ?? [])
-        .filter((item) => !q || [item.title, item.description, item.category, item.owner.name].some((value) => hasText(value, q)))
-        .slice(0, 3),
+    () => filterHomeItems(servicesQuery.data, q, (item) => [item.title, item.description, item.category, item.owner.name], 3),
     [servicesQuery.data, q],
   );
   const ads = useMemo(
-    () =>
-      (adsQuery.data ?? [])
-        .filter((item) => !q || [item.title, item.description, item.category, item.condition].some((value) => hasText(value, q)))
-        .slice(0, 3),
+    () => filterHomeItems(adsQuery.data, q, (item) => [item.title, item.description, item.category, item.condition], 3),
     [adsQuery.data, q],
   );
   const offers = useMemo(
-    () =>
-      (offersQuery.data ?? [])
-        .filter((item) => !q || [item.name, item.offerTitle, item.location ?? '', item.type].some((value) => hasText(value, q)))
-        .slice(0, 5),
+    () => filterHomeItems(offersQuery.data, q, (item) => [item.name, item.offerTitle, item.location ?? '', item.type], 5),
     [offersQuery.data, q],
   );
   const events = useMemo(
-    () =>
-      (eventsQuery.data ?? [])
-        .filter((item) => !q || [item.title, item.description, item.club, item.location].some((value) => hasText(value, q)))
-        .slice(0, 2),
+    () => filterHomeItems(eventsQuery.data, q, (item) => [item.title, item.description, item.club, item.location], 2),
     [eventsQuery.data, q],
   );
 
@@ -81,10 +75,18 @@ export default function HomeRoute() {
   const universityName = profileQuery.data?.universityName?.trim() || 'المجتمع الجامعي';
   const universityNumber = profileQuery.data?.universityNumber?.trim() || '';
   const fullName = profileQuery.data?.fullName?.trim() || user?.name || '';
+  const scrollBottomPadding = insets.bottom + 118;
+  const fabBottom = insets.bottom + 86;
 
   const toExplore = (tab: ExploreTab) => {
     router.push({ pathname: '/(tabs)/explore', params: { tab } });
   };
+
+  const goToNews = () => onSection('news');
+  const goToOffers = () => onSection('offers');
+  const goToServices = () => toExplore('services');
+  const goToMarketplace = () => toExplore('marketplace');
+  const goToEvents = () => toExplore('events');
 
   const onSection = (key: SectionKey) => {
     scrollRef.current?.scrollTo({ y: Math.max(positions.current[key] - 8, 0), animated: true });
@@ -95,7 +97,7 @@ export default function HomeRoute() {
   };
 
   const openNewsCard = (item: NewsItem) => {
-    Alert.alert(item.title, `${item.source}\n${item.timeAgo}`);
+    Alert.alert(item.title, [item.source, item.timeAgo].join('\n'));
   };
 
   const openOfferCard = (item: PartnerOffer) => {
@@ -108,7 +110,7 @@ export default function HomeRoute() {
       <View style={styles.root}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 118 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
           showsVerticalScrollIndicator={false}
         >
           <HomeHero
@@ -127,8 +129,8 @@ export default function HomeRoute() {
               isLoading={newsQuery.isLoading}
               isError={newsQuery.isError}
               news={news}
-              onPressTicker={() => onSection('news')}
-              onPressMore={() => onSection('news')}
+              onPressTicker={goToNews}
+              onPressMore={goToNews}
               onPressCard={openNewsCard}
               onLayout={register('news')}
             />
@@ -137,16 +139,16 @@ export default function HomeRoute() {
               isLoading={servicesQuery.isLoading}
               isError={servicesQuery.isError}
               services={services}
-              onPressMore={() => toExplore('services')}
-              onPressCard={() => toExplore('services')}
+              onPressMore={goToServices}
+              onPressCard={goToServices}
             />
 
             <HomeAdsSection
               isLoading={adsQuery.isLoading}
               isError={adsQuery.isError}
               ads={ads}
-              onPressMore={() => toExplore('marketplace')}
-              onPressCard={() => toExplore('marketplace')}
+              onPressMore={goToMarketplace}
+              onPressCard={goToMarketplace}
             />
 
             {showOffers ? (
@@ -154,7 +156,7 @@ export default function HomeRoute() {
                 isLoading={offersQuery.isLoading}
                 isError={offersQuery.isError}
                 offers={offers}
-                onPressMore={() => onSection('offers')}
+                onPressMore={goToOffers}
                 onPressCard={openOfferCard}
                 onLayout={register('offers')}
               />
@@ -164,16 +166,52 @@ export default function HomeRoute() {
               isLoading={eventsQuery.isLoading}
               isError={eventsQuery.isError}
               events={events}
-              onPressMore={() => toExplore('events')}
-              onPressCard={() => toExplore('events')}
+              onPressMore={goToEvents}
+              onPressCard={goToEvents}
             />
           </View>
         </ScrollView>
 
-        <Pressable style={({ pressed }) => [styles.fab, { bottom: insets.bottom + 86 }, pressed && styles.pressed]} accessibilityLabel="الخدمات">
+        <Pressable style={({ pressed }) => [styles.fab, { bottom: fabBottom }, pressed && styles.pressed]} accessibilityLabel="الخدمات">
           <Ionicons name="briefcase-outline" size={23} color="#ffffff" />
         </Pressable>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+  },
+  root: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  content: {
+    backgroundColor: Colors.background,
+  },
+  body: {
+    paddingTop: 18,
+    paddingHorizontal: 16,
+  },
+  fab: {
+    position: 'absolute',
+    left: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0a84ff',
+    shadowColor: '#0a84ff',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }],
+  },
+});
