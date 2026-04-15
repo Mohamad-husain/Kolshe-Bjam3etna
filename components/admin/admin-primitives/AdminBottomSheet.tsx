@@ -1,6 +1,8 @@
 import type { PropsWithChildren } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -46,29 +48,37 @@ export function AdminBottomSheet({
         />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.modalSurface,
-              borderColor: theme.border,
-            },
-            sheetStyle,
-          ]}
+        <KeyboardAvoidingView
+          pointerEvents="box-none"
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={12}
+          style={styles.sheetAvoider}
         >
-          <View style={[styles.sheetHandle, { backgroundColor: theme.borderStrong }]} />
-          <Pressable onPress={onClose} style={styles.sheetClose}>
-            <Text style={[styles.sheetCloseText, { color: theme.danger }]}>إلغاء</Text>
-          </Pressable>
-          <Text style={[styles.sheetTitle, { color: theme.heading }]}>{title}</Text>
-          <ScrollView
-            showsVerticalScrollIndicator={showsVerticalScrollIndicator}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={[styles.sheetContent, contentContainerStyle]}
+          <View
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: theme.modalSurface,
+                borderColor: theme.border,
+              },
+              sheetStyle,
+            ]}
           >
-            {children}
-          </ScrollView>
-        </View>
+            <View style={[styles.sheetHandle, { backgroundColor: theme.borderStrong }]} />
+            <Pressable onPress={onClose} style={styles.sheetClose}>
+              <Text style={[styles.sheetCloseText, { color: theme.danger }]}>إلغاء</Text>
+            </Pressable>
+            <Text style={[styles.sheetTitle, { color: theme.heading }]}>{title}</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              contentContainerStyle={[styles.sheetContent, contentContainerStyle]}
+            >
+              {children}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
