@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 
+import { AuthHintCard } from '@/components/auth/auth-hint-card';
 import { AuthInput } from '@/components/auth/auth-input';
 import {
   AuthErrorText,
@@ -11,11 +12,6 @@ import {
 import { useRegisterMutation } from '@/hooks/mutations/use-auth-mutations';
 import { AUTH_COPY, AUTH_VALIDATION } from '@/lib/auth/auth-copy';
 import type { User } from '@/services/auth-api';
-import {
-  Colors,
-  Dimensions,
-  FontFamily,
-} from '@/styles/ui-theme';
 
 type RegisterFormProps = {
   onSuccess: (user: User) => void;
@@ -28,7 +24,6 @@ type RegisterFormValues = {
 };
 
 export default function RegisterForm({ onSuccess }: RegisterFormProps) {
-  const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const registerMutation = useRegisterMutation();
   const {
@@ -44,15 +39,21 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     mode: 'onChange',
   });
 
-  const handleRegister = handleSubmit(async (values) => {
-    setServerError('');
+  const serverError =
+    registerMutation.isError && registerMutation.error
+      ? registerMutation.error instanceof Error
+        ? registerMutation.error.message
+        : AUTH_COPY.registerFailed
+      : '';
 
-    try {
-      const user = await registerMutation.mutateAsync(values);
-      onSuccess(user);
-    } catch (error) {
-      setServerError(error instanceof Error ? error.message : AUTH_COPY.registerFailed);
+  const clearServerError = () => {
+    if (registerMutation.isError) {
+      registerMutation.reset();
     }
+  };
+
+  const handleRegister = handleSubmit((values) => {
+    registerMutation.mutate(values, { onSuccess });
   });
 
   return (
@@ -67,7 +68,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             autoComplete="name"
             icon="person-outline"
             onBlur={onBlur}
-            onChangeText={onChange}
+            onChangeText={(nextValue) => {
+              clearServerError();
+              onChange(nextValue);
+            }}
             placeholder={AUTH_COPY.fullNamePlaceholder}
             textContentType="name"
             value={value}
@@ -88,7 +92,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             icon="mail-outline"
             keyboardType="email-address"
             onBlur={onBlur}
-            onChangeText={onChange}
+            onChangeText={(nextValue) => {
+              clearServerError();
+              onChange(nextValue);
+            }}
             placeholder={AUTH_COPY.universityEmailPlaceholder}
             textContentType="username"
             value={value}
@@ -108,7 +115,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             autoComplete="password-new"
             icon="lock-closed-outline"
             onBlur={onBlur}
-            onChangeText={onChange}
+            onChangeText={(nextValue) => {
+              clearServerError();
+              onChange(nextValue);
+            }}
             placeholder={AUTH_COPY.passwordPlaceholder}
             secureTextEntry={!showPassword}
             textContentType="newPassword"
@@ -120,10 +130,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       />
       <AuthErrorText message={errors.password?.message} />
 
-      <View style={styles.hintBox}>
-        <View style={styles.hintDot} />
-        <Text style={styles.hintText}>{AUTH_COPY.registerHint}</Text>
-      </View>
+      <AuthHintCard message={AUTH_COPY.registerHint} />
 
       <AuthErrorText message={serverError} />
 
@@ -138,30 +145,3 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  hintBox: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(74, 120, 247, 0.1)',
-  },
-  hintDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Dimensions.radiusFull,
-    backgroundColor: Colors.primary,
-  },
-  hintText: {
-    flex: 1,
-    color: 'rgba(54, 101, 229, 0.9)',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    fontFamily: FontFamily.cairo,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-});

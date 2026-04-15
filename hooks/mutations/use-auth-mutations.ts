@@ -21,6 +21,10 @@ function cacheUser(queryClient: ReturnType<typeof useQueryClient>, user: User) {
   queryClient.setQueryData(queryKeys.auth.user, user);
 }
 
+function clearProfileCache(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
+}
+
 export function useLoginMutation() {
   const queryClient = useQueryClient();
 
@@ -28,6 +32,7 @@ export function useLoginMutation() {
     mutationFn: (input: LoginInput) => login(input),
     onSuccess: (user) => {
       cacheUser(queryClient, user);
+      clearProfileCache(queryClient);
     },
   });
 }
@@ -39,6 +44,7 @@ export function useRegisterMutation() {
     mutationFn: (input: RegisterInput) => register(input),
     onSuccess: (user) => {
       cacheUser(queryClient, user);
+      clearProfileCache(queryClient);
     },
   });
 }
@@ -62,7 +68,12 @@ export function useResetPasswordMutation() {
 }
 
 export function useCompleteProfileMutation() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (input: CompleteProfileInput) => completeProfile(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.profile });
+    },
   });
 }

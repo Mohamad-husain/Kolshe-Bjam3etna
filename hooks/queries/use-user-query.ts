@@ -10,5 +10,7 @@ export function useUserQuery() {
     queryFn: async () => queryClient.getQueryData<User | null>(queryKeys.auth.user) ?? null,
     initialData: () => queryClient.getQueryData<User | null>(queryKeys.auth.user) ?? null,
     staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
   });
 }
