@@ -1,4 +1,5 @@
-import { apiClient, getApiErrorMessage, getAuthToken } from '@/services/http-client';
+import { apiClient, getApiErrorMessage } from '@/services/http-client';
+import { getAuthToken } from '@/services/auth-api';
 
 type AiChatResponse = {
   message?: string | null;
