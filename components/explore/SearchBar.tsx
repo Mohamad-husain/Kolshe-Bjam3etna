@@ -1,5 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { View, TextInput, StyleSheet, Text } from "react-native";
+import {
+  KeyboardAvoidingView,
+  View,
+  TextInput,
+  StyleSheet,
+  Text,
+} from "react-native";
 import {
   Colors,
   Dimensions,
@@ -23,7 +29,7 @@ export function SearchBar({
   error,
 }: SearchBarProps) {
   return (
-    <View>
+    <KeyboardAvoidingView>
       <View
         style={[
           styles.container,
@@ -45,7 +51,7 @@ export function SearchBar({
         />
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -62,6 +68,9 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
+    alignSelf: "center",
+    maxWidth: 500,
+    width: "100%",
   },
   input: {
     flex: 1,
