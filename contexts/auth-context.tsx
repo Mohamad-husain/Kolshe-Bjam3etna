@@ -64,6 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn: (nextUser) => {
         setUser(nextUser);
         queryClient.setQueryData(queryKeys.auth.user, nextUser);
+        queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
 
         const token = getAuthToken();
 
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(null);
         setAuthToken(null);
         queryClient.setQueryData(queryKeys.auth.user, null);
+        queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
         void clearStoredAuthSession();
       },
     }),
