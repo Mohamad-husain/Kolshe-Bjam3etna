@@ -1,10 +1,13 @@
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
 import { AUTH_COPY } from '@/lib/auth/auth-copy';
 import {
   getTokenDisplayName,
   getTokenRoles,
   hasAdminPanelRoles,
 } from '@/lib/auth/admin-access';
-import { apiClient, getApiErrorMessage, setAuthToken } from '@/services/http-client';
+import { apiClient, getApiErrorMessage } from '@/services/http-client';
 
 const AUTH_ENDPOINTS = {
   login: '/api/Account/login',
@@ -30,6 +33,8 @@ const AUTH_ERROR_MESSAGES = {
   completeProfileFailed: 'تعذر إكمال الملف الشخصي',
 } as const;
 
+const AUTH_SESSION_KEY = 'auth.session';
+
 export type User = {
   id: string;
   name: string;
@@ -38,6 +43,21 @@ export type User = {
   roles: string[];
   canAccessAdmin: boolean;
 };
+
+type WebStorage = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
+export type AuthSession = {
+  token: string;
+  user: User;
+};
+
+let authToken: string | null = null;
+let secureStoreAvailability: Promise<boolean> | null = null;
+let storageOperationQueue: Promise<void> = Promise.resolve();
 
 export type University = {
   id: number;
@@ -124,6 +144,238 @@ type AuthenticatedUserParams = {
   isProfileCompleted?: boolean;
   roles?: string[];
 };
+
+function getWebStorage(): WebStorage | null {
+  return (globalThis as { localStorage?: WebStorage }).localStorage ?? null;
+}
+
+function getSecureStoreOptions() {
+  if (Platform.OS === 'ios') {
+    return {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    };
+  }
+
+  return undefined;
+}
+
+function enqueueStorageOperation(operation: () => Promise<void>) {
+  const nextOperation = storageOperationQueue.then(operation, operation);
+
+  storageOperationQueue = nextOperation.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return nextOperation;
+}
+
+async function waitForStorageOperations() {
+  await storageOperationQueue;
+}
+
+async function isSecureStoreAvailable() {
+  if (Platform.OS === 'web') {
+    return false;
+  }
+
+  if (!secureStoreAvailability) {
+    secureStoreAvailability = SecureStore.isAvailableAsync().catch(() => false);
+  }
+
+  return secureStoreAvailability;
+}
+
+async function getStorageItem(key: string) {
+  if (Platform.OS === 'web') {
+    return getWebStorage()?.getItem(key) ?? null;
+  }
+
+  if (!(await isSecureStoreAvailable())) {
+    return null;
+  }
+
+  return SecureStore.getItemAsync(key);
+}
+
+async function setStorageItem(key: string, value: string) {
+  if (Platform.OS === 'web') {
+    getWebStorage()?.setItem(key, value);
+    return;
+  }
+
+  if (!(await isSecureStoreAvailable())) {
+    return;
+  }
+
+  await SecureStore.setItemAsync(key, value, getSecureStoreOptions());
+}
+
+async function deleteStorageItem(key: string) {
+  if (Platform.OS === 'web') {
+    getWebStorage()?.removeItem(key);
+    return;
+  }
+
+  if (!(await isSecureStoreAvailable())) {
+    return;
+  }
+
+  await SecureStore.deleteItemAsync(key);
+}
+
+function normalizeToken(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length > 0 ? trimmedValue : null;
+}
+
+function normalizeStoredUser(value: unknown): User | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<User> & {
+    roles?: unknown;
+    canAccessAdmin?: unknown;
+  };
+
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.name !== 'string' ||
+    typeof candidate.email !== 'string' ||
+    typeof candidate.isProfileCompleted !== 'boolean'
+  ) {
+    return null;
+  }
+
+  const roles = Array.isArray(candidate.roles)
+    ? candidate.roles.filter((role): role is string => typeof role === 'string')
+    : [];
+
+  return {
+    id: candidate.id,
+    name: candidate.name,
+    email: candidate.email,
+    isProfileCompleted: candidate.isProfileCompleted,
+    roles,
+    canAccessAdmin:
+      typeof candidate.canAccessAdmin === 'boolean'
+        ? candidate.canAccessAdmin
+        : hasAdminPanelRoles(roles),
+  };
+}
+
+function parseStoredAuthSession(value: unknown): AuthSession | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as {
+    token?: unknown;
+    user?: unknown;
+  };
+  const token = normalizeToken(candidate.token);
+  const user = normalizeStoredUser(candidate.user);
+
+  if (!token || !user) {
+    return null;
+  }
+
+  return {
+    token,
+    user,
+  };
+}
+
+export function getAuthToken() {
+  return authToken;
+}
+
+export function setAuthToken(token: string | null) {
+  authToken = normalizeToken(token) ?? null;
+}
+
+export async function loadStoredAuthSession(): Promise<AuthSession | null> {
+  await waitForStorageOperations();
+
+  try {
+    const storedValue = await getStorageItem(AUTH_SESSION_KEY);
+
+    if (!storedValue) {
+      return null;
+    }
+
+    const session = parseStoredAuthSession(JSON.parse(storedValue));
+
+    if (!session) {
+      await enqueueStorageOperation(() => deleteStorageItem(AUTH_SESSION_KEY));
+      return null;
+    }
+
+    return session;
+  } catch {
+    try {
+      await enqueueStorageOperation(() => deleteStorageItem(AUTH_SESSION_KEY));
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+}
+
+export async function restoreAuthSession(): Promise<AuthSession | null> {
+  const session = await loadStoredAuthSession();
+  setAuthToken(session?.token ?? null);
+  return session;
+}
+
+export async function saveStoredAuthSession(session: AuthSession) {
+  const normalizedSession = parseStoredAuthSession(session);
+
+  if (!normalizedSession) {
+    await clearAuthSession();
+    return;
+  }
+
+  setAuthToken(normalizedSession.token);
+
+  try {
+    await enqueueStorageOperation(() =>
+      setStorageItem(AUTH_SESSION_KEY, JSON.stringify(normalizedSession)),
+    );
+  } catch {
+    // Keep the in-memory token active even if persistence fails on the device.
+  }
+}
+
+export async function saveAuthenticatedUser(user: User) {
+  const token = getAuthToken();
+
+  if (!token) {
+    await clearAuthSession();
+    return;
+  }
+
+  await saveStoredAuthSession({
+    token,
+    user,
+  });
+}
+
+export async function clearAuthSession() {
+  setAuthToken(null);
+
+  try {
+    await enqueueStorageOperation(() => deleteStorageItem(AUTH_SESSION_KEY));
+  } catch {
+    // Ignore storage cleanup errors so logout still completes in memory.
+  }
+}
 
 function trimValue(value: string) {
   return value.trim();

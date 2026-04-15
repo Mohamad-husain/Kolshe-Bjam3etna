@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query-keys';
-import { getAccountProfile, getUniversities } from '@/services/auth-api';
-import { getAuthToken } from '@/services/http-client';
+import { getAccountProfile, getAuthToken, getUniversities } from '@/services/auth-api';
 
 function isAuthQueryEnabled(enabled = true) {
   return Boolean(getAuthToken()) && enabled;
