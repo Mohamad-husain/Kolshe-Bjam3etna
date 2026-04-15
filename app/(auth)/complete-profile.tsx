@@ -29,7 +29,6 @@ export default function CompleteProfileRoute() {
   const completeProfileMutation = useCompleteProfileMutation();
   const [major, setMajor] = useState('');
   const [bio, setBio] = useState('');
-  const [serverError, setServerError] = useState('');
   const [profileImage, setProfileImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const universityId = Number(params.universityId);
 
@@ -49,14 +48,29 @@ export default function CompleteProfileRoute() {
   }
 
   const currentUser = user;
+  const serverError =
+    completeProfileMutation.isError && completeProfileMutation.error
+      ? completeProfileMutation.error instanceof Error
+        ? completeProfileMutation.error.message
+        : 'تعذر إكمال الملف الشخصي'
+      : '';
+
+  function clearServerError() {
+    if (completeProfileMutation.isError) {
+      completeProfileMutation.reset();
+    }
+  }
 
   async function handlePickImage() {
-    setServerError('');
+    clearServerError();
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('صلاحية مطلوبة', 'يرجى السماح للتطبيق بالوصول إلى الصور لاختيار صورة شخصية.');
+      Alert.alert(
+        'صلاحية مطلوبة',
+        'يرجى السماح للتطبيق بالوصول إلى الصور لاختيار صورة شخصية.',
+      );
       return;
     }
 
@@ -72,11 +86,9 @@ export default function CompleteProfileRoute() {
     }
   }
 
-  async function handleSubmit() {
-    setServerError('');
-
-    try {
-      await completeProfileMutation.mutateAsync({
+  function handleSubmit() {
+    completeProfileMutation.mutate(
+      {
         universityId,
         major,
         bio,
@@ -86,17 +98,18 @@ export default function CompleteProfileRoute() {
           type: profileImage?.mimeType,
           file: profileImage?.file,
         },
-      });
+      },
+      {
+        onSuccess: () => {
+          signIn({
+            ...currentUser,
+            isProfileCompleted: true,
+          });
 
-      signIn({
-        ...currentUser,
-        isProfileCompleted: true,
-      });
-
-      router.replace('/(tabs)/home');
-    } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'تعذر إكمال الملف الشخصي');
-    }
+          router.replace('/(tabs)/home');
+        },
+      },
+    );
   }
 
   return (
@@ -123,9 +136,7 @@ export default function CompleteProfileRoute() {
 
           <Pressable
             disabled={completeProfileMutation.isPending}
-            onPress={() => {
-              void handleSubmit();
-            }}
+            onPress={handleSubmit}
             style={({ pressed }) => [
               styles.primaryButton,
               pressed && !completeProfileMutation.isPending && styles.primaryButtonPressed,
@@ -169,7 +180,10 @@ export default function CompleteProfileRoute() {
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>التخصص / القسم</Text>
         <TextInput
-          onChangeText={setMajor}
+          onChangeText={(value) => {
+            clearServerError();
+            setMajor(value);
+          }}
           placeholder="مثال: هندسة برمجيات"
           placeholderTextColor="#a1a1aa"
           style={styles.input}
@@ -182,7 +196,10 @@ export default function CompleteProfileRoute() {
         <Text style={styles.label}>نبذة عنك</Text>
         <TextInput
           multiline
-          onChangeText={setBio}
+          onChangeText={(value) => {
+            clearServerError();
+            setBio(value);
+          }}
           placeholder="أنا طالب سنة ثالثة مهتم بتطوير التطبيقات..."
           placeholderTextColor="#a1a1aa"
           style={[styles.input, styles.textArea]}

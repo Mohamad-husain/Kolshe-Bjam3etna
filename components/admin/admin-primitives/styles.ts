@@ -100,6 +100,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
+  tabsContentCompact: {
+    flexGrow: 1,
+  },
   tabButton: {
     minHeight: 46,
     borderRadius: 16,

@@ -1,8 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as ImagePicker from 'expo-image-picker';
 import { startTransition, useDeferredValue, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -38,12 +37,38 @@ import {
 } from '@/components/admin/admin-entities';
 import { AdminProvider, useAdmin, useAdminClubSummary, useAdminRoleSummary } from '@/contexts/admin-context';
 import {
+  adminSections,
   adminNewsCategories,
   adminOfferCategories,
   formatCompactNumber,
   getRoleOption,
   toEnglishDigits,
 } from '@/lib/admin/admin-config';
+import {
+  buildClubForm,
+  buildNewsForm,
+  buildOfferForm,
+  buildRoleForm,
+  buildUserForm,
+  hasValidationErrors,
+  normalizeClubFormInput,
+  normalizeNewsFormInput,
+  normalizeOfferFormInput,
+  normalizeText,
+  normalizeUserFormInput,
+  pickImage,
+  type ClubFormErrors,
+  type ClubFormState,
+  type NewsFormErrors,
+  type OfferFormErrors,
+  type RoleFormErrors,
+  type UserFormErrors,
+  validateClubForm,
+  validateNewsForm,
+  validateOfferForm,
+  validateRoleForm,
+  validateUserForm,
+} from '@/lib/admin/admin-dashboard-form-utils';
 import type {
   AdminClubItem,
   AdminClubSubscriptionType,
@@ -61,276 +86,6 @@ import type {
   AdminUserUpsertInput,
 } from '@/types/admin';
 
-type UserFormErrors = Partial<Record<'fullName' | 'email' | 'universityName', string>>;
-type NewsFormErrors = Partial<Record<'title' | 'source' | 'content', string>>;
-type RoleFormErrors = Partial<Record<'email' | 'scopeId', string>>;
-type OfferFormErrors = Partial<
-  Record<'partnerName' | 'title' | 'description' | 'location' | 'phone' | 'email' | 'expireDateUtc' | 'discountPercent', string>
->;
-type ClubFormState = {
-  name: string;
-  universityName: string;
-  managerName: string;
-  managerEmail: string;
-  subscriptionType: AdminClubSubscriptionType;
-};
-type ClubFormErrors = Partial<Record<'name' | 'universityName' | 'managerName' | 'managerEmail', string>>;
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
-
-function normalizeText(value: string) {
-  return value.trim().replace(/\s+/g, ' ');
-}
-
-function countLetters(value: string) {
-  return Array.from(normalizeText(value)).filter((char) => /\p{L}/u.test(char)).length;
-}
-
-function startsWithLetter(value: string) {
-  const normalized = normalizeText(value);
-  return normalized.length > 0 && /^\p{L}/u.test(normalized);
-}
-
-function isEmailValid(value: string) {
-  return emailPattern.test(normalizeText(value).toLowerCase());
-}
-
-function isIsoDateValid(value: string) {
-  if (!isoDatePattern.test(value)) {
-    return false;
-  }
-
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}
-
-function validateNameField(value: string, label: string, minimumLetters: number, maximumLetters: number) {
-  const normalized = normalizeText(value);
-
-  if (!normalized) {
-    return `${label} مطلوب`;
-  }
-
-  if (!startsWithLetter(normalized)) {
-    return `${label} يجب أن يبدأ بحرف`;
-  }
-
-  const letters = countLetters(normalized);
-
-  if (letters < minimumLetters) {
-    return `${label} يجب أن يحتوي على ${toEnglishDigits(String(minimumLetters))} أحرف على الأقل`;
-  }
-
-  if (letters > maximumLetters) {
-    return `${label} يجب ألّا يزيد عن ${toEnglishDigits(String(maximumLetters))} حرفاً`;
-  }
-
-  return undefined;
-}
-
-function validateRequiredText(value: string, label: string) {
-  return normalizeText(value) ? undefined : `${label} مطلوب`;
-}
-
-function validateUserForm(form: AdminUserUpsertInput): UserFormErrors {
-  return {
-    fullName: validateNameField(form.fullName, 'الاسم', 6, 18),
-    email: !normalizeText(form.email)
-      ? 'البريد الإلكتروني مطلوب'
-      : !isEmailValid(form.email)
-        ? 'البريد الإلكتروني غير صحيح'
-        : undefined,
-    universityName: validateRequiredText(form.universityName, 'الجامعة'),
-  };
-}
-
-function validateNewsForm(form: AdminNewsUpsertInput): NewsFormErrors {
-  const title = normalizeText(form.title);
-  const titleLetters = countLetters(title);
-  const contentLetters = countLetters(form.content);
-
-  return {
-    title: !title
-      ? 'عنوان الخبر مطلوب'
-      : !startsWithLetter(title)
-        ? 'عنوان الخبر يجب أن يبدأ بحرف'
-        : titleLetters < 10
-          ? 'عنوان الخبر يجب أن يحتوي على 10 أحرف على الأقل'
-          : undefined,
-    source: !normalizeText(form.source)
-      ? 'المصدر مطلوب'
-      : countLetters(form.source) < 3
-        ? 'المصدر قصير جداً'
-        : undefined,
-    content: !normalizeText(form.content)
-      ? 'تفاصيل الخبر مطلوبة'
-      : contentLetters < 30
-        ? 'تفاصيل الخبر يجب أن تحتوي على 30 حرفاً على الأقل'
-        : undefined,
-  };
-}
-
-function validateRoleForm(
-  form: AdminRoleAssignInput,
-  isEditing: boolean,
-  roleOption = getRoleOption(form.role),
-): RoleFormErrors {
-  return {
-    email: isEditing
-      ? undefined
-      : !normalizeText(form.email)
-        ? 'البريد الجامعي مطلوب'
-        : !isEmailValid(form.email)
-          ? 'البريد الجامعي غير صحيح'
-          : undefined,
-    scopeId: roleOption.requiresScope && !form.scopeId ? `حقل ${roleOption.scopeLabel ?? 'الفعالية المخصصة'} مطلوب` : undefined,
-  };
-}
-
-function validateOfferForm(form: AdminOfferUpsertInput): OfferFormErrors {
-  return {
-    partnerName: !normalizeText(form.partnerName)
-      ? 'الاسم مطلوب'
-      : !startsWithLetter(form.partnerName)
-        ? 'الاسم يجب أن يبدأ بحرف'
-        : countLetters(form.partnerName) < 3
-          ? 'الاسم قصير جداً'
-          : undefined,
-    title: !normalizeText(form.title)
-      ? 'عنوان العرض مطلوب'
-      : !startsWithLetter(form.title)
-        ? 'عنوان العرض يجب أن يبدأ بحرف'
-        : countLetters(form.title) < 10
-          ? 'عنوان العرض يجب أن يحتوي على 10 أحرف على الأقل'
-          : undefined,
-    description: !normalizeText(form.description)
-      ? 'تفاصيل العرض مطلوبة'
-      : countLetters(form.description) < 20
-        ? 'تفاصيل العرض يجب أن تحتوي على 20 حرفاً على الأقل'
-        : undefined,
-    location: validateRequiredText(form.location, 'الموقع'),
-    phone: !normalizeText(form.phone)
-      ? 'رقم التواصل مطلوب'
-      : form.phone.replace(/\D/g, '').length < 8
-        ? 'رقم التواصل غير صحيح'
-        : undefined,
-    email: normalizeText(form.email) && !isEmailValid(form.email) ? 'البريد الإلكتروني غير صحيح' : undefined,
-    expireDateUtc: !normalizeText(form.expireDateUtc)
-      ? 'تاريخ الانتهاء مطلوب'
-      : !isIsoDateValid(form.expireDateUtc)
-        ? 'تاريخ الانتهاء يجب أن يكون بصيغة YYYY-MM-DD'
-        : undefined,
-    discountPercent:
-      !Number.isFinite(form.discountPercent) || form.discountPercent <= 0 || form.discountPercent > 100
-        ? 'نسبة الخصم يجب أن تكون بين 1 و100'
-        : undefined,
-  };
-}
-
-function validateClubForm(form: ClubFormState): ClubFormErrors {
-  return {
-    name: !normalizeText(form.name)
-      ? 'اسم النادي مطلوب'
-      : !startsWithLetter(form.name)
-        ? 'اسم النادي يجب أن يبدأ بحرف'
-        : countLetters(form.name) < 3
-          ? 'اسم النادي قصير جداً'
-          : undefined,
-    universityName: validateRequiredText(form.universityName, 'الجامعة'),
-    managerName: validateNameField(form.managerName, 'اسم المسؤول', 6, 18),
-    managerEmail: !normalizeText(form.managerEmail)
-      ? 'البريد الإلكتروني مطلوب'
-      : !isEmailValid(form.managerEmail)
-        ? 'البريد الإلكتروني غير صحيح'
-        : undefined,
-  };
-}
-
-function hasValidationErrors(errors: Record<string, string | undefined>) {
-  return Object.values(errors).some(Boolean);
-}
-
-function buildUserForm(user: AdminUser): AdminUserUpsertInput {
-  return {
-    fullName: normalizeText(user.fullName),
-    email: normalizeText(user.email).toLowerCase(),
-    universityId: user.universityId,
-    universityName: normalizeText(user.universityName),
-    isBlocked: user.status === 'blocked',
-  };
-}
-
-function buildNewsForm(item?: AdminNewsItem | null): AdminNewsUpsertInput {
-  return {
-    title: normalizeText(item?.title ?? ''),
-    content: normalizeText(item?.content ?? ''),
-    source: normalizeText(item?.source ?? ''),
-    category: item?.category ?? adminNewsCategories[0],
-    image: null,
-    isImportant: item?.isImportant ?? false,
-    isPublished: item?.isPublished ?? false,
-  };
-}
-
-function buildRoleForm(member?: AdminRoleMember | null): AdminRoleAssignInput {
-  return {
-    fullName: '',
-    email: normalizeText(member?.email ?? '').toLowerCase(),
-    role: member?.role ?? 'admin',
-    scopeId: member?.scopeId ?? null,
-  };
-}
-
-function buildOfferForm(item?: AdminOfferItem | null): AdminOfferUpsertInput {
-  return {
-    image: null,
-    partnerName: normalizeText(item?.partnerName ?? ''),
-    type: item?.type ?? 'academy',
-    category: normalizeText(item?.category ?? adminOfferCategories[0]),
-    title: normalizeText(item?.title ?? ''),
-    description: normalizeText(item?.description ?? ''),
-    location: normalizeText(item?.location ?? ''),
-    phone: normalizeText(item?.phone ?? ''),
-    email: normalizeText(item?.email ?? '').toLowerCase(),
-    expireDateUtc: item?.expireDateUtc ?? new Date().toISOString().slice(0, 10),
-    discountPercent: item?.discountPercent ?? 0,
-    showOnHomePage: item?.showOnHomePage ?? true,
-    isVerified: item?.isVerified ?? true,
-  };
-}
-
-function buildClubForm(item?: AdminClubItem | null) {
-  return {
-    name: normalizeText(item?.name ?? ''),
-    universityName: normalizeText(item?.universityName ?? ''),
-    managerName: normalizeText(item?.managerName ?? ''),
-    managerEmail: normalizeText(item?.managerEmail ?? '').toLowerCase(),
-    subscriptionType: item?.subscriptionType ?? 'monthly',
-  } satisfies ClubFormState;
-}
-
-async function pickImage() {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  if (!permission.granted) {
-    Alert.alert('صلاحية مطلوبة', 'يرجى السماح بالوصول إلى الصور لاختيار صورة مناسبة.');
-    return null;
-  }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    quality: 0.9,
-  });
-
-  if (result.canceled || !result.assets?.length) {
-    return null;
-  }
-
-  return result.assets[0] ?? null;
-}
-
 function AdminDashboardContent() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -338,6 +93,7 @@ function AdminDashboardContent() {
     theme,
     activeSection,
     setActiveSection,
+    allowedSections,
     toast,
     clearToast,
     accessDeniedMessage,
@@ -375,17 +131,17 @@ function AdminDashboardContent() {
   const offersLoading = loading.offers && offers.length === 0;
   const clubsLoading = loading.clubs && clubs.length === 0;
   const sectionHorizontalPadding = width <= 340 ? 4 : width <= 380 ? 6 : width <= 430 ? 8 : 10;
+  const visibleSections = useMemo(
+    () => adminSections.filter((section) => allowedSections.includes(section.key)),
+    [allowedSections],
+  );
+  const resolvedActiveSection = allowedSections.includes(activeSection)
+    ? activeSection
+    : allowedSections[0] ?? 'overview';
 
   const [userSearch, setUserSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-  const [userForm, setUserForm] = useState<AdminUserUpsertInput>({
-    fullName: '',
-    email: '',
-    universityId: null,
-    universityName: '',
-    isBlocked: false,
-  });
+  const [userForm, setUserForm] = useState<AdminUserUpsertInput>(buildUserForm());
   const [userErrors, setUserErrors] = useState<UserFormErrors>({});
   const [userValidationEnabled, setUserValidationEnabled] = useState(false);
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
@@ -397,7 +153,6 @@ function AdminDashboardContent() {
   const [newsValidationEnabled, setNewsValidationEnabled] = useState(false);
   const [newsImagePreview, setNewsImagePreview] = useState<string | null>(null);
   const [deletingNews, setDeletingNews] = useState<AdminNewsItem | null>(null);
-  const [togglingUser, setTogglingUser] = useState<AdminUser | null>(null);
 
   const [roleFilter, setRoleFilter] = useState<AdminRoleValue | 'all'>('all');
   const [editingRole, setEditingRole] = useState<AdminRoleMember | null>(null);
@@ -609,10 +364,7 @@ function AdminDashboardContent() {
     }
 
     await saveUser(editingUser.id, {
-      ...userForm,
-      fullName: normalizeText(userForm.fullName),
-      email: normalizeText(userForm.email).toLowerCase(),
-      universityName: normalizeText(userForm.universityName),
+      ...normalizeUserFormInput(userForm),
     });
     setUserErrors({});
     setEditingUser(null);
@@ -629,11 +381,7 @@ function AdminDashboardContent() {
     }
 
     await saveNews(editingNews, {
-      ...newsForm,
-      title: normalizeText(newsForm.title),
-      source: normalizeText(newsForm.source),
-      content: normalizeText(newsForm.content),
-      isPublished: publishNow ? true : newsForm.isPublished,
+      ...normalizeNewsFormInput(newsForm, publishNow),
     });
     setNewsErrors({});
     setEditingNews(null);
@@ -680,15 +428,7 @@ function AdminDashboardContent() {
     }
 
     await saveOffer(editingOffer, {
-      ...offerForm,
-      partnerName: normalizeText(offerForm.partnerName),
-      category: normalizeText(offerForm.category),
-      title: normalizeText(offerForm.title),
-      description: normalizeText(offerForm.description),
-      location: normalizeText(offerForm.location),
-      phone: normalizeText(offerForm.phone),
-      email: normalizeText(offerForm.email).toLowerCase(),
-      expireDateUtc: normalizeText(offerForm.expireDateUtc),
+      ...normalizeOfferFormInput(offerForm),
     });
     setOfferErrors({});
     setEditingOffer(null);
@@ -706,11 +446,7 @@ function AdminDashboardContent() {
     }
 
     await saveClub(editingClub, {
-      ...clubForm,
-      name: normalizeText(clubForm.name),
-      universityName: normalizeText(clubForm.universityName),
-      managerName: normalizeText(clubForm.managerName),
-      managerEmail: normalizeText(clubForm.managerEmail).toLowerCase(),
+      ...normalizeClubFormInput(clubForm),
     });
     setClubErrors({});
     setEditingClub(null);
@@ -730,7 +466,8 @@ function AdminDashboardContent() {
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 42 }]} showsVerticalScrollIndicator={false}>
           <AdminHero
             theme={theme}
-            activeSection={activeSection}
+            activeSection={resolvedActiveSection}
+            sections={visibleSections}
             onChangeSection={(section) => {
               clearToast();
               startTransition(() => setActiveSection(section));
@@ -739,7 +476,7 @@ function AdminDashboardContent() {
           />
           <AdminToastBanner theme={theme} toast={toast} />
           <View style={[styles.sectionWrap, { paddingHorizontal: sectionHorizontalPadding }]}>
-            {activeSection === 'overview' ? (
+            {resolvedActiveSection === 'overview' ? (
               <>
                 <View style={styles.metricsRow}>
                   <AdminMetricCard theme={theme} icon="briefcase-outline" accent={theme.warning} value={toEnglishDigits(dashboard.adsCount.toLocaleString('en-US'))} label="الإعلانات" trend={`${toEnglishDigits(dashboard.adsGrowth)}%+`} />
@@ -761,7 +498,7 @@ function AdminDashboardContent() {
               </>
             ) : null}
 
-            {activeSection === 'users' ? (
+            {resolvedActiveSection === 'users' ? (
               <>
                 <AdminSearchInput theme={theme} value={userSearch} onChangeText={setUserSearch} placeholder="ابحث عن مستخدم..." />
                 <View style={styles.stack}>
@@ -788,7 +525,7 @@ function AdminDashboardContent() {
               </>
             ) : null}
 
-            {activeSection === 'news' ? (
+            {resolvedActiveSection === 'news' ? (
               <>
                 <Pressable onPress={() => openNewsEditor()} style={({ pressed }) => [styles.addDashed, { borderColor: `${theme.primary}50`, backgroundColor: theme.cardBackground }, pressed && styles.pressed]}>
                   <Text style={[styles.addDashedText, { color: theme.primary }]}>نشر خبر جديد +</Text>
@@ -817,13 +554,13 @@ function AdminDashboardContent() {
               </>
             ) : null}
 
-            {activeSection === 'roles' ? (
+            {resolvedActiveSection === 'roles' ? (
               <>
-                <View style={styles.summaryGrid}>
+                <View style={styles.rolesSummaryGrid}>
                   {roleSummary.map((item) => {
                     const option = getRoleOptionByValue(item.role);
                     return (
-                      <View key={item.role} style={styles.summaryCell}>
+                      <View key={item.role} style={styles.rolesSummaryCell}>
                         <AdminOutlinedStat
                           theme={theme}
                           title={option.label}
@@ -851,7 +588,7 @@ function AdminDashboardContent() {
               </>
             ) : null}
 
-            {activeSection === 'offers' ? (
+            {resolvedActiveSection === 'offers' ? (
               <>
                 <View style={styles.summaryGrid}>
                   <View style={styles.summaryCell}>
@@ -898,7 +635,7 @@ function AdminDashboardContent() {
               </>
             ) : null}
 
-            {activeSection === 'clubs' ? (
+            {resolvedActiveSection === 'clubs' ? (
               <>
                 <View style={styles.summaryGridWide}>
                   <View style={styles.summaryWideCell}>
@@ -936,23 +673,6 @@ function AdminDashboardContent() {
           </View>
         </ScrollView>
       </View>
-
-      <AdminBottomSheet
-        theme={theme}
-        visible={false}
-        title="بيانات المستخدم"
-        onClose={() => setSelectedUser(null)}
-      >
-        {selectedUser ? (
-          <>
-            <AdminTextField theme={theme} label="الاسم" value={selectedUser.fullName} onChangeText={() => {}} readOnly />
-            <AdminTextField theme={theme} label="البريد الإلكتروني" value={selectedUser.email} onChangeText={() => {}} readOnly />
-            <AdminTextField theme={theme} label="الجامعة" value={selectedUser.universityName} onChangeText={() => {}} readOnly />
-            <AdminTextField theme={theme} label="عدد المنشورات" value={toEnglishDigits(String(selectedUser.postsCount))} onChangeText={() => {}} readOnly />
-            <AdminTextField theme={theme} label="تاريخ الانضمام" value={toEnglishDigits(selectedUser.joinedAt)} onChangeText={() => {}} readOnly />
-          </>
-        ) : null}
-      </AdminBottomSheet>
 
       <AdminBottomSheet
         theme={theme}
@@ -1113,7 +833,7 @@ function AdminDashboardContent() {
               scopeId: getRoleOptionByValue(value).requiresScope ? roleForm.scopeId ?? roleScopes[0]?.id ?? null : null,
             });
           }}
-          columns={2}
+          columns={roleOptions.length === 3 ? 3 : 2}
           options={roleOptions.map((option) => ({
             value: option.value,
             label: option.label,
@@ -1300,27 +1020,6 @@ function AdminDashboardContent() {
         }}
         onCancel={() => setDeletingClub(null)}
       />
-      <AdminConfirmDialog
-        theme={theme}
-        visible={false}
-        icon={togglingUser?.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'}
-        accent={togglingUser?.status === 'active' ? theme.danger : theme.success}
-        title={togglingUser?.status === 'active' ? 'إيقاف المستخدم' : 'تفعيل المستخدم'}
-        subtitle={togglingUser?.fullName}
-        description={
-          togglingUser?.status === 'active'
-            ? 'هل أنت متأكد من إيقاف هذا المستخدم؟ سيتم إخفاء نشاطاته حتى إعادة تفعيله.'
-            : 'هل تريد إعادة تفعيل هذا المستخدم لاسترجاع حالته إلى نشط؟'
-        }
-        confirmLabel={togglingUser?.status === 'active' ? 'نعم، أوقف' : 'نعم، فعّل'}
-        onConfirm={() => {
-          if (togglingUser) {
-            void toggleUserBlocked(togglingUser);
-          }
-          setTogglingUser(null);
-        }}
-        onCancel={() => setTogglingUser(null)}
-      />
       <AdminConfirmDialog theme={theme} visible={renewingClub !== null} icon="refresh-outline" accent={theme.primary} title="تجديد الاشتراك" subtitle={renewingClub?.name} subtitleColor={theme.primary} description="سيتم تمديد الاشتراك بحسب الخطة المختارة." confirmLabel="تأكيد التجديد" confirmTone="primary" onConfirm={() => void handleRenewClub()} onCancel={() => setRenewingClub(null)} />
       {renewingClub ? (
         <View style={styles.renewFloating}>
@@ -1465,6 +1164,15 @@ const styles = StyleSheet.create({
   },
   summaryCell: {
     width: '48.5%',
+  },
+  rolesSummaryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12,
+  },
+  rolesSummaryCell: {
+    flex: 1,
   },
   summaryGridWide: {
     flexDirection: 'row',

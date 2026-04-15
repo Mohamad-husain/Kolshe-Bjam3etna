@@ -9,91 +9,80 @@ import { getAdminOffers } from '@/services/admin/admin-offers-api';
 import {
   getAdminAvailableRoles,
   getAdminRoles,
-  getAdminRolesSummary,
-  getAdminRoleScopes,
 } from '@/services/admin/admin-roles-api';
 import { getAdminUsers } from '@/services/admin/admin-users-api';
 
-export function useAdminDashboardQuery() {
+type AdminQueryOptions = {
+  enabled?: boolean;
+};
+
+function isAdminQueryEnabled(enabled = true) {
+  return Boolean(getAuthToken()) && enabled;
+}
+
+export function useAdminDashboardQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.dashboard,
     queryFn: getAdminDashboardSummary,
     staleTime: 60 * 1000,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminUsersQuery() {
+export function useAdminUsersQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.users,
     queryFn: getAdminUsers,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminNewsQuery() {
+export function useAdminNewsQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.news,
     queryFn: getAdminNews,
     refetchOnWindowFocus: false,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminRolesQuery() {
+export function useAdminRolesQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.roles,
     queryFn: getAdminRoles,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminRoleSummaryQuery() {
-  return useQuery({
-    queryKey: queryKeys.admin.roleSummary,
-    queryFn: getAdminRolesSummary,
-    enabled: Boolean(getAuthToken()),
-  });
-}
-
-export function useAdminRoleOptionsQuery() {
+export function useAdminRoleOptionsQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.roleOptions,
     queryFn: getAdminAvailableRoles,
     staleTime: 5 * 60 * 1000,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminRoleScopesQuery() {
-  return useQuery({
-    queryKey: queryKeys.admin.roleScopes,
-    queryFn: getAdminRoleScopes,
-    staleTime: 5 * 60 * 1000,
-    enabled: Boolean(getAuthToken()),
-  });
-}
-
-export function useAdminOffersQuery() {
+export function useAdminOffersQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.offers,
     queryFn: getAdminOffers,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminClubsQuery() {
+export function useAdminClubsQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.clubs,
     queryFn: getAdminClubs,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
 
-export function useAdminClubSummaryQuery() {
+export function useAdminClubSummaryQuery({ enabled = true }: AdminQueryOptions = {}) {
   return useQuery({
     queryKey: queryKeys.admin.clubSummary,
     queryFn: getAdminClubSummary,
-    enabled: Boolean(getAuthToken()),
+    enabled: isAdminQueryEnabled(enabled),
   });
 }
