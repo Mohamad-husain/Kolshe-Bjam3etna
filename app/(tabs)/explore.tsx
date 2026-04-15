@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EventsTab } from "@/components/explore/EventsTab";
@@ -74,9 +74,16 @@ function parseTabParam(value?: string | string[]): TabId | null {
 
 export default function ExploreRoute() {
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
-  const [activeTab, setActiveTab] = useState<TabId>(() => parseTabParam(params.tab) ?? "services");
+  const [activeTab, setActiveTab] = useState<TabId>(
+    () => parseTabParam(params.tab) ?? "services",
+  );
   const [showFilter, setShowFilter] = useState(false);
   const currentTab = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
+  const bubblePalette = {
+    top: `${currentTab.color}0A`,
+    middle: `${currentTab.color}0D`,
+    bottom: `${currentTab.color}14`,
+  };
 
   useEffect(() => {
     const requestedTab = parseTabParam(params.tab);
@@ -94,97 +101,128 @@ export default function ExploreRoute() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerRight}>
-          {currentTab?.trendingCount ? (
-            <TouchableOpacity
-              style={[
-                styles.trendingBadge,
-                { backgroundColor: `${currentTab.color}15` },
-              ]}
-            >
-              <Ionicons
-                name="flame-outline"
-                size={13}
-                color={currentTab.color}
-              />
-              <Text style={[styles.trendingText, { color: currentTab.color }]}>
-                trending {currentTab.trendingCount}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          <Text style={styles.title}>استكشف</Text>
-        </View>
-
-        <TouchableOpacity
+      <View style={styles.mobileShell}>
+        <View
           style={[
-            styles.filterButton,
-            showFilter && {
-              backgroundColor: Colors.primary,
-              borderColor: Colors.primary,
-            },
+            styles.topRightBubble,
+            { backgroundColor: bubblePalette.top },
           ]}
-          onPress={() => setShowFilter((prev) => !prev)}
-        >
-          <Text style={[styles.filterText, showFilter && { color: "#fff" }]}>
-            فلتر
-          </Text>
-          <Ionicons
-            name="options-outline"
-            size={16}
-            color={showFilter ? "#fff" : Colors.foreground}
-          />
-        </TouchableOpacity>
-      </View>
+        />
+        <View
+          style={[
+            styles.topLeftBubble,
+            { backgroundColor: bubblePalette.middle },
+          ]}
+        />
+        <View
+          style={[
+            styles.bottomLeftBubble,
+            { backgroundColor: bubblePalette.bottom },
+          ]}
+        />
 
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              onPress={() => handleTabChange(tab.id)}
-              style={styles.tabItem}
-            >
-              <Ionicons
-                name={tab.icon}
-                size={18}
-                color={isActive ? tab.color : Colors.mutedForeground}
-              />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  { color: isActive ? tab.color : Colors.mutedForeground },
-                  isActive && { fontWeight: FontWeight.bold },
+        <View style={styles.header}>
+          <View style={styles.headerSide}>
+            {currentTab?.trendingCount ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.trendingBadge,
+                  { backgroundColor: `${currentTab.color}15` },
+                  pressed && styles.pressed,
                 ]}
               >
-                {tab.label}
-              </Text>
-              {isActive ? (
-                <View
-                  style={[
-                    styles.activeIndicator,
-                    { backgroundColor: tab.color },
-                  ]}
+                <Ionicons
+                  name="flame-outline"
+                  size={13}
+                  color={currentTab.color}
                 />
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <Text
+                  style={[styles.trendingText, { color: currentTab.color }]}
+                >
+                  trending {currentTab.trendingCount}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
 
-      <View style={styles.content}>
-        {activeTab === "services" ? (
-          <ServicesTab showFilter={showFilter} />
-        ) : null}
-        {activeTab === "marketplace" ? (
-          <MarketplaceTab showFilter={showFilter} />
-        ) : null}
-        {activeTab === "exchange" ? (
-          <ExchangeTab showFilter={showFilter} />
-        ) : null}
-        {activeTab === "events" ? <EventsTab showFilter={showFilter} /> : null}
+          <Text style={styles.title}>استكشف</Text>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterButton,
+              showFilter && {
+                backgroundColor: Colors.primary,
+                borderColor: Colors.primary,
+              },
+              pressed && styles.pressed,
+            ]}
+            onPress={() => setShowFilter((prev) => !prev)}
+          >
+            <Text style={[styles.filterText, showFilter && { color: "#fff" }]}>
+              فلتر
+            </Text>
+            <Ionicons
+              name="options-outline"
+              size={16}
+              color={showFilter ? "#fff" : Colors.foreground}
+            />
+          </Pressable>
+        </View>
+
+        <View style={styles.tabBar}>
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+
+            return (
+              <Pressable
+                key={tab.id}
+                onPress={() => handleTabChange(tab.id)}
+                style={({ pressed }) => [
+                  styles.tabItem,
+                  pressed && styles.tabPressed,
+                ]}
+              >
+                <Ionicons
+                  name={tab.icon}
+                  size={18}
+                  color={isActive ? tab.color : Colors.mutedForeground}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isActive ? tab.color : Colors.mutedForeground },
+                    isActive && { fontWeight: FontWeight.bold },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+                {isActive ? (
+                  <View
+                    style={[
+                      styles.activeIndicator,
+                      { backgroundColor: tab.color },
+                    ]}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.content}>
+          {activeTab === "services" ? (
+            <ServicesTab showFilter={showFilter} />
+          ) : null}
+          {activeTab === "marketplace" ? (
+            <MarketplaceTab showFilter={showFilter} />
+          ) : null}
+          {activeTab === "exchange" ? (
+            <ExchangeTab showFilter={showFilter} />
+          ) : null}
+          {activeTab === "events" ? (
+            <EventsTab showFilter={showFilter} />
+          ) : null}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -195,19 +233,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  mobileShell: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+  },
   header: {
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    position: "relative",
   },
-  headerRight: {
+  headerSide: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.sm,
+    minWidth: 72,
   },
   title: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    textAlign: "center",
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
     fontFamily: FontFamily.cairo,
@@ -272,5 +322,35 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  tabPressed: {
+    opacity: 0.72,
+  },
+  topRightBubble: {
+    position: "absolute",
+    top: -110,
+    right: -90,
+    width: 360,
+    height: 360,
+    borderRadius: Dimensions.radiusFull,
+  },
+  topLeftBubble: {
+    position: "absolute",
+    top: 260,
+    left: -130,
+    width: 250,
+    height: 250,
+    borderRadius: Dimensions.radiusFull,
+  },
+  bottomLeftBubble: {
+    position: "absolute",
+    bottom: -110,
+    right: -40,
+    width: 210,
+    height: 210,
+    borderRadius: Dimensions.radiusFull,
   },
 });

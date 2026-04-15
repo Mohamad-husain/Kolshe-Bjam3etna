@@ -1,6 +1,6 @@
-import { apiClient } from './http-client';
-import { EventCardData } from "@/components/explore/EventCard";
-
+import { apiClient } from "./http-client";
+import { EventCardData } from "@/types/explore";
+import { toAbsoluteImageUrl } from "./media";
 type ApiEvent = {
   id: number;
   title: string;
@@ -34,10 +34,10 @@ function formatDateTime(dateTimeUtc: string): { date: string; time: string } {
 function formatEventType(type: string): string {
   const normalized = type.trim().toLowerCase();
   const labels: Record<string, string> = {
-    workshop: 'ورشة',
-    exhibition: 'معرض',
-    seminar: 'ندوة',
-    meetup: 'لقاء',
+    workshop: "ورشة",
+    exhibition: "معرض",
+    seminar: "ندوة",
+    meetup: "لقاء",
   };
 
   return labels[normalized] ?? type;
@@ -46,6 +46,9 @@ function formatEventType(type: string): string {
 function mapToEventCard(item: ApiEvent): EventCardData {
   const { date, time } = formatDateTime(item.dateTimeUtc);
   const eventType = formatEventType(item.type);
+  //logs عشان نشوف الصورة مالها
+  // console.log("event keys:", Object.keys(item));
+  // console.log("event item:", item);
 
   return {
     id: String(item.id),
@@ -58,6 +61,7 @@ function mapToEventCard(item: ApiEvent): EventCardData {
     location: item.location,
     registeredCount: item.registeredCount,
     maxCount: item.capacity,
+    imageUrl: toAbsoluteImageUrl(item.coverImageUrl),
   };
 }
 

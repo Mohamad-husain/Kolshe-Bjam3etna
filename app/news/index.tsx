@@ -110,7 +110,10 @@ export default function NewsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.container]}>
+      <View style={styles.mobileShell}>
+        <View style={styles.topRightBubble} />
+        <View style={styles.topLeftBubble} />
+        <View style={styles.bottomLeftBubble} />
         <FlatList
           data={otherNews}
           keyExtractor={(item) => item.id}
@@ -241,6 +244,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  mobileShell: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+  },
   header: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -317,6 +326,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
   },
   center: {
     flex: 1,
@@ -328,5 +338,32 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     color: Colors.mutedForeground,
+  },
+  topRightBubble: {
+    position: "absolute",
+    top: -110,
+    right: -90,
+    width: 360,
+    height: 360,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: "rgba(104, 139, 245, 0.03)",
+  },
+  topLeftBubble: {
+    position: "absolute",
+    top: 260,
+    left: -130,
+    width: 250,
+    height: 250,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: "rgba(124, 156, 251, 0.04)",
+  },
+  bottomLeftBubble: {
+    position: "absolute",
+    bottom: -110,
+    right: -40,
+    width: 210,
+    height: 210,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: "rgba(108, 150, 255, 0.07)",
   },
 });

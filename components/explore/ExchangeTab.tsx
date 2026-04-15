@@ -19,6 +19,7 @@ import {
 import { CategoryFilter, type Category } from "./CategoryFilter";
 import { ExchangeCard } from "./ExchangeCard";
 import { SearchBar } from "./SearchBar";
+import { useSearchInput } from "@/hooks/explore/use-search-input";
 
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
@@ -32,25 +33,18 @@ type ExchangeTabProps = {
 };
 
 export function ExchangeTab({ showFilter }: ExchangeTabProps) {
-  const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useExchangeQuery();
-  const [searchError, setSearchError] = useState("");
-  const handleSearch = (text: string) => {
-    setSearch(text);
-    if (text.length > 0 && text.trim() === "") {
-      setSearchError("لا يمكن البحث بمسافات فارغة");
-    } else {
-      setSearchError("");
-    }
-  };
+  const { search, searchError, handleSearch } = useSearchInput();
   const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
     return items.filter((item) => {
       const matchSearch =
-        search === "" ||
-        item.title.includes(search) ||
-        item.have.includes(search) ||
-        item.want.includes(search);
+        normalizedSearch === "" ||
+        item.title.toLowerCase().includes(normalizedSearch) ||
+        item.description.toLowerCase().includes(normalizedSearch);
+
       const matchCategory =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -82,7 +76,7 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في خدمات..."
+            placeholder="ماذا تريد ان تستيدل ؟"
             value={search}
             onChangeText={handleSearch}
             error={searchError}
@@ -110,6 +104,7 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
 const styles = StyleSheet.create({
   list: {
     paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingBottom: 100,
   },
   center: {

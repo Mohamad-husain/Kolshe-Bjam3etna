@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import {
   Colors,
   SemanticColors,
@@ -10,22 +10,7 @@ import {
   Spacing,
 } from "@/styles/ui-theme";
 import { getCategoryAccent } from "./explore-colors";
-
-export interface ServiceCardData {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  pricePerHour: number;
-  deadline: string;
-  isUrgent?: boolean;
-  isTrending?: boolean;
-  owner: {
-    name: string;
-    rating: number;
-    initials: string;
-  };
-}
+import type { ServiceCardData } from "@/types/explore";
 
 interface ServiceCardProps {
   data: ServiceCardData;
@@ -36,21 +21,15 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
   const accent = getCategoryAccent(data.category);
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.85}
-      style={styles.card}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
       <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
       {/* Badges */}
       <View style={styles.badges}>
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: accent.strongBg },
-          ]}
-        >
+        <View style={[styles.badge, { backgroundColor: accent.strongBg }]}>
           <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
           </Text>
@@ -119,16 +98,13 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
         {/* Owner */}
         <View style={styles.owner}>
           <Text style={styles.ownerName}>{data.owner.name}</Text>
-          <View style={styles.ratingBox}>
-            <Ionicons name="star" size={12} color={SemanticColors.orange} />
-            <Text style={styles.ratingText}>{data.owner.rating}</Text>
-          </View>
+
           <View style={[styles.avatar, { backgroundColor: accent.color }]}>
             <Text style={styles.avatarText}>{data.owner.initials}</Text>
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -136,8 +112,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: Dimensions.radiusCard,
+    width: "100%",
+    maxWidth: 500,
+    alignSelf: "center",
     padding: Spacing.md,
-    marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
@@ -145,8 +123,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 7,
     overflow: "hidden",
+  },
+  cardPressed: {
+    opacity: 0.85,
   },
   accentBar: {
     position: "absolute",
@@ -245,15 +226,5 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
     color: Colors.foreground,
     fontWeight: FontWeight.medium,
-  },
-  ratingBox: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 2,
-  },
-  ratingText: {
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
   },
 });
