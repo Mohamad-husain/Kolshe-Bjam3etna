@@ -23,7 +23,6 @@ type LoginFormValues = {
 };
 
 export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
-  const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const loginMutation = useLoginMutation();
   const {
@@ -38,15 +37,21 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
     mode: 'onChange',
   });
 
-  const handleLogin = handleSubmit(async (values) => {
-    setServerError('');
+  const serverError =
+    loginMutation.isError && loginMutation.error
+      ? loginMutation.error instanceof Error
+        ? loginMutation.error.message
+        : AUTH_COPY.loginFailed
+      : '';
 
-    try {
-      const user = await loginMutation.mutateAsync(values);
-      onSuccess(user);
-    } catch (error) {
-      setServerError(error instanceof Error ? error.message : AUTH_COPY.loginFailed);
+  const clearServerError = () => {
+    if (loginMutation.isError) {
+      loginMutation.reset();
     }
+  };
+
+  const handleLogin = handleSubmit((values) => {
+    loginMutation.mutate(values, { onSuccess });
   });
 
   return (
@@ -63,7 +68,10 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
             icon="mail-outline"
             keyboardType="email-address"
             onBlur={onBlur}
-            onChangeText={onChange}
+            onChangeText={(nextValue) => {
+              clearServerError();
+              onChange(nextValue);
+            }}
             placeholder={AUTH_COPY.universityEmailPlaceholder}
             textContentType="username"
             value={value}
@@ -83,7 +91,10 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
             autoComplete="password"
             icon="lock-closed-outline"
             onBlur={onBlur}
-            onChangeText={onChange}
+            onChangeText={(nextValue) => {
+              clearServerError();
+              onChange(nextValue);
+            }}
             placeholder={AUTH_COPY.passwordPlaceholder}
             secureTextEntry={!showPassword}
             textContentType="password"
@@ -97,7 +108,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
 
       <Pressable
         accessibilityRole="button"
-        disabled={!onForgotPassword}
+        disabled={!onForgotPassword || loginMutation.isPending}
         onPress={onForgotPassword}
         style={authFormStyles.inlineButton}
       >

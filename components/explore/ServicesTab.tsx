@@ -19,6 +19,7 @@ import {
 import { CategoryFilter, type Category } from "./CategoryFilter";
 import { SearchBar } from "./SearchBar";
 import { ServiceCard } from "./ServiceCard";
+import { useSearchInput } from "@/hooks/explore/use-search-input";
 
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
@@ -32,16 +33,18 @@ type ServicesTabProps = {
 };
 
 export function ServicesTab({ showFilter }: ServicesTabProps) {
-  const [search, setSearch] = useState("");
+  const { search, searchError, handleSearch } = useSearchInput();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useServicesQuery();
-  const [searchError, setSearchError] = useState("");
   const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
     return items.filter((item) => {
       const matchSearch =
-        search === "" ||
-        item.title.includes(search) ||
-        item.description.includes(search);
+        normalizedSearch === "" ||
+        item.title.toLowerCase().includes(normalizedSearch) ||
+        item.description.toLowerCase().includes(normalizedSearch);
+
       const matchCategory =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -56,14 +59,7 @@ export function ServicesTab({ showFilter }: ServicesTabProps) {
       </View>
     );
   }
-  const handleSearch = (text: string) => {
-    setSearch(text);
-    if (text.length > 0 && text.trim() === "") {
-      setSearchError("لا يمكن البحث بمسافات فارغة");
-    } else {
-      setSearchError("");
-    }
-  };
+
   if (error) {
     return (
       <View style={styles.center}>
@@ -108,6 +104,7 @@ export function ServicesTab({ showFilter }: ServicesTabProps) {
 const styles = StyleSheet.create({
   list: {
     paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingBottom: 100,
   },
   center: {
