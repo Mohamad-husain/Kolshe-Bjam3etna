@@ -39,8 +39,8 @@ export function getCategoryAccent(category?: string | null): AccentStyle {
   }
 
   if (
-    value.includes("إلكترون") ||
-    value.includes("الكترون") ||
+    value.includes("إلكتروني") ||
+    value.includes("الكترونيات") ||
     value.includes("حاسوب") ||
     value.includes("لابتوب") ||
     value.includes("تقني") ||
@@ -53,7 +53,7 @@ export function getCategoryAccent(category?: string | null): AccentStyle {
   if (
     value.includes("تصميم") ||
     value.includes("design") ||
-    value.includes("هوية")
+    value.includes("هواية")
   ) {
     return ACCENTS.violet;
   }

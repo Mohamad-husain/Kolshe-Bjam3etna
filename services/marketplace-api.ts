@@ -1,5 +1,7 @@
-import { apiClient } from './http-client';
-import { MarketplaceCardData } from "@/components/explore/MarketplaceCard";
+import { apiClient } from "./http-client";
+import { toAbsoluteImageUrl } from "./media";
+
+import { MarketplaceCardData } from "@/types/explore";
 
 type ApiProductAd = {
   id: number;
@@ -15,23 +17,6 @@ type ApiProductAd = {
     profileImageUrl: string | null;
   };
 };
-
-function toAbsoluteImageUrl(path: string | null) {
-  if (!path) {
-    return null;
-  }
-
-  if (/^https?:\/\//i.test(path)) {
-    return path;
-  }
-
-  const baseUrl = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
-  if (!baseUrl) {
-    return path;
-  }
-
-  return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
-}
 
 function mapCondition(condition: string): string {
   const map: Record<string, string> = {
@@ -55,7 +40,6 @@ function mapToMarketplaceCard(item: ApiProductAd): MarketplaceCardData {
     imageUrl: toAbsoluteImageUrl(item.coverImageUrl),
     owner: {
       name: item.user.fullName,
-      rating: 0,
       initials: item.user.fullName.charAt(0),
     },
   };

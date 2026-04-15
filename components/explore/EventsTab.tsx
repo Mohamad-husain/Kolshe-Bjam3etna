@@ -19,6 +19,7 @@ import {
 import { CategoryFilter, type Category } from "./CategoryFilter";
 import { EventCard } from "./EventCard";
 import { SearchBar } from "./SearchBar";
+import { useSearchInput } from "@/hooks/explore/use-search-input";
 
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
@@ -32,31 +33,25 @@ type EventsTabProps = {
 };
 
 export function EventsTab({ showFilter }: EventsTabProps) {
-  const [search, setSearch] = useState("");
+  const { search, searchError, handleSearch } = useSearchInput();
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [searchError, setSearchError] = useState("");
   const { data: items = [], isLoading, error } = useEventsQuery();
-  const handleSearch = (text: string) => {
-    setSearch(text);
-    if (text.length > 0 && text.trim() === "") {
-      setSearchError("لا يمكن البحث بمسافات فارغة");
-    } else {
-      setSearchError("");
-    }
-  };
   const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
     return items.filter((item) => {
       const matchSearch =
-        search === "" ||
-        item.title.includes(search) ||
-        item.club.includes(search);
+        normalizedSearch === "" ||
+        item.title.toLowerCase().includes(normalizedSearch) ||
+        item.description.toLowerCase().includes(normalizedSearch) ||
+        item.club.toLowerCase().includes(normalizedSearch);
+
       const matchCategory =
         selectedCategory === "all" || item.club === selectedCategory;
 
       return matchSearch && matchCategory;
     });
   }, [items, search, selectedCategory]);
-
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -81,7 +76,7 @@ export function EventsTab({ showFilter }: EventsTabProps) {
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في فعاليات......"
+            placeholder="ابحث في فعاليات..."
             value={search}
             onChangeText={handleSearch}
             error={searchError}
@@ -109,6 +104,7 @@ export function EventsTab({ showFilter }: EventsTabProps) {
 const styles = StyleSheet.create({
   list: {
     paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingBottom: 100,
   },
   center: {
