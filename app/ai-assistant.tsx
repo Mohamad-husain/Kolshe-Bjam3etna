@@ -28,9 +28,18 @@ type SuggestedQuestion = {
 type ChatMessage = {
   id: number;
   role: 'assistant' | 'user';
-  state?: 'default' | 'error';
+  state?: 'error';
   text: string;
 };
+
+const HOME_ROUTE = '/(tabs)/home';
+const FALLBACK_ERROR = 'تعذر التواصل مع المساعد الذكي';
+const LOADING_DOTS = [0, 1, 2];
+const screenBackground = '#f6f7fb';
+const primaryColor = '#4f7cff';
+const borderColor = 'rgba(60,60,67,0.08)';
+const surfaceBorder = { borderWidth: 1, borderColor } as const;
+const centered = { alignItems: 'center', justifyContent: 'center' } as const;
 
 const suggestedQuestions: SuggestedQuestion[] = [
   { icon: 'help-circle-outline', text: 'كيف أضيف إعلان جديد؟', color: '#007aff' },
@@ -40,43 +49,31 @@ const suggestedQuestions: SuggestedQuestion[] = [
 ];
 
 export default function AiAssistantScreen() {
-  const insets = useSafeAreaInsets();
+  const { bottom } = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const isMountedRef = useRef(true);
   const messageIdRef = useRef(0);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const nextMessageId = () => {
+  const hasMessages = messages.length > 0;
+  const trimmedInput = input.trim();
+  const canSend = Boolean(trimmedInput) && !isLoading;
+
+  const addMessage = (role: ChatMessage['role'], text: string, state?: ChatMessage['state']) => {
     messageIdRef.current += 1;
-    return messageIdRef.current;
+    setMessages((current) => [...current, { id: messageIdRef.current, role, state, text }]);
   };
 
-  const scrollToBottom = () => {
+  const submitInput = () => {
+    void handleSend(input);
+  };
+
+  useEffect(() => {
     requestAnimationFrame(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
   }, [messages, isLoading]);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace('/(tabs)/home');
-  };
 
   const handleSend = async (value: string) => {
     const trimmed = value.trim();
@@ -85,50 +82,16 @@ export default function AiAssistantScreen() {
       return;
     }
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: nextMessageId(),
-        role: 'user',
-        text: trimmed,
-      },
-    ]);
+    addMessage('user', trimmed);
     setInput('');
     setIsLoading(true);
 
     try {
-      const reply = await sendAiChatMessage(trimmed);
-
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: nextMessageId(),
-          role: 'assistant',
-          text: reply,
-        },
-      ]);
+      addMessage('assistant', await sendAiChatMessage(trimmed));
     } catch (error) {
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: nextMessageId(),
-          role: 'assistant',
-          state: 'error',
-          text: error instanceof Error ? error.message : 'تعذر التواصل مع المساعد الذكي',
-        },
-      ]);
+      addMessage('assistant', error instanceof Error ? error.message : FALLBACK_ERROR, 'error');
     } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
@@ -145,7 +108,7 @@ export default function AiAssistantScreen() {
           <View style={styles.header}>
             <Pressable
               accessibilityLabel="رجوع"
-              onPress={handleBack}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace(HOME_ROUTE))}
               style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
             >
               <Ionicons name="arrow-back" size={20} color={Colors.foreground} />
@@ -170,12 +133,12 @@ export default function AiAssistantScreen() {
             ref={scrollRef}
             contentContainerStyle={[
               styles.messagesContent,
-              messages.length === 0 && styles.messagesContentEmpty,
+              !hasMessages && styles.messagesContentEmpty,
             ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {messages.length === 0 ? (
+            {!hasMessages ? (
               <View style={styles.emptyState}>
                 <View style={styles.welcomeCard}>
                   <View style={styles.welcomeIconWrap}>
@@ -214,18 +177,12 @@ export default function AiAssistantScreen() {
               </View>
             ) : (
               <View style={styles.chatList}>
-                {messages.map((message) => {
-                  const isUser = message.role === 'user';
-                  const isError = message.state === 'error';
+                {messages.map(({ id, role, state, text }) => {
+                  const isUser = role === 'user';
+                  const isError = state === 'error';
 
                   return (
-                    <View
-                      key={message.id}
-                      style={[
-                        styles.messageRow,
-                        isUser ? styles.messageRowUser : styles.messageRowAssistant,
-                      ]}
-                    >
+                    <View key={id} style={[styles.messageRow, isUser && styles.messageRowUser]}>
                       <View style={[styles.avatar, isUser ? styles.userAvatar : styles.assistantAvatar]}>
                         <Ionicons
                           name={isUser ? 'person-outline' : 'sparkles-outline'}
@@ -248,7 +205,7 @@ export default function AiAssistantScreen() {
                             isError && styles.errorMessageText,
                           ]}
                         >
-                          {message.text}
+                          {text}
                         </Text>
                       </View>
                     </View>
@@ -256,16 +213,16 @@ export default function AiAssistantScreen() {
                 })}
 
                 {isLoading ? (
-                  <View style={[styles.messageRow, styles.messageRowAssistant]}>
+                  <View style={styles.messageRow}>
                     <View style={[styles.avatar, styles.assistantAvatar]}>
                       <Ionicons name="sparkles-outline" size={16} color="#007aff" />
                     </View>
 
                     <View style={[styles.messageBubble, styles.assistantBubble, styles.typingBubble]}>
                       <View style={styles.typingDots}>
-                        <View style={styles.typingDot} />
-                        <View style={styles.typingDot} />
-                        <View style={styles.typingDot} />
+                        {LOADING_DOTS.map((dot) => (
+                          <View key={dot} style={styles.typingDot} />
+                        ))}
                       </View>
                     </View>
                   </View>
@@ -274,36 +231,29 @@ export default function AiAssistantScreen() {
             )}
           </ScrollView>
 
-          <View
-            style={[
-              styles.inputArea,
-              { paddingBottom: Math.max(insets.bottom, 12) },
-            ]}
-          >
+          <View style={[styles.inputArea, { paddingBottom: Math.max(bottom, 12) }]}>
             <View style={styles.inputBar}>
               <Pressable
                 accessibilityLabel="إرسال"
-                disabled={!input.trim() || isLoading}
-                onPress={() => {
-                  void handleSend(input);
-                }}
+                disabled={!canSend}
+                onPress={submitInput}
                 style={({ pressed }) => [
                   styles.sendButton,
-                  (!input.trim() || isLoading) && styles.sendButtonDisabled,
-                  pressed && input.trim() && !isLoading && styles.pressed,
+                  !canSend && styles.sendButtonDisabled,
+                  pressed && canSend && styles.pressed,
                 ]}
               >
                 {isLoading ? (
                   <View style={styles.sendLoading}>
-                    <View style={styles.sendLoadingDot} />
-                    <View style={styles.sendLoadingDot} />
-                    <View style={styles.sendLoadingDot} />
+                    {LOADING_DOTS.map((dot) => (
+                      <View key={dot} style={styles.sendLoadingDot} />
+                    ))}
                   </View>
                 ) : (
                   <Ionicons
                     name="send"
                     size={18}
-                    color={input.trim() ? '#ffffff' : Colors.mutedForeground}
+                    color={trimmedInput ? '#ffffff' : Colors.mutedForeground}
                   />
                 )}
               </Pressable>
@@ -312,9 +262,7 @@ export default function AiAssistantScreen() {
                 blurOnSubmit={false}
                 editable={!isLoading}
                 onChangeText={setInput}
-                onSubmitEditing={() => {
-                  void handleSend(input);
-                }}
+                onSubmitEditing={submitInput}
                 placeholder="اكتب رسالتك..."
                 placeholderTextColor="rgba(142,142,147,0.7)"
                 returnKeyType="send"
@@ -333,14 +281,14 @@ export default function AiAssistantScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f6f7fb',
+    backgroundColor: screenBackground,
   },
   keyboardView: {
     flex: 1,
   },
   root: {
     flex: 1,
-    backgroundColor: '#f6f7fb',
+    backgroundColor: screenBackground,
   },
   header: {
     flexDirection: 'row',
@@ -350,14 +298,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   backButton: {
+    ...centered,
+    ...surfaceBorder,
     width: 42,
     height: 42,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
     shadowColor: '#0f172a',
     shadowOpacity: 0.05,
     shadowRadius: 16,
@@ -377,12 +323,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerIcon: {
+    ...centered,
     width: 58,
     height: 58,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4f7cff',
+    backgroundColor: primaryColor,
     shadowColor: '#2563eb',
     shadowOpacity: 0.24,
     shadowRadius: 16,
@@ -398,7 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: SemanticColors.green,
     borderWidth: 2,
-    borderColor: '#f6f7fb',
+    borderColor: screenBackground,
   },
   headerTitle: {
     color: '#1c1c1e',
@@ -428,10 +373,9 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   welcomeCard: {
+    ...surfaceBorder,
     borderRadius: 30,
     backgroundColor: 'rgba(255,255,255,0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
     paddingHorizontal: 22,
     paddingVertical: 28,
     alignItems: 'center',
@@ -442,11 +386,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   welcomeIconWrap: {
+    ...centered,
     width: 70,
     height: 70,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'rgba(0,122,255,0.14)',
     marginBottom: 16,
   },
@@ -480,16 +423,14 @@ const styles = StyleSheet.create({
     rowGap: 10,
   },
   suggestionCard: {
+    ...centered,
+    ...surfaceBorder,
     width: '48.4%',
     minHeight: 102,
     borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
     paddingHorizontal: 14,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: '#0f172a',
     shadowOpacity: 0.06,
     shadowRadius: 20,
@@ -497,11 +438,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   suggestionIconWrap: {
+    ...centered,
     width: 44,
     height: 44,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 10,
   },
   suggestionText: {
@@ -522,26 +462,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   messageRowUser: {
-    justifyContent: 'flex-start',
     flexDirection: 'row-reverse',
   },
-  messageRowAssistant: {
-    justifyContent: 'flex-start',
-  },
   avatar: {
+    ...centered,
     width: 36,
     height: 36,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   userAvatar: {
-    backgroundColor: '#4f7cff',
+    backgroundColor: primaryColor,
   },
   assistantAvatar: {
+    ...surfaceBorder,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
   },
   messageBubble: {
     maxWidth: '79%',
@@ -555,13 +489,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   userBubble: {
-    backgroundColor: '#4f7cff',
+    backgroundColor: primaryColor,
     borderBottomRightRadius: 8,
   },
   assistantBubble: {
+    ...surfaceBorder,
     backgroundColor: 'rgba(255,255,255,0.94)',
-    borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
     borderBottomLeftRadius: 8,
   },
   errorBubble: {
@@ -603,12 +536,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(246,247,251,0.98)',
   },
   inputBar: {
+    ...surfaceBorder,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.96)',
-    borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
     padding: 8,
     shadowColor: '#0f172a',
     shadowOpacity: 0.06,
@@ -627,12 +559,11 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   sendButton: {
+    ...centered,
     width: 44,
     height: 44,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4f7cff',
+    backgroundColor: primaryColor,
   },
   sendButtonDisabled: {
     backgroundColor: 'rgba(120,120,128,0.12)',
