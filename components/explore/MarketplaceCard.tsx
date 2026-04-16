@@ -20,6 +20,7 @@ interface MarketplaceCardProps {
 
 export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
   const accent = getCategoryAccent(data.category);
+  const hasImage = Boolean(data.imageUrl);
 
   return (
     <Pressable
@@ -34,7 +35,7 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
 
       <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
-      <View style={styles.badges}>
+      <View style={[styles.badges, hasImage && styles.badgesAfterImage]}>
         <View style={[styles.badge, { backgroundColor: accent.strongBg }]}>
           <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
@@ -82,7 +83,7 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
       <View style={styles.footer}>
         <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
           <Text style={[styles.priceText, { color: accent.color }]}>
-            {data.price} د.أ
+            {data.price} شيقل
           </Text>
         </View>
 
@@ -153,6 +154,9 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
+  },
+  badgesAfterImage: {
+    marginTop: Spacing.sm,
   },
   badge: {
     flexDirection: "row-reverse",
