@@ -1,5 +1,6 @@
 import { apiClient, getApiErrorMessage } from "@/services/http-client";
 import { toAbsoluteImageUrl } from "./media";
+import { normalizeNewsCategory } from "@/lib/news/news-categories";
 
 type ApiNewsItem = {
   id: number;
@@ -68,7 +69,7 @@ function mapNewsItem(item: ApiNewsItem): NewsItem {
     id: String(item.id),
     title: item.title,
     source: item.source || "إعلان جامعي",
-    category: item.category || "عام",
+    category: normalizeNewsCategory(item.category),
     imageUrl: toAbsoluteImageUrl(item.imageUrl),
     isImportant: Boolean(item.isImportant),
     viewsCount: Number(item.viewsCount ?? 0),

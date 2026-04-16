@@ -14,11 +14,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   CategoryFilter,
-  type Category,
 } from "@/components/explore/CategoryFilter";
 import { getNewsAccent } from "@/components/news/news_colors";
 
 import { NewsCard } from "@/components/news/NewsCard";
+import {
+  ALL_NEWS_CATEGORY,
+  NEWS_CATEGORIES,
+} from "@/lib/news/news-categories";
 import { getNews } from "@/services/news-api";
 import {
   Colors,
@@ -29,22 +32,12 @@ import {
   SemanticColors,
   Spacing,
 } from "@/styles/ui-theme";
-const NEWS_CATEGORIES: Category[] = [
-  { id: "الكل", label: "الكل" },
-  { id: "أكاديمي", label: "أكاديمي" },
-  { id: "تسجيل", label: "تسجيل" },
-  { id: "منح", label: "منح" },
-  { id: "إدارة", label: "إدارة" },
-  { id: "تقنية", label: "تقنية" },
-  { id: "إعلان عام", label: "إعلان عام" },
-];
-
 export default function NewsScreen() {
   const [searchError, setSearchError] = useState("");
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("الكل");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_NEWS_CATEGORY);
   const activeAccent =
-    selectedCategory === "الكل"
+    selectedCategory === ALL_NEWS_CATEGORY
       ? {
           color: SemanticColors.blue,
           softBg: `${SemanticColors.blue}12`,
@@ -75,7 +68,8 @@ export default function NewsScreen() {
         item.title.includes(search) ||
         item.source.includes(search);
       const matchCategory =
-        selectedCategory === "الكل" || item.category === selectedCategory;
+        selectedCategory === ALL_NEWS_CATEGORY ||
+        item.category === selectedCategory;
       return matchSearch && matchCategory;
     });
   }, [items, search, selectedCategory]);
