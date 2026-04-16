@@ -19,6 +19,7 @@ interface ExchangeCardProps {
 
 export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
   const accent = getCategoryAccent(data.category);
+  const hasImage = Boolean(data.imageUrl);
 
   return (
     <Pressable
@@ -32,7 +33,7 @@ export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
       ) : null}
       <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
-      <View style={styles.badges}>
+      <View style={[styles.badges, hasImage && styles.badgesAfterImage]}>
         <View style={[styles.badge, { backgroundColor: accent.strongBg }]}>
           <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
@@ -132,6 +133,9 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: "row-reverse",
     marginBottom: Spacing.sm,
+  },
+  badgesAfterImage: {
+    marginTop: Spacing.sm,
   },
   badge: {
     paddingHorizontal: Spacing.sm,
