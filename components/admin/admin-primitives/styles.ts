@@ -321,6 +321,10 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: 14,
   },
+  sheetAvoider: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   confirmBackdrop: {
     flex: 1,
     justifyContent: 'center',

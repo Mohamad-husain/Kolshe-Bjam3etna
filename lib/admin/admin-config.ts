@@ -8,7 +8,7 @@ import type {
   AdminSection,
 } from '@/types/admin';
 
-export const adminSections: Array<{ key: AdminSection; label: string }> = [
+export const adminSections: { key: AdminSection; label: string }[] = [
   { key: 'overview', label: 'نظرة عامة' },
   { key: 'users', label: 'المستخدمون' },
   { key: 'news', label: 'الأخبار' },
@@ -17,13 +17,15 @@ export const adminSections: Array<{ key: AdminSection; label: string }> = [
   { key: 'clubs', label: 'الأندية' },
 ];
 
-export const adminNewsCategories = [
-  'إعلان عام',
-  'أكاديمي',
-  'منح وبعثات',
-  'أنشطة ورياضة',
-  'مرافق وخدمات',
+export const adminNewsCategoryEntries = [
+  { id: '1', label: 'إعلان عام' },
+  { id: '2', label: 'أكاديمي' },
+  { id: '3', label: 'منح وبعثات' },
+  { id: '4', label: 'أنشطة ورياضة' },
+  { id: '5', label: 'مرافق وخدمات' },
 ] as const;
+
+export const adminNewsCategories = adminNewsCategoryEntries.map((item) => item.label);
 
 export const adminOfferCategories = ['برمجة', 'كتب', 'تصميم', 'قهوة', 'ألعاب'] as const;
 
@@ -78,6 +80,28 @@ const offerTypeLabels: Record<AdminOfferType, string> = {
 
 export function getRoleOption(role: AdminRoleValue) {
   return adminRoleOptions.find((item) => item.value === role) ?? adminRoleOptions[0];
+}
+
+function resolveAdminNewsCategoryEntry(value: string | number | null | undefined) {
+  const normalized = String(value ?? '').trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return (
+    adminNewsCategoryEntries.find(
+      (item) => item.id === normalized || item.label === normalized,
+    ) ?? null
+  );
+}
+
+export function getAdminNewsCategoryId(value: string | number | null | undefined) {
+  return resolveAdminNewsCategoryEntry(value)?.id ?? String(value ?? '').trim();
+}
+
+export function getAdminNewsCategoryLabel(value: string | number | null | undefined) {
+  return resolveAdminNewsCategoryEntry(value)?.label ?? String(value ?? '').trim();
 }
 
 export function getRoleLabel(role: AdminRoleValue) {

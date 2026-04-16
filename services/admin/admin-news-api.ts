@@ -1,4 +1,8 @@
-import { formatIsoDate } from '@/lib/admin/admin-config';
+import {
+  formatIsoDate,
+  getAdminNewsCategoryId,
+  getAdminNewsCategoryLabel,
+} from '@/lib/admin/admin-config';
 import { apiClient } from '@/services/http-client';
 import type { AdminNewsItem, AdminNewsUpsertInput } from '@/types/admin';
 
@@ -17,6 +21,9 @@ import {
 
 function mapNewsItem(record: ApiRecord): AdminNewsItem {
   const createdAt = getDateField(record, ['createdAtUtc', 'createdAt', 'publishDateUtc']);
+  const categoryValue =
+    getNumberField(record, ['category', 'categoryId']) ??
+    getStringField(record, ['category', 'categoryId', 'categoryName']);
   const isPublished =
     getBooleanField(record, ['isPublished', 'published']) ??
     Boolean(getStringField(record, ['publishedAt', 'publishedAtUtc']));
@@ -26,7 +33,7 @@ function mapNewsItem(record: ApiRecord): AdminNewsItem {
     title: getStringField(record, ['title']) ?? '',
     content: getStringField(record, ['content', 'body', 'description']) ?? '',
     source: getStringField(record, ['source']) ?? '',
-    category: getStringField(record, ['category']) ?? '',
+    category: getAdminNewsCategoryLabel(categoryValue),
     imageUrl: toAbsoluteImageUrl(getStringField(record, ['imageUrl', 'image', 'coverImageUrl'])),
     isImportant: getBooleanField(record, ['isImportant', 'important']) ?? false,
     isPublished,
@@ -39,10 +46,13 @@ function mapNewsItem(record: ApiRecord): AdminNewsItem {
 
 function buildNewsFormData(input: AdminNewsUpsertInput) {
   const formData = new FormData();
+  const content = input.content.trim();
+
   formData.append('Title', input.title.trim());
-  formData.append('Content', input.content.trim());
+  formData.append('Content', content);
+  formData.append('Description', content);
   formData.append('Source', input.source.trim());
-  formData.append('Category', input.category.trim());
+  formData.append('Category', getAdminNewsCategoryId(input.category));
   formData.append('IsImportant', String(input.isImportant));
   formData.append('IsPublished', String(input.isPublished));
   appendFileToFormData(formData, 'Image', input.image);
