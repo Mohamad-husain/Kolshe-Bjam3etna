@@ -38,22 +38,34 @@ export function getNewsAccent(category?: string | null): AccentStyle {
     return ACCENTS.green;
   }
 
-  if (value.includes("أكاديمي") || value.includes("تعليم")) {
+  if (value.includes("أكاديمي") || value.includes("اكاديمي") || value.includes("تعليم")) {
     return ACCENTS.orange;
+  }
+
+  if (value.includes("أنشطة") || value.includes("انشطة") || value.includes("رياض")) {
+    return ACCENTS.red;
+  }
+
+  if (value.includes("مرافق") || value.includes("خدمات")) {
+    return ACCENTS.violet;
   }
 
   if (value.includes("تسجيل") || value.includes("enrollment")) {
     return ACCENTS.lightBlue;
   }
 
-  if (value.includes("إدارة") || value.includes("management")) {
+  if (value.includes("إدارة") || value.includes("ادارة") || value.includes("management")) {
     return ACCENTS.violet;
   }
 
   if (value.includes("تقنية") || value.includes("technology")) {
     return ACCENTS.blue;
   }
-  if (value.includes("اعلان عام") || value.includes("general")) {
+  if (
+    value.includes("إعلان عام") ||
+    value.includes("اعلان عام") ||
+    value.includes("general")
+  ) {
     return ACCENTS.blue;
   }
 
