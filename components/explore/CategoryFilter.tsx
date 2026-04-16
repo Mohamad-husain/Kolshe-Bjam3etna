@@ -1,11 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import {
   Colors,
   Dimensions,
@@ -61,12 +55,13 @@ export function CategoryFilter({
         {categories.map((cat) => {
           const isSelected = selected === cat.id;
           return (
-            <TouchableOpacity
+            <Pressable
               key={cat.id}
               onPress={() => onSelect(cat.id)}
-              style={[
+              style={({ pressed }) => [
                 styles.chip,
                 { backgroundColor: isSelected ? accentColor : Colors.card },
+                pressed && styles.chipPressed,
               ]}
             >
               <Text
@@ -77,7 +72,7 @@ export function CategoryFilter({
               >
                 {cat.label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -91,6 +86,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     borderRadius: Dimensions.radiusCard,
     padding: Spacing.md,
+    alignSelf: "center",
+    maxWidth: 500,
+    width: "100%",
   },
   header: {
     flexDirection: "row-reverse",
@@ -127,6 +125,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: Dimensions.radiusFull,
+  },
+  chipPressed: {
+    opacity: 0.85,
   },
   chipText: {
     fontSize: FontSize.sm,

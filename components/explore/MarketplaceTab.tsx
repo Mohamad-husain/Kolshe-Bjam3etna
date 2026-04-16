@@ -19,6 +19,7 @@ import {
 import { CategoryFilter, type Category } from "./CategoryFilter";
 import { MarketplaceCard } from "./MarketplaceCard";
 import { SearchBar } from "./SearchBar";
+import { useSearchInput } from "@/hooks/explore/use-search-input";
 
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
@@ -32,10 +33,10 @@ type MarketplaceTabProps = {
 };
 
 export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
-  const [search, setSearch] = useState("");
+  const { search, searchError, handleSearch } = useSearchInput();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useMarketplaceQuery();
-  const [searchError, setSearchError] = useState("");
+
   const filtered = useMemo(() => {
     return items.filter((item) => {
       const matchSearch =
@@ -56,14 +57,7 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
       </View>
     );
   }
-  const handleSearch = (text: string) => {
-    setSearch(text);
-    if (text.length > 0 && text.trim() === "") {
-      setSearchError("لا يمكن البحث بمسافات فارغة");
-    } else {
-      setSearchError("");
-    }
-  };
+
   if (error) {
     return (
       <View style={styles.center}>
@@ -108,6 +102,7 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
 const styles = StyleSheet.create({
   list: {
     paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingBottom: 100,
   },
   center: {

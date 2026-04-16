@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query-keys';
-import { getAuthToken } from '@/services/http-client';
+import { getAuthToken } from '@/services/auth-api';
 import { getAdminClubs, getAdminClubSummary } from '@/services/admin/admin-clubs-api';
 import { getAdminDashboardSummary } from '@/services/admin/admin-dashboard-api';
 import { getAdminNews } from '@/services/admin/admin-news-api';

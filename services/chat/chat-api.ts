@@ -1,4 +1,5 @@
-import { apiClient, getAuthToken } from "../http-client"
+import { apiClient } from "../http-client"
+import { getAuthToken } from "@/services/auth-api"
 import type {
     ChatConversation,
     ChatConversationApi,

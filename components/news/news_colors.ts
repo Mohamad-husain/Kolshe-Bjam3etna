@@ -51,7 +51,7 @@ export function getNewsAccent(category?: string | null): AccentStyle {
   }
 
   if (value.includes("تقنية") || value.includes("technology")) {
-    return ACCENTS.red;
+    return ACCENTS.blue;
   }
   if (value.includes("اعلان عام") || value.includes("general")) {
     return ACCENTS.blue;

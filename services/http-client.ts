@@ -1,7 +1,8 @@
 import axios, { isAxiosError } from 'axios';
 
+import { getAuthToken } from '@/services/auth-api';
+
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
-let authToken: string | null = null;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -12,20 +13,14 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  if (authToken) {
-    config.headers.Authorization = `Bearer ${authToken}`;
+  const token = getAuthToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
 });
-
-export function getAuthToken() {
-  return authToken;
-}
-
-export function setAuthToken(token: string | null) {
-  authToken = token;
-}
 
 function parseResponsePayload(payload: unknown) {
   if (!payload) {
