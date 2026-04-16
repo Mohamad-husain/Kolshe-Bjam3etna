@@ -43,6 +43,44 @@ function parseResponsePayload(payload: unknown) {
   }
 }
 
+function extractValidationMessage(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if ('errors' in payload) {
+    const errors = (payload as { errors?: unknown }).errors;
+
+    if (errors && typeof errors === 'object') {
+      for (const value of Object.values(errors as Record<string, unknown>)) {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          return value.trim();
+        }
+
+        if (Array.isArray(value)) {
+          const firstMessage = value.find(
+            (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0,
+          );
+
+          if (firstMessage) {
+            return firstMessage.trim();
+          }
+        }
+      }
+    }
+  }
+
+  if ('detail' in payload) {
+    const detail = (payload as { detail?: unknown }).detail;
+
+    if (typeof detail === 'string' && detail.trim().length > 0) {
+      return detail.trim();
+    }
+  }
+
+  return null;
+}
+
 function extractMessage(payload: unknown, fallback: string) {
   if (payload && typeof payload === 'object' && 'message' in payload) {
     const message = (payload as { message?: unknown }).message;
@@ -50,6 +88,12 @@ function extractMessage(payload: unknown, fallback: string) {
     if (typeof message === 'string' && message.trim().length > 0) {
       return message;
     }
+  }
+
+  const validationMessage = extractValidationMessage(payload);
+
+  if (validationMessage) {
+    return validationMessage;
   }
 
   return fallback;
