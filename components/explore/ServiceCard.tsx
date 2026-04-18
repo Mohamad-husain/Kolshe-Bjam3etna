@@ -81,7 +81,7 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
         {/* Price */}
         <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
           <Text style={[styles.priceText, { color: accent.color }]}>
-            {data.pricePerHour} د.أ/ساعة
+            {data.pricePerHour} شيقل/ساعة
           </Text>
         </View>
 

@@ -19,6 +19,7 @@ interface EventCardProps {
 export function EventCard({ data, onPress }: EventCardProps) {
   // devide by zero guard for capacity progress calculation
   const hasValidCapacity = data.maxCount > 0;
+  const hasImage = Boolean(data.imageUrl);
   const progress = hasValidCapacity
     ? Math.min(data.registeredCount / data.maxCount, 1)
     : 0;
@@ -38,7 +39,7 @@ export function EventCard({ data, onPress }: EventCardProps) {
 
       <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
-      <View style={styles.header}>
+      <View style={[styles.header, hasImage && styles.headerAfterImage]}>
         <View style={styles.headerText}>
           <Text
             style={[
@@ -172,6 +173,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: Spacing.sm,
+  },
+  headerAfterImage: {
+    marginTop: Spacing.sm,
   },
   headerText: {
     alignItems: "flex-end",
