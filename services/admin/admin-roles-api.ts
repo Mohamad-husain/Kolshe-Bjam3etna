@@ -40,7 +40,7 @@ function normalizeRoleValue(value: string | null): AdminRoleValue | null {
     normalized.includes('مالك') ||
     normalized.includes('فعالي')
   ) {
-    return 'eventOwner';
+    return 'Coordinator';
   }
 
   if (normalized.includes('admin')) {

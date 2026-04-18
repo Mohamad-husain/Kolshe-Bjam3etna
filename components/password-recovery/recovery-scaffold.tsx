@@ -3,6 +3,7 @@ import { type PropsWithChildren } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppLogoBadge } from '@/components/app-logo-badge';
 import { Colors } from '@/styles/ui-theme';
 
 import { styles } from './styles';
@@ -47,9 +48,7 @@ export function RecoveryScaffold({
           </Pressable>
         ) : null}
 
-        <View style={styles.logoBox}>
-          <Ionicons name="school-outline" size={38} color="#ffffff" />
-        </View>
+        <AppLogoBadge style={styles.logoBox} iconSize={38} />
 
         {children}
       </View>

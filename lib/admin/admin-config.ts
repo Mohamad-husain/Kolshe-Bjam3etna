@@ -47,7 +47,7 @@ export const adminRoleOptions: AdminRoleOption[] = [
     requiresScope: false,
   },
   {
-    value: 'eventOwner',
+    value: 'Coordinator',
     label: 'مالك الفعالية',
     description: 'إدارة فعالية أو نادٍ محدد.',
     color: '#b45af6',
@@ -56,6 +56,30 @@ export const adminRoleOptions: AdminRoleOption[] = [
     scopeLabel: 'النادي أو الفعالية المخصصة',
   },
 ];
+
+function resolveRoleValue(role: AdminRoleValue | string | null | undefined): AdminRoleValue | null {
+  const normalized = String(role ?? '').trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const compact = normalized.toLowerCase().replace(/[\s_-]+/g, '');
+
+  if (compact === 'superadmin') {
+    return 'superAdmin';
+  }
+
+  if (compact === 'coordinator' || compact === 'eventowner') {
+    return 'Coordinator';
+  }
+
+  if (compact === 'admin') {
+    return 'admin';
+  }
+
+  return null;
+}
 
 const clubStatusLabels: Record<AdminClubStatus, string> = {
   active: 'نشط',
@@ -78,8 +102,9 @@ const offerTypeLabels: Record<AdminOfferType, string> = {
   store: 'متجر',
 };
 
-export function getRoleOption(role: AdminRoleValue) {
-  return adminRoleOptions.find((item) => item.value === role) ?? adminRoleOptions[0];
+export function getRoleOption(role: AdminRoleValue | string | null | undefined) {
+  const resolvedRole = resolveRoleValue(role) ?? 'admin';
+  return adminRoleOptions.find((item) => item.value === resolvedRole) ?? adminRoleOptions[0];
 }
 
 function resolveAdminNewsCategoryEntry(value: string | number | null | undefined) {
@@ -104,7 +129,7 @@ export function getAdminNewsCategoryLabel(value: string | number | null | undefi
   return resolveAdminNewsCategoryEntry(value)?.label ?? String(value ?? '').trim();
 }
 
-export function getRoleLabel(role: AdminRoleValue) {
+export function getRoleLabel(role: AdminRoleValue | string | null | undefined) {
   return getRoleOption(role).label;
 }
 
