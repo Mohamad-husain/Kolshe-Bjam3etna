@@ -323,7 +323,7 @@ export function AdminDashboardOverlays({ controller }: AdminDashboardOverlaysPro
             icon:
               option.value === 'superAdmin'
                 ? 'shield-checkmark-outline'
-                : option.value === 'eventOwner'
+                : option.value === 'Coordinator'
                   ? 'calendar-outline'
                   : 'shield-outline',
           }))}
