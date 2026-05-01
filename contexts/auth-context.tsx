@@ -8,14 +8,13 @@ import {
 } from 'react';
 
 import {
-  clearStoredAuthSession,
-  loadStoredAuthSession,
-  saveStoredAuthSession,
-} from '@/lib/auth/auth-session';
+  clearAuthSession,
+  restoreAuthSession,
+  saveAuthenticatedUser,
+} from '@/services/auth-api';
 import { queryKeys } from '@/lib/query-keys';
 import { queryClient } from '@/lib/query-client';
 import type { User } from '@/services/auth-api';
-import { getAuthToken, setAuthToken } from '@/services/http-client';
 
 type AuthContextValue = {
   user: User | null;
@@ -33,18 +32,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let isMounted = true;
 
     async function hydrateAuthState() {
-      const session = await loadStoredAuthSession();
+      const session = await restoreAuthSession();
 
       if (!isMounted) {
         return;
       }
 
       if (session) {
-        setAuthToken(session.token);
         setUser(session.user);
         queryClient.setQueryData(queryKeys.auth.user, session.user);
       } else {
-        setAuthToken(null);
         queryClient.setQueryData(queryKeys.auth.user, null);
       }
 
@@ -65,22 +62,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(nextUser);
         queryClient.setQueryData(queryKeys.auth.user, nextUser);
         queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
-
-        const token = getAuthToken();
-
-        if (token) {
-          void saveStoredAuthSession({ token, user: nextUser });
-          return;
-        }
-
-        void clearStoredAuthSession();
+        void saveAuthenticatedUser(nextUser);
       },
       signOut: () => {
         setUser(null);
-        setAuthToken(null);
         queryClient.setQueryData(queryKeys.auth.user, null);
         queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
-        void clearStoredAuthSession();
+        void clearAuthSession();
       },
     }),
     [user],

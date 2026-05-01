@@ -1,5 +1,6 @@
-import { apiClient } from './http-client';
-import { ExchangeCardData } from "@/components/explore/ExchangeCard";
+import { apiClient } from "./http-client";
+import { ExchangeCardData } from "@/types/explore";
+import { toAbsoluteImageUrl } from "./media";
 
 type ApiSwapAd = {
   id: number;
@@ -25,9 +26,9 @@ function mapToExchangeCard(item: ApiSwapAd): ExchangeCardData {
     want: item.wantedTitle, // ← أريد
     owner: {
       name: item.user.fullName,
-      rating: 0,
       initials: item.user.fullName.charAt(0),
     },
+    imageUrl: toAbsoluteImageUrl(item.user.profileImageUrl),
   };
 }
 

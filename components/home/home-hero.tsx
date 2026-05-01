@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AppLogoBadge } from '@/components/app-logo-badge';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 type HomeHeroProps = {
@@ -41,7 +41,7 @@ export function HomeHero({
             </View>
 
             <View style={styles.logoWrap}>
-              <Image source={require('../../assets/souqlogo.png')} style={styles.logo} contentFit="cover" />
+              <AppLogoBadge size={42} iconSize={22} />
             </View>
           </View>
         </View>
@@ -113,10 +113,14 @@ const styles = StyleSheet.create({
     color: 'rgba(191,219,254,0.9)', fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.semibold
   },
   logoWrap: {
-    width: 50, height: 50, borderRadius: 16, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.14)'
-  },
-  logo: {
-    width: '100%', height: '100%'
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   welcome: {
     alignItems: 'flex-end', marginBottom: 20

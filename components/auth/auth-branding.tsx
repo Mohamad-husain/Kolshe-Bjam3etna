@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AppLogoBadge } from '@/components/app-logo-badge';
 import { AUTH_COPY } from '@/lib/auth/auth-copy';
 import {
   Colors,
@@ -11,9 +11,7 @@ import {
 export function AuthBranding() {
   return (
     <View style={styles.container}>
-      <View style={styles.logoBox}>
-        <Ionicons name="school-outline" size={37} color="#ffffff" />
-      </View>
+      <AppLogoBadge style={styles.logoBox} />
 
       <Text style={styles.title}>{AUTH_COPY.appTitle}</Text>
       <Text style={styles.subtitle}>{AUTH_COPY.appSubtitle}</Text>
@@ -28,17 +26,6 @@ const styles = StyleSheet.create({
   },
   logoBox: {
     marginBottom: 22,
-    width: 80,
-    height: 80,
-    borderRadius: 22,
-    backgroundColor: '#2f63e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2f63e0',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 6,
   },
   title: {
     color: Colors.foreground,

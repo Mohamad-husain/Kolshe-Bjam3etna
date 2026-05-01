@@ -81,7 +81,7 @@ export type AdminNewsUpsertInput = {
   isPublished: boolean;
 };
 
-export type AdminRoleValue = 'admin' | 'superAdmin' | 'eventOwner';
+export type AdminRoleValue = 'admin' | 'superAdmin' | 'Coordinator';
 
 export type AdminRoleSummary = {
   role: AdminRoleValue;

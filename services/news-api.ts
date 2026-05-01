@@ -1,4 +1,6 @@
 import { apiClient, getApiErrorMessage } from "@/services/http-client";
+import { toAbsoluteImageUrl } from "./media";
+import { normalizeNewsCategory } from "@/lib/news/news-categories";
 
 type ApiNewsItem = {
   id: number;
@@ -27,18 +29,6 @@ export type NewsItem = {
   viewsCount: number;
   timeAgo: string;
 };
-
-function toAbsoluteImageUrl(path: string | null) {
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
-
-  const baseUrl = (process.env.EXPO_PUBLIC_API_BASE_URL ?? "")
-    .trim()
-    .replace(/\/$/, "");
-  if (!baseUrl) return path;
-
-  return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
-}
 
 function pluralizeArabic(
   value: number,
@@ -78,12 +68,12 @@ function mapNewsItem(item: ApiNewsItem): NewsItem {
   return {
     id: String(item.id),
     title: item.title,
-    source: item.source || "إعلان جامعي", // إضافتك
-    category: item.category || "عام", // إضافتك
+    source: item.source || "إعلان جامعي",
+    category: normalizeNewsCategory(item.category),
     imageUrl: toAbsoluteImageUrl(item.imageUrl),
     isImportant: Boolean(item.isImportant),
-    viewsCount: Number(item.viewsCount ?? 0), // إضافتك
-    timeAgo: formatRelativeTime(item.createdAtUtc), // إضافتك
+    viewsCount: Number(item.viewsCount ?? 0),
+    timeAgo: formatRelativeTime(item.createdAtUtc),
   };
 }
 

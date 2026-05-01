@@ -179,10 +179,10 @@ export const adminRolesFixture: AdminRoleMember[] = [
     id: 'role-2',
     fullName: 'لينا حسن',
     email: 'lina@ju.edu.jo',
-    role: 'eventOwner',
+    role: 'Coordinator',
     scopeId: 1,
     scopeName: 'ورشة عمل البرمجة بالبايثون',
-    permissions: getRoleOption('eventOwner').permissions,
+    permissions: getRoleOption('Coordinator').permissions,
     addedAt: '2026-01-18',
     addedBy: 'المدير الأعلى',
     ...buildAvatar('لينا حسن'),
@@ -191,10 +191,10 @@ export const adminRolesFixture: AdminRoleMember[] = [
     id: 'role-3',
     fullName: 'عمر أحمد',
     email: 'omar@ju.edu.jo',
-    role: 'eventOwner',
+    role: 'Coordinator',
     scopeId: null,
     scopeName: null,
-    permissions: getRoleOption('eventOwner').permissions,
+    permissions: getRoleOption('Coordinator').permissions,
     addedAt: '2026-01-20',
     addedBy: 'أحمد محمد',
     ...buildAvatar('عمر أحمد'),
@@ -204,7 +204,7 @@ export const adminRolesFixture: AdminRoleMember[] = [
 export const adminRoleSummaryFixture: AdminRoleSummary[] = [
   { role: 'admin', count: 1 },
   { role: 'superAdmin', count: 0 },
-  { role: 'eventOwner', count: 2 },
+  { role: 'Coordinator', count: 2 },
 ];
 
 export const adminOffersFixture: AdminOfferItem[] = [

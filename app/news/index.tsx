@@ -14,11 +14,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   CategoryFilter,
-  type Category,
 } from "@/components/explore/CategoryFilter";
 import { getNewsAccent } from "@/components/news/news_colors";
 
 import { NewsCard } from "@/components/news/NewsCard";
+import {
+  ALL_NEWS_CATEGORY,
+  NEWS_CATEGORIES,
+} from "@/lib/news/news-categories";
 import { getNews } from "@/services/news-api";
 import {
   Colors,
@@ -29,22 +32,12 @@ import {
   SemanticColors,
   Spacing,
 } from "@/styles/ui-theme";
-const NEWS_CATEGORIES: Category[] = [
-  { id: "الكل", label: "الكل" },
-  { id: "أكاديمي", label: "أكاديمي" },
-  { id: "تسجيل", label: "تسجيل" },
-  { id: "منح", label: "منح" },
-  { id: "إدارة", label: "إدارة" },
-  { id: "تقنية", label: "تقنية" },
-  { id: "إعلان عام", label: "إعلان عام" },
-];
-
 export default function NewsScreen() {
   const [searchError, setSearchError] = useState("");
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("الكل");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_NEWS_CATEGORY);
   const activeAccent =
-    selectedCategory === "الكل"
+    selectedCategory === ALL_NEWS_CATEGORY
       ? {
           color: SemanticColors.blue,
           softBg: `${SemanticColors.blue}12`,
@@ -75,7 +68,8 @@ export default function NewsScreen() {
         item.title.includes(search) ||
         item.source.includes(search);
       const matchCategory =
-        selectedCategory === "الكل" || item.category === selectedCategory;
+        selectedCategory === ALL_NEWS_CATEGORY ||
+        item.category === selectedCategory;
       return matchSearch && matchCategory;
     });
   }, [items, search, selectedCategory]);
@@ -110,7 +104,10 @@ export default function NewsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.container]}>
+      <View style={styles.mobileShell}>
+        <View style={styles.topRightBubble} />
+        <View style={styles.topLeftBubble} />
+        <View style={styles.bottomLeftBubble} />
         <FlatList
           data={otherNews}
           keyExtractor={(item) => item.id}
@@ -241,6 +238,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  mobileShell: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+  },
   header: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -317,6 +320,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
   },
   center: {
     flex: 1,
@@ -328,5 +332,32 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     color: Colors.mutedForeground,
+  },
+  topRightBubble: {
+    position: "absolute",
+    top: -110,
+    right: -90,
+    width: 360,
+    height: 360,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: "rgba(104, 139, 245, 0.03)",
+  },
+  topLeftBubble: {
+    position: "absolute",
+    top: 260,
+    left: -130,
+    width: 250,
+    height: 250,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: "rgba(124, 156, 251, 0.04)",
+  },
+  bottomLeftBubble: {
+    position: "absolute",
+    bottom: -110,
+    right: -40,
+    width: 210,
+    height: 210,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: "rgba(108, 150, 255, 0.07)",
   },
 });

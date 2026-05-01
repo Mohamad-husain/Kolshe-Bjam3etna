@@ -1,9 +1,10 @@
-import { apiClient, getAuthToken } from "../http-client"
+import { apiClient } from "../http-client"
 import {
     decodeJwtPayload,
     getJwtStringClaim,
     jwtClaimKeys,
 } from "@/lib/auth/jwt"
+import { getAuthToken } from "@/services/auth-api"
 import type {
     ChatConversation,
     ChatConversationApi,

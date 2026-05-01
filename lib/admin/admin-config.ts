@@ -8,7 +8,7 @@ import type {
   AdminSection,
 } from '@/types/admin';
 
-export const adminSections: Array<{ key: AdminSection; label: string }> = [
+export const adminSections: { key: AdminSection; label: string }[] = [
   { key: 'overview', label: 'نظرة عامة' },
   { key: 'users', label: 'المستخدمون' },
   { key: 'news', label: 'الأخبار' },
@@ -17,13 +17,15 @@ export const adminSections: Array<{ key: AdminSection; label: string }> = [
   { key: 'clubs', label: 'الأندية' },
 ];
 
-export const adminNewsCategories = [
-  'إعلان عام',
-  'أكاديمي',
-  'منح وبعثات',
-  'أنشطة ورياضة',
-  'مرافق وخدمات',
+export const adminNewsCategoryEntries = [
+  { id: '1', label: 'إعلان عام' },
+  { id: '2', label: 'أكاديمي' },
+  { id: '3', label: 'منح وبعثات' },
+  { id: '4', label: 'أنشطة ورياضة' },
+  { id: '5', label: 'مرافق وخدمات' },
 ] as const;
+
+export const adminNewsCategories = adminNewsCategoryEntries.map((item) => item.label);
 
 export const adminOfferCategories = ['برمجة', 'كتب', 'تصميم', 'قهوة', 'ألعاب'] as const;
 
@@ -45,7 +47,7 @@ export const adminRoleOptions: AdminRoleOption[] = [
     requiresScope: false,
   },
   {
-    value: 'eventOwner',
+    value: 'Coordinator',
     label: 'مالك الفعالية',
     description: 'إدارة فعالية أو نادٍ محدد.',
     color: '#b45af6',
@@ -54,6 +56,30 @@ export const adminRoleOptions: AdminRoleOption[] = [
     scopeLabel: 'النادي أو الفعالية المخصصة',
   },
 ];
+
+function resolveRoleValue(role: AdminRoleValue | string | null | undefined): AdminRoleValue | null {
+  const normalized = String(role ?? '').trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const compact = normalized.toLowerCase().replace(/[\s_-]+/g, '');
+
+  if (compact === 'superadmin') {
+    return 'superAdmin';
+  }
+
+  if (compact === 'coordinator' || compact === 'eventowner') {
+    return 'Coordinator';
+  }
+
+  if (compact === 'admin') {
+    return 'admin';
+  }
+
+  return null;
+}
 
 const clubStatusLabels: Record<AdminClubStatus, string> = {
   active: 'نشط',
@@ -76,11 +102,34 @@ const offerTypeLabels: Record<AdminOfferType, string> = {
   store: 'متجر',
 };
 
-export function getRoleOption(role: AdminRoleValue) {
-  return adminRoleOptions.find((item) => item.value === role) ?? adminRoleOptions[0];
+export function getRoleOption(role: AdminRoleValue | string | null | undefined) {
+  const resolvedRole = resolveRoleValue(role) ?? 'admin';
+  return adminRoleOptions.find((item) => item.value === resolvedRole) ?? adminRoleOptions[0];
 }
 
-export function getRoleLabel(role: AdminRoleValue) {
+function resolveAdminNewsCategoryEntry(value: string | number | null | undefined) {
+  const normalized = String(value ?? '').trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return (
+    adminNewsCategoryEntries.find(
+      (item) => item.id === normalized || item.label === normalized,
+    ) ?? null
+  );
+}
+
+export function getAdminNewsCategoryId(value: string | number | null | undefined) {
+  return resolveAdminNewsCategoryEntry(value)?.id ?? String(value ?? '').trim();
+}
+
+export function getAdminNewsCategoryLabel(value: string | number | null | undefined) {
+  return resolveAdminNewsCategoryEntry(value)?.label ?? String(value ?? '').trim();
+}
+
+export function getRoleLabel(role: AdminRoleValue | string | null | undefined) {
   return getRoleOption(role).label;
 }
 

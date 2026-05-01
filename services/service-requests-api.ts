@@ -1,5 +1,5 @@
-import { apiClient } from './http-client';
-import { ServiceCardData } from "@/components/explore/ServiceCard";
+import { apiClient } from "./http-client";
+import { ServiceCardData } from "@/types/explore";
 
 type ApiServiceRequest = {
   id: number;
@@ -20,7 +20,7 @@ function formatDeadline(deadlineUtc: string): string {
   const deadline = new Date(deadlineUtc);
 
   if (Number.isNaN(deadline.getTime()) || deadline.getFullYear() < 2000) {
-    return 'غير محدد';
+    return "غير محدد";
   }
 
   const now = new Date();
@@ -34,11 +34,11 @@ function formatDeadline(deadlineUtc: string): string {
 
   const diffWeeks = Math.ceil(diffDays / 7);
   if (diffDays <= 30) {
-    return diffWeeks === 1 ? 'متبقي أسبوع' : `متبقي ${diffWeeks} أسابيع`;
+    return diffWeeks === 1 ? "متبقي أسبوع" : `متبقي ${diffWeeks} أسابيع`;
   }
 
   const diffMonths = Math.ceil(diffDays / 30);
-  return diffMonths === 1 ? 'متبقي شهر' : `متبقي ${diffMonths} أشهر`;
+  return diffMonths === 1 ? "متبقي شهر" : `متبقي ${diffMonths} أشهر`;
 }
 
 function mapToServiceCard(item: ApiServiceRequest): ServiceCardData {
@@ -51,7 +51,6 @@ function mapToServiceCard(item: ApiServiceRequest): ServiceCardData {
     deadline: formatDeadline(item.deadlineUtc),
     owner: {
       name: item.user.fullName,
-      rating: 0,
       initials: item.user.fullName.charAt(0),
     },
   };
