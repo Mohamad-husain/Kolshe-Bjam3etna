@@ -10,7 +10,11 @@ import {
     restoreChatMutationSnapshot,
     updateConversationPreview,
 } from "@/hooks/chat/mutations/chat-mutation-utils"
-import type { ChatMessage, UpdateChatMessageRequest } from "@/types/chat"
+import type {
+    ChatConversation,
+    ChatMessage,
+    UpdateChatMessageRequest,
+} from "@/types/chat"
 
 type UpdateMessageInput = UpdateChatMessageRequest & {
     conversationId: string
@@ -46,7 +50,7 @@ export const useUpdateMessage = () => {
                 snapshot.previousMessages.find((message) => message.id === variables.messageId)
 
             if (updatedMessage && lastMessage?.id === variables.messageId) {
-                queryClient.setQueryData(
+                queryClient.setQueryData<ChatConversation[]>(
                     queryKeys.chat.conversations,
                     (old = []) =>
                         updateConversationPreview(

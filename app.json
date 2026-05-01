@@ -29,6 +29,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "اسمح للتطبيق بالوصول إلى الصور لاختيار صورة وإرسالها في المحادثات",
+          "cameraPermission": "اسمح للتطبيق باستخدام الكاميرا لالتقاط صورة وإرسالها في المحادثات"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
