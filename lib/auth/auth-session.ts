@@ -1,7 +1,9 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
-
 import { hasAdminPanelRoles } from '@/lib/auth/admin-access';
+import {
+  deletePersistentStorageItem,
+  getPersistentStorageItem,
+  setPersistentStorageItem,
+} from '@/lib/storage/persistent-storage';
 import type { User } from '@/services/auth-api';
 
 const AUTH_SESSION_KEY = 'auth.session';
@@ -10,42 +12,6 @@ type PersistedAuthSession = {
   token: string;
   user: User;
 };
-
-type WebStorage = {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-  removeItem: (key: string) => void;
-};
-
-function getWebStorage(): WebStorage | null {
-  return (globalThis as { localStorage?: WebStorage }).localStorage ?? null;
-}
-
-async function getStorageItem(key: string) {
-  if (Platform.OS === 'web') {
-    return getWebStorage()?.getItem(key) ?? null;
-  }
-
-  return SecureStore.getItemAsync(key);
-}
-
-async function setStorageItem(key: string, value: string) {
-  if (Platform.OS === 'web') {
-    getWebStorage()?.setItem(key, value);
-    return;
-  }
-
-  await SecureStore.setItemAsync(key, value);
-}
-
-async function deleteStorageItem(key: string) {
-  if (Platform.OS === 'web') {
-    getWebStorage()?.removeItem(key);
-    return;
-  }
-
-  await SecureStore.deleteItemAsync(key);
-}
 
 function normalizeStoredUser(value: unknown): User | null {
   if (!value || typeof value !== 'object') {
@@ -106,7 +72,7 @@ function parseStoredSession(value: unknown): PersistedAuthSession | null {
 
 export async function loadStoredAuthSession(): Promise<PersistedAuthSession | null> {
   try {
-    const storedValue = await getStorageItem(AUTH_SESSION_KEY);
+    const storedValue = await getPersistentStorageItem(AUTH_SESSION_KEY);
 
     if (!storedValue) {
       return null;
@@ -115,21 +81,21 @@ export async function loadStoredAuthSession(): Promise<PersistedAuthSession | nu
     const session = parseStoredSession(JSON.parse(storedValue));
 
     if (!session) {
-      await deleteStorageItem(AUTH_SESSION_KEY);
+      await deletePersistentStorageItem(AUTH_SESSION_KEY);
       return null;
     }
 
     return session;
   } catch {
-    await deleteStorageItem(AUTH_SESSION_KEY);
+    await deletePersistentStorageItem(AUTH_SESSION_KEY);
     return null;
   }
 }
 
 export async function saveStoredAuthSession(session: PersistedAuthSession) {
-  await setStorageItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  await setPersistentStorageItem(AUTH_SESSION_KEY, JSON.stringify(session));
 }
 
 export async function clearStoredAuthSession() {
-  await deleteStorageItem(AUTH_SESSION_KEY);
+  await deletePersistentStorageItem(AUTH_SESSION_KEY);
 }

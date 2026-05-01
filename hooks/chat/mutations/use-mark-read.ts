@@ -7,7 +7,7 @@ import {
     invalidateChatQueries,
     restoreChatMutationSnapshot,
 } from "@/hooks/chat/mutations/chat-mutation-utils"
-import type { ChatMessage } from "@/types/chat"
+import type { ChatConversation, ChatMessage } from "@/types/chat"
 
 export const useMarkRead = () => {
     const queryClient = useQueryClient()
@@ -18,7 +18,7 @@ export const useMarkRead = () => {
             await cancelChatQueries(queryClient, conversationId)
             const snapshot = getChatMutationSnapshot(queryClient, conversationId)
 
-            queryClient.setQueryData(
+            queryClient.setQueryData<ChatConversation[]>(
                 queryKeys.chat.conversations,
                 (old = []) =>
                     old.map((conversation) =>

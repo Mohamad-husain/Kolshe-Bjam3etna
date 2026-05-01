@@ -75,7 +75,6 @@ export default function AddMenuRoute() {
             <View style={styles.headerSide} />
 
             <View style={styles.titleRow}>
-              <Ionicons name="sparkles-outline" size={18} color={Colors.primary} />
               <Text style={styles.title}>إضافة جديد</Text>
             </View>
 
