@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 50,
     // Lock the nav layout so app-level RTL does not flip tab order.
-    direction: 'ltr',
+    writingDirection: 'ltr',
   },
   nav: {
     backgroundColor: Colors.background,

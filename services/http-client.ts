@@ -1,6 +1,6 @@
 import axios, { isAxiosError } from 'axios';
 
-import { getAuthToken } from '@/services/auth-api';
+import { getAuthToken, invalidateAuthSession } from '@/services/auth-api';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
 
@@ -15,12 +15,45 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = getAuthToken();
 
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (typeof config.headers?.delete === 'function') {
+      config.headers.delete('Content-Type');
+    } else if (config.headers) {
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
+    }
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
 });
+
+function isPublicAuthPath(pathname: string) {
+  return (
+    pathname.includes('/api/Account/login') ||
+    pathname.includes('/api/Account/register') ||
+    pathname.includes('/api/Account/forgot-password') ||
+    pathname.includes('/api/Account/verify-reset-code') ||
+    pathname.includes('/api/Account/reset-password')
+  );
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (isAxiosError(error) && error.response?.status === 401) {
+      const requestUrl = String(error.config?.url ?? '');
+
+      if (!isPublicAuthPath(requestUrl)) {
+        await invalidateAuthSession();
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 function parseResponsePayload(payload: unknown) {
   if (!payload) {
