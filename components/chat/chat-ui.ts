@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import {
   DELETED_MESSAGE_PREVIEW,
   EDITED_MESSAGE_PREVIEW,
+  isDeletedMessageContent,
 } from '@/hooks/chat/mutations/chat-mutation-utils';
 
 const CHAT_AVATAR_COLORS = [
@@ -114,7 +115,7 @@ export function getMessagePreviewText(value?: string | null) {
     return '';
   }
 
-  if (/^\[(deleted|removed)\]$/i.test(text) || /^deleted$/i.test(text)) {
+  if (isDeletedMessageContent(text)) {
     return DELETED_MESSAGE_PREVIEW;
   }
 
@@ -138,6 +139,10 @@ export function getMessageBodyText(value?: string | null, hasAttachment?: boolea
 
   if (!text) {
     return '';
+  }
+
+  if (isDeletedMessageContent(text)) {
+    return DELETED_MESSAGE_PREVIEW;
   }
 
   if (/^\[(image|photo)\]$/i.test(text)) {

@@ -40,11 +40,13 @@ import { useMarkRead } from "@/hooks/chat/mutations/use-mark-read"
 import { useUpdateMessage } from "@/hooks/chat/mutations/use-update-message"
 import { useChatConversations } from "@/hooks/chat/queries/use-chat-conversations"
 import { useChatMessages } from "@/hooks/chat/queries/use-chat-messages"
-import type { ChatMessage } from "@/types/chat"
+import type { ChatConversation, ChatMessage } from "@/types/chat"
 
 const EMPTY_MESSAGES: ChatMessage[] = []
 
-const scrollMessagesToEnd = (listRef: React.RefObject<FlatList>) => {
+const scrollMessagesToEnd = (
+    listRef: React.RefObject<FlatList<ChatMessage> | null>
+) => {
     setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true })
     }, 100)
@@ -56,7 +58,7 @@ export default function ChatScreen() {
         otherUserName?: string
         otherUserAvatarUrl?: string
     }>()
-    const flatListRef = useRef<FlatList>(null)
+    const flatListRef = useRef<FlatList<ChatMessage> | null>(null)
     const { user } = useAuth()
 
     const conversationId = params.conversationId || ""
@@ -75,7 +77,7 @@ export default function ChatScreen() {
     const [previewImageUri, setPreviewImageUri] = useState<string | null>(null)
 
     const messages = messagesData ?? EMPTY_MESSAGES
-    const conversations = conversationsData ?? []
+    const conversations: ChatConversation[] = conversationsData ?? []
     const currentConversation = conversations.find(
         (conversation) => conversation.id === conversationId
     )

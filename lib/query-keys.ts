@@ -11,6 +11,8 @@ export const queryKeys = {
   chat: {
     conversations: ['chat', 'conversations'] as const,
     messages: (conversationId: string) => ['chat', 'messages', conversationId] as const,
+    deletedMessages: (conversationId: string) =>
+      ['chat', 'deleted-messages', conversationId] as const,
   },
   explore: {
     services: ['explore', 'services'] as const,

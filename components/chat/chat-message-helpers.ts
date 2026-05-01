@@ -4,6 +4,10 @@ import {
     getDisplayFileUri,
     getFileLabel,
 } from "@/components/chat/chat-ui"
+import {
+    DELETED_MESSAGE_PREVIEW,
+    isDeletedMessageContent,
+} from "@/hooks/chat/mutations/chat-mutation-utils"
 import type { ChatMessage } from "@/types/chat"
 
 type OwnershipInput = {
@@ -62,10 +66,11 @@ export const hasFileAttachment = (message: ChatMessage) =>
     !!getDisplayFileUri(message.fileUrl) || !!message.fileName.trim()
 
 export const getMessageActionsState = (message: ChatMessage) => {
-    const canEdit = isOwnMessage(message)
-    const canDelete = isOwnMessage(message)
-    const canDownloadImage = hasImageAttachment(message)
-    const canDownloadFile = hasFileAttachment(message)
+    const isDeleted = isDeletedMessageContent(message.content)
+    const canEdit = isOwnMessage(message) && !isDeleted
+    const canDelete = isOwnMessage(message) && !isDeleted
+    const canDownloadImage = !isDeleted && hasImageAttachment(message)
+    const canDownloadFile = !isDeleted && hasFileAttachment(message)
 
     return {
         canEdit,
@@ -80,6 +85,10 @@ export const hasMessageActions = (message: ChatMessage) =>
     getMessageActionsState(message).hasAny
 
 export const getMessageActionSubtitle = (message: ChatMessage) => {
+    if (isDeletedMessageContent(message.content)) {
+        return DELETED_MESSAGE_PREVIEW
+    }
+
     if (message.content.trim()) {
         return message.content.trim()
     }
