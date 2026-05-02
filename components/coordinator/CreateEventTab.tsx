@@ -10,6 +10,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -86,21 +87,17 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
     },
   });
   const pickImage = async (onChange: (value: any) => void) => {
-    // 1. طلب صلاحية
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      alert("لازم تعطي إذن للوصول للصور");
+      alert(" اعطي إذن للوصول للصور");
       return;
     }
-
-    // 2. فتح المعرض
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
     });
 
-    // 3. إذا المستخدم اختار صورة
     if (!result.canceled) {
       const asset = result.assets[0];
 
@@ -114,7 +111,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
 
   const onSubmit = handleSubmit((values) => {
     if (!values.date || !values.time) {
-      Alert.alert("خطأ", "لازم تعبّي التاريخ والوقت");
+      Alert.alert("خطأ", " التاريخ والوقت مطلوب");
       return;
     }
     const dateTime = new Date(`${values.date}T${values.time}:00Z`);
@@ -169,255 +166,261 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
   });
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Controller
-        control={control}
-        name="coverImage"
-        render={({ field: { onChange, value } }) => (
-          <Pressable
-            style={styles.imagePicker}
-            onPress={() => pickImage(onChange)}
-          >
-            <Ionicons
-              name="cloud-upload-outline"
-              size={32}
-              color={SemanticColors.green}
+    <KeyboardAvoidingView style={{ flex: 1 }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Controller
+          control={control}
+          name="coverImage"
+          render={({ field: { onChange, value } }) => (
+            <Pressable
+              style={styles.imagePicker}
+              onPress={() => pickImage(onChange)}
+            >
+              <Ionicons
+                name="cloud-upload-outline"
+                size={32}
+                color={SemanticColors.green}
+              />
+
+              <Text style={styles.imagePickerText}>
+                {value ? "تم اختيار صورة" : "أضف صورة أو بوستر للفعالية"}
+              </Text>
+            </Pressable>
+          )}
+        />
+
+        <Text style={styles.label}>عنوان الفعالية *</Text>
+        <Controller
+          control={control}
+          name="title"
+          rules={{ required: "عنوان الفعالية مطلوب" }}
+          render={({ field: { onChange, value } }) => (
+            <TextInput
+              style={[styles.input, errors.title && styles.inputError]}
+              placeholder="مثال: ورشة عمل البرمجة بالبايثون"
+              placeholderTextColor={Colors.mutedForeground}
+              value={value}
+              onChangeText={onChange}
+              textAlign="right"
             />
-
-            <Text style={styles.imagePickerText}>
-              {value ? "تم اختيار صورة" : "أضف صورة أو بوستر للفعالية"}
-            </Text>
-          </Pressable>
+          )}
+        />
+        {errors.title && (
+          <Text style={styles.errorText}>{errors.title.message}</Text>
         )}
-      />
 
-      <Text style={styles.label}>عنوان الفعالية *</Text>
-      <Controller
-        control={control}
-        name="title"
-        rules={{ required: "عنوان الفعالية مطلوب" }}
-        render={({ field: { onChange, value } }) => (
-          <TextInput
-            style={[styles.input, errors.title && styles.inputError]}
-            placeholder="مثال: ورشة عمل البرمجة بالبايثون"
-            placeholderTextColor={Colors.mutedForeground}
-            value={value}
-            onChangeText={onChange}
-            textAlign="right"
-          />
-        )}
-      />
-      {errors.title && (
-        <Text style={styles.errorText}>{errors.title.message}</Text>
-      )}
-
-      <Text style={styles.label}>نوع الفعالية</Text>
-      <Controller
-        control={control}
-        name="type"
-        render={({ field: { onChange, value } }) => (
-          <View style={styles.typeRow}>
-            {EVENT_TYPES.map((type) => (
-              <Pressable
-                key={type.id}
-                onPress={() => onChange(type.id)}
-                style={[
-                  styles.typeChip,
-                  value === type.id && styles.typeChipActive,
-                ]}
-              >
-                <Text
+        <Text style={styles.label}>نوع الفعالية</Text>
+        <Controller
+          control={control}
+          name="type"
+          render={({ field: { onChange, value } }) => (
+            <View style={styles.typeRow}>
+              {EVENT_TYPES.map((type) => (
+                <Pressable
+                  key={type.id}
+                  onPress={() => onChange(type.id)}
                   style={[
-                    styles.typeChipText,
-                    value === type.id && styles.typeChipTextActive,
+                    styles.typeChip,
+                    value === type.id && styles.typeChipActive,
                   ]}
                 >
-                  {type.label}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.typeChipText,
+                      value === type.id && styles.typeChipTextActive,
+                    ]}
+                  >
+                    {type.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        />
+
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>الوقت</Text>
+            <Controller
+              control={control}
+              name="time"
+              rules={{ required: "الوقت مطلوب" }}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <Pressable
+                    onPress={() => setShowTimePicker(true)}
+                    style={styles.input}
+                  >
+                    <Text style={{ textAlign: "right" }}>
+                      {value || "اختر الوقت"}
+                    </Text>
+                  </Pressable>
+
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={new Date()}
+                      mode="time"
+                      is24Hour={true}
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowTimePicker(false);
+                        if (selectedTime) {
+                          const hours = selectedTime
+                            .getHours()
+                            .toString()
+                            .padStart(2, "0");
+                          const minutes = selectedTime
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, "0");
+
+                          onChange(`${hours}:${minutes}`);
+                        }
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            />
           </View>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>التاريخ</Text>
+            <Controller
+              control={control}
+              name="date"
+              rules={{ required: "التاريخ مطلوب" }}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    style={styles.input}
+                  >
+                    <Text style={{ textAlign: "right" }}>
+                      {value || "اختر التاريخ"}
+                    </Text>
+                  </Pressable>
+
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={value ? new Date(value) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowDatePicker(false);
+                        if (selectedDate) {
+                          const formatted = selectedDate
+                            .toISOString()
+                            .split("T")[0];
+                          onChange(formatted);
+                        }
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            />
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>الحد الأقصى</Text>
+            <Controller
+              control={control}
+              name="capacity"
+              rules={{ required: "الحد الأقصى مطلوب" }}
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={[styles.input, errors.capacity && styles.inputError]}
+                  placeholder="50"
+                  placeholderTextColor={Colors.mutedForeground}
+                  value={value}
+                  onChangeText={onChange}
+                  textAlign="right"
+                  keyboardType="numeric"
+                />
+              )}
+            />
+          </View>
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>المكان</Text>
+            <Controller
+              control={control}
+              name="location"
+              rules={{ required: "المكان مطلوب" }}
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={[styles.input, errors.location && styles.inputError]}
+                  placeholder="قاعة الحاسوب"
+                  placeholderTextColor={Colors.mutedForeground}
+                  value={value}
+                  onChangeText={onChange}
+                  textAlign="right"
+                />
+              )}
+            />
+          </View>
+        </View>
+
+        <Text style={styles.label}>شرح التفاصيل</Text>
+        <Controller
+          control={control}
+          name="description"
+          rules={{ required: "الوصف مطلوب" }}
+          render={({ field: { onChange, value } }) => (
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                errors.description && styles.inputError,
+              ]}
+              placeholder="اشرح هدف الفعالية، ماذا سيستفيد المشاركون، والمحاور الرئيسية..."
+              placeholderTextColor={Colors.mutedForeground}
+              value={value}
+              onChangeText={onChange}
+              textAlign="right"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          )}
+        />
+        {errors.description && (
+          <Text style={styles.errorText}>{errors.description.message}</Text>
         )}
-      />
 
-      <View style={styles.row}>
-        <View style={styles.rowItem}>
-          <Text style={styles.label}>الوقت</Text>
-          <Controller
-            control={control}
-            name="time"
-            rules={{ required: "الوقت مطلوب" }}
-            render={({ field: { onChange, value } }) => (
-              <>
-                <Pressable
-                  onPress={() => setShowTimePicker(true)}
-                  style={styles.input}
-                >
-                  <Text style={{ textAlign: "right" }}>
-                    {value || "اختر الوقت"}
-                  </Text>
-                </Pressable>
-
-                {showTimePicker && (
-                  <DateTimePicker
-                    value={new Date()}
-                    mode="time"
-                    is24Hour={true}
-                    display="default"
-                    onChange={(event, selectedTime) => {
-                      setShowTimePicker(false);
-                      if (selectedTime) {
-                        const hours = selectedTime
-                          .getHours()
-                          .toString()
-                          .padStart(2, "0");
-                        const minutes = selectedTime
-                          .getMinutes()
-                          .toString()
-                          .padStart(2, "0");
-
-                        onChange(`${hours}:${minutes}`);
-                      }
-                    }}
-                  />
-                )}
-              </>
-            )}
-          />
-        </View>
-        <View style={styles.rowItem}>
-          <Text style={styles.label}>التاريخ</Text>
-          <Controller
-            control={control}
-            name="date"
-            rules={{ required: "التاريخ مطلوب" }}
-            render={({ field: { onChange, value } }) => (
-              <>
-                <Pressable
-                  onPress={() => setShowDatePicker(true)}
-                  style={styles.input}
-                >
-                  <Text style={{ textAlign: "right" }}>
-                    {value || "اختر التاريخ"}
-                  </Text>
-                </Pressable>
-
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={value ? new Date(value) : new Date()}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(false);
-                      if (selectedDate) {
-                        const formatted = selectedDate
-                          .toISOString()
-                          .split("T")[0];
-                        onChange(formatted);
-                      }
-                    }}
-                  />
-                )}
-              </>
-            )}
-          />
-        </View>
-      </View>
-
-      <View style={styles.row}>
-        <View style={styles.rowItem}>
-          <Text style={styles.label}>الحد الأقصى</Text>
-          <Controller
-            control={control}
-            name="capacity"
-            rules={{ required: "الحد الأقصى مطلوب" }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                style={[styles.input, errors.capacity && styles.inputError]}
-                placeholder="50"
-                placeholderTextColor={Colors.mutedForeground}
-                value={value}
-                onChangeText={onChange}
-                textAlign="right"
-                keyboardType="numeric"
+        <Pressable
+          style={({ pressed }) => [
+            styles.submitButton,
+            pressed && styles.submitButtonPressed,
+            isPending && styles.submitButtonDisabled,
+          ]}
+          onPress={() => void onSubmit()}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#fff"
               />
-            )}
-          />
-        </View>
-        <View style={styles.rowItem}>
-          <Text style={styles.label}>المكان</Text>
-          <Controller
-            control={control}
-            name="location"
-            rules={{ required: "المكان مطلوب" }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                style={[styles.input, errors.location && styles.inputError]}
-                placeholder="قاعة الحاسوب"
-                placeholderTextColor={Colors.mutedForeground}
-                value={value}
-                onChangeText={onChange}
-                textAlign="right"
-              />
-            )}
-          />
-        </View>
-      </View>
-
-      <Text style={styles.label}>شرح التفاصيل</Text>
-      <Controller
-        control={control}
-        name="description"
-        rules={{ required: "الوصف مطلوب" }}
-        render={({ field: { onChange, value } }) => (
-          <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              errors.description && styles.inputError,
-            ]}
-            placeholder="اشرح هدف الفعالية، ماذا سيستفيد المشاركون، والمحاور الرئيسية..."
-            placeholderTextColor={Colors.mutedForeground}
-            value={value}
-            onChangeText={onChange}
-            textAlign="right"
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        )}
-      />
-      {errors.description && (
-        <Text style={styles.errorText}>{errors.description.message}</Text>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.submitButton,
-          pressed && styles.submitButtonPressed,
-          isPending && styles.submitButtonDisabled,
-        ]}
-        onPress={() => void onSubmit()}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-            {/* ⑤ نص الزر يتغير حسب الوضع */}
-            <Text style={styles.submitButtonText}>
-              {isEditing ? "حفظ التعديلات" : "نشر الفعالية"}
-            </Text>
-          </>
-        )}
-      </Pressable>
-    </ScrollView>
+              {/* ⑤ نص الزر يتغير حسب الوضع */}
+              <Text style={styles.submitButtonText}>
+                {isEditing ? "حفظ التعديلات" : "نشر الفعالية"}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
