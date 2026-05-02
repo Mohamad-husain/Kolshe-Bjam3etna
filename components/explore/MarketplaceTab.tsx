@@ -24,8 +24,9 @@ import { useSearchInput } from "@/hooks/explore/use-search-input";
 const CATEGORIES: Category[] = [
   { id: "all", label: "الكل" },
   { id: "كتاب", label: "كتب" },
-  { id: "إلكترونيات", label: "إلكترونيات" },
+  { id: "الكترونيات", label: "إلكترونيات" },
   { id: "تصميم", label: "تصميم" },
+  { id: "برمجة", label: "برمجة" },
 ];
 
 type MarketplaceTabProps = {

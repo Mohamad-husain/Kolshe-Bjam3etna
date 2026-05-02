@@ -4,7 +4,16 @@ import DateTimePicker, {
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ServiceRequestBasicStep } from '@/components/submissions/service-request/service-request-basic-step';
@@ -179,63 +188,71 @@ export function NewServiceScreen() {
           onStepPress={setActiveStep}
         />
 
-        <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 28 }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+          style={styles.keyboardAvoiding}
         >
-          {activeStep === 1 ? (
-            <ServiceRequestBasicStep
-              title={title}
-              titleError={titleError}
-              selectedCategoryId={categoryId}
-              canProceed={step1Done}
-              onTitleChange={setTitle}
-              onCategoryChange={setCategoryId}
-              onNext={() => setActiveStep(2)}
-            />
-          ) : null}
+          <ScrollView
+            contentContainerStyle={[styles.content, { flexGrow: 1, paddingBottom: insets.bottom + 96 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          >
+            {activeStep === 1 ? (
+              <ServiceRequestBasicStep
+                title={title}
+                titleError={titleError}
+                selectedCategoryId={categoryId}
+                canProceed={step1Done}
+                onTitleChange={setTitle}
+                onCategoryChange={setCategoryId}
+                onNext={() => setActiveStep(2)}
+              />
+            ) : null}
 
-          {activeStep === 2 ? (
-            <ServiceRequestDetailsStep
-              budgetPresetId={budgetPresetId}
-              customBudget={customBudget}
-              deadline={deadline}
-              description={description}
-              budgetError={budgetError}
-              deadlineError={deadlineError}
-              descriptionError={descriptionError}
-              canProceed={step2Done}
-              onBudgetPresetChange={(presetId) => {
-                setBudgetPresetId(presetId);
-                setCustomBudget('');
-              }}
-              onCustomBudgetChange={(value) => {
-                setCustomBudget(value);
+            {activeStep === 2 ? (
+              <ServiceRequestDetailsStep
+                budgetPresetId={budgetPresetId}
+                customBudget={customBudget}
+                deadline={deadline}
+                description={description}
+                budgetError={budgetError}
+                deadlineError={deadlineError}
+                descriptionError={descriptionError}
+                canProceed={step2Done}
+                onBudgetPresetChange={(presetId) => {
+                  setBudgetPresetId(presetId);
+                  setCustomBudget('');
+                }}
+                onCustomBudgetChange={(value) => {
+                  setCustomBudget(value);
 
-                if (value.trim()) {
-                  setBudgetPresetId('');
-                }
-              }}
-              onOpenDatePicker={openDatePicker}
-              onDescriptionChange={setDescription}
-              onNext={() => setActiveStep(3)}
-            />
-          ) : null}
+                  if (value.trim()) {
+                    setBudgetPresetId('');
+                  }
+                }}
+                onOpenDatePicker={openDatePicker}
+                onDescriptionChange={setDescription}
+                onNext={() => setActiveStep(3)}
+              />
+            ) : null}
 
-          {activeStep === 3 ? (
-            <ServiceRequestReviewStep
-              title={title}
-              description={description}
-              deadline={deadline}
-              budgetLabel={budgetLabel}
-              selectedCategory={selectedCategory}
-              canSubmit={canSubmit}
-              isSubmitting={mutation.isPending}
-              onSubmit={handleSubmit}
-            />
-          ) : null}
-        </ScrollView>
+            {activeStep === 3 ? (
+              <ServiceRequestReviewStep
+                title={title}
+                description={description}
+                deadline={deadline}
+                budgetLabel={budgetLabel}
+                selectedCategory={selectedCategory}
+                canSubmit={canSubmit}
+                isSubmitting={mutation.isPending}
+                onSubmit={handleSubmit}
+              />
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         <Modal
           visible={showDatePicker && Platform.OS === 'ios'}
