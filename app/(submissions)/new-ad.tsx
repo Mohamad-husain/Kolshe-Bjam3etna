@@ -1,5 +1,5 @@
-import { SubmissionSectionScreen } from '@/components/submissions/submission-section-screen';
+import { NewProductAdScreen } from '@/components/submissions/new-product-ad-screen';
 
 export default function NewAdRoute() {
-  return <SubmissionSectionScreen title="إضافة إعلان بيع" />;
+  return <NewProductAdScreen />;
 }

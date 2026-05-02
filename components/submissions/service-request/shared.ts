@@ -103,6 +103,7 @@ export function getStepCopy(step: ServiceRequestStep) {
 export const serviceRequestStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f6f7fb' },
   screen: { flex: 1, backgroundColor: '#f6f7fb' },
+  keyboardAvoiding: { flex: 1 },
   topBubble: {
     position: 'absolute',
     top: 110,
