@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createEvent,
   deleteEvent,
+  getCoordinatorDashboard,
   getEventRegistrations,
   getMyEvents,
   updateEvent,
@@ -12,6 +13,7 @@ import {
 
 export const COORDINATOR_KEYS = {
   myEvents: ["coordinator", "my-events"] as const,
+  dashboard: ["coordinator", "dashboard"] as const,
   registrations: (eventId: number) =>
     ["coordinator", "registrations", eventId] as const,
 };
@@ -20,6 +22,12 @@ export function useMyEventsQuery() {
   return useQuery({
     queryKey: COORDINATOR_KEYS.myEvents,
     queryFn: getMyEvents,
+  });
+}
+export function useCoordinatorDashboardQuery() {
+  return useQuery({
+    queryKey: COORDINATOR_KEYS.dashboard,
+    queryFn: getCoordinatorDashboard,
   });
 }
 export function useEventRegistrationsQuery(eventId: number, enabled: boolean) {
@@ -36,6 +44,7 @@ export function useCreateEventMutation() {
     mutationFn: (input: CreateEventInput) => createEvent(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: COORDINATOR_KEYS.myEvents });
+      queryClient.invalidateQueries({ queryKey: COORDINATOR_KEYS.dashboard });
     },
   });
 }
@@ -46,6 +55,7 @@ export function useDeleteEventMutation() {
     mutationFn: (eventId: number) => deleteEvent(eventId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: COORDINATOR_KEYS.myEvents });
+      queryClient.invalidateQueries({ queryKey: COORDINATOR_KEYS.dashboard });
     },
   });
 }
@@ -56,6 +66,7 @@ export function useUpdateEventMutation() {
     mutationFn: (input: UpdateEventInput) => updateEvent(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: COORDINATOR_KEYS.myEvents });
+      queryClient.invalidateQueries({ queryKey: COORDINATOR_KEYS.dashboard });
     },
   });
 }

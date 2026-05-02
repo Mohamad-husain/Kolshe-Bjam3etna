@@ -9,9 +9,19 @@ export type CoordinatorEvent = {
   dateTimeUtc: string | null;
   capacity: number;
   description: string;
+  content: string;
+  agendaJson: string;
   registeredCount: number;
   progressPercent: number;
   coverImageUrl: string | null;
+};
+
+export type CoordinatorDashboardSummary = {
+  activeEventsCount: number;
+  totalRegistrations: number;
+  requestsCount: number;
+  registrationRatePercent: number;
+  averageRating: number;
 };
 
 export type CreateEventInput = {
@@ -68,6 +78,22 @@ function getNumberField(record: ApiRecord, keys: string[]) {
   return null;
 }
 
+function getJsonTextField(record: ApiRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+
+    if (Array.isArray(value) || isRecord(value)) {
+      return JSON.stringify(value);
+    }
+  }
+
+  return null;
+}
+
 function getArrayField(record: ApiRecord, keys: string[]) {
   for (const key of keys) {
     const value = record[key];
@@ -79,6 +105,15 @@ function getArrayField(record: ApiRecord, keys: string[]) {
 
   return null;
 }
+
+function unwrapResponseData(data: unknown) {
+  if (isRecord(data) && "data" in data) {
+    return data.data;
+  }
+
+  return data;
+}
+
 export type EventRegistration = {
   userId: string;
   fullName: string;
@@ -119,12 +154,42 @@ function getResponseRecords(data: unknown) {
     return [];
   }
 
-  const records = getArrayField(data, ["data", "items"]);
+  const responseData = unwrapResponseData(data);
+
+  if (Array.isArray(responseData)) {
+    return responseData;
+  }
+
+  if (!isRecord(responseData)) {
+    return [];
+  }
+
+  const records = getArrayField(responseData, ["data", "items"]);
   return Array.isArray(records) ? records : [];
 }
 
+function mapCoordinatorDashboard(
+  record: ApiRecord,
+): CoordinatorDashboardSummary {
+  return {
+    activeEventsCount:
+      getNumberField(record, ["activeEventsCount", "ActiveEventsCount"]) ?? 0,
+    totalRegistrations:
+      getNumberField(record, ["totalRegistrations", "TotalRegistrations"]) ??
+      0,
+    requestsCount:
+      getNumberField(record, ["requestsCount", "RequestsCount"]) ?? 0,
+    registrationRatePercent:
+      getNumberField(record, [
+        "registrationRatePercent",
+        "RegistrationRatePercent",
+      ]) ?? 0,
+    averageRating:
+      getNumberField(record, ["averageRating", "AverageRating"]) ?? 0,
+  };
+}
+
 function mapCoordinatorEvent(record: ApiRecord): CoordinatorEvent {
-  console.log("EVENT RAW DATE:", record.dateTimeUtc);
   const capacity =
     getNumberField(record, ["capacity", "maxCount", "maxAttendees"]) ?? 0;
   const registeredCount =
@@ -158,6 +223,15 @@ function mapCoordinatorEvent(record: ApiRecord): CoordinatorEvent {
       "coverUrl",
     ]),
     description: getStringField(record, ["description", "details"]) ?? "",
+    content: getStringField(record, ["content", "Content"]) ?? "",
+    agendaJson:
+      getJsonTextField(record, [
+        "agendaJson",
+        "AgendaJson",
+        "agenda",
+        "agendaItems",
+      ]) ??
+      "[]",
   };
 }
 export async function deleteEvent(eventId: number): Promise<void> {
@@ -169,9 +243,21 @@ export async function deleteEvent(eventId: number): Promise<void> {
 }
 export type UpdateEventInput = CreateEventInput & { eventId: number };
 
+function normalizeAgendaJson(agendaJson: string) {
+  const trimmed = agendaJson.trim();
+
+  if (!trimmed) {
+    return "[]";
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(trimmed));
+  } catch {
+    return "[]";
+  }
+}
+
 export async function updateEvent(input: UpdateEventInput): Promise<void> {
-  console.log("UPDATE INPUT:", input);
-  console.log("IMAGE BEFORE SEND:", input.coverImage);
   const formData = new FormData();
 
   formData.append("Title", input.title);
@@ -180,8 +266,8 @@ export async function updateEvent(input: UpdateEventInput): Promise<void> {
   formData.append("DateTimeUtc", input.dateTimeUtc);
   formData.append("Capacity", String(input.capacity));
   formData.append("Description", input.description);
-  formData.append("Content", input.content);
-  formData.append("AgendaJson", input.agendaJson);
+  formData.append("Content", input.content.trim() || input.description);
+  formData.append("AgendaJson", normalizeAgendaJson(input.agendaJson));
 
   if (input.coverImage?.uri) {
     let file: any;
@@ -233,6 +319,23 @@ export async function getMyEvents(): Promise<CoordinatorEvent[]> {
   }
 }
 
+export async function getCoordinatorDashboard(): Promise<CoordinatorDashboardSummary> {
+  try {
+    const { data } = await apiClient.get("/api/coordinator/events/dashboard");
+    const responseData = unwrapResponseData(data);
+
+    if (!isRecord(responseData)) {
+      return mapCoordinatorDashboard({});
+    }
+
+    return mapCoordinatorDashboard(responseData);
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(error, "تعذر تحميل إحصائيات المنسق"),
+    );
+  }
+}
+
 export async function createEvent(input: CreateEventInput): Promise<void> {
   try {
     const formData = new FormData();
@@ -241,8 +344,8 @@ export async function createEvent(input: CreateEventInput): Promise<void> {
     formData.append("Location", input.location);
     formData.append("DateTimeUtc", input.dateTimeUtc);
     formData.append("Capacity", String(input.capacity));
-    formData.append("Content", input.content);
-    formData.append("AgendaJson", input.agendaJson);
+    formData.append("Content", input.content.trim() || input.description);
+    formData.append("AgendaJson", normalizeAgendaJson(input.agendaJson));
     formData.append("Description", input.description);
     if (input.coverImage?.uri) {
       formData.append("CoverImage", {
