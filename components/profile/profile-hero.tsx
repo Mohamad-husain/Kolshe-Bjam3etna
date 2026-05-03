@@ -85,6 +85,7 @@ export function ProfileHero({
               <View style={styles.avatarShell}>
                 {summary.profileImageUri ? (
                   <Image
+                    cachePolicy="none"
                     source={{ uri: summary.profileImageUri }}
                     style={styles.avatarImage}
                     contentFit="cover"

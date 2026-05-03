@@ -41,19 +41,26 @@ import {
   useMyServiceRequestsQuery,
   useMySwapAdsQuery,
   useOutgoingOffersQuery,
-} from "@/hooks/queries/use-profile-queries";
-import type { IncomingOffer } from "@/services/profile-api";
-import {
-  Colors,
-  FontFamily,
-  FontSize,
-  FontWeight,
-  SemanticColors,
-} from "@/styles/ui-theme";
+} from '@/hooks/queries/use-profile-queries';
+import { formatStudyYearLabel } from '@/lib/edit-profile-config';
+import type { IncomingOffer } from '@/services/profile-api';
+import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 type ProfileTab = "العروض" | "إعلانات" | "خدمات" | "تبادلات" | "فعالياتي";
 type OfferView = "incoming" | "outgoing";
 type ExploreTarget = "services" | "marketplace" | "exchange" | "events";
+
+function normalizeProfileText(value: string | number | null | undefined) {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value).trim();
+  }
+
+  return '';
+}
 
 type RegisteredEventItem = {
   id: number;
@@ -182,23 +189,18 @@ export default function ProfileRoute() {
   const ads = adsQuery.data ?? [];
   const swaps = swapsQuery.data ?? [];
 
-  const fullName = profile?.fullName?.trim() || user?.name || "مستخدم جديد";
-  const major = profile?.major?.trim() || "مصمم جرافيك | مطور ويب";
-  const universityName = profile?.universityName?.trim() || "الجامعة الأردنية";
-  const studyYear = profile?.studyYear?.trim() || "السنة الثانية";
+  const fullName = profile?.fullName?.trim() || user?.name || 'مستخدم جديد';
+  const major = profile?.major?.trim() || 'مصمم جرافيك | مطور ويب';
+  const universityName = profile?.universityName?.trim() || 'الجامعة الأردنية';
+  const studyYear =
+    formatStudyYearLabel(profile?.studyYear) || 'السنة الثانية';
   const detailText = profile?.universityNumber?.trim()
     ? `الرقم الجامعي ${profile.universityNumber}`
-    : "مقيم بالحرم";
-  const profileImageUri = getValidImageUri(profile?.profileImageUrl);
-  const pendingOffers = incomingOffers.filter(
-    (item) => item.status === "pending",
-  ).length;
-  const acceptingOfferId = acceptOfferMutation.isPending
-    ? (acceptOfferMutation.variables ?? null)
-    : null;
-  const rejectingOfferId = rejectOfferMutation.isPending
-    ? (rejectOfferMutation.variables ?? null)
-    : null;
+    : 'مقيم بالحرم';
+  const profileImageUri = getValidImageUri(normalizeProfileText(profile?.profileImageUrl) || null);
+  const pendingOffers = incomingOffers.filter((item) => item.status === 'pending').length;
+  const acceptingOfferId = acceptOfferMutation.isPending ? acceptOfferMutation.variables ?? null : null;
+  const rejectingOfferId = rejectOfferMutation.isPending ? rejectOfferMutation.variables ?? null : null;
 
   const openMessages = () => {
     router.push("/(tabs)/messages");
@@ -285,10 +287,7 @@ export default function ProfileRoute() {
             onOpenAdmin={() => router.push("/admin-dashboard")}
             onOpenSettings={() => router.push("/settings")}
             onEditProfile={() =>
-              showSoonAlert(
-                "تعديل الملف الشخصي",
-                "واجهة التعديل ستُربط مع نموذج تحديث الملف الشخصي لاحقاً.",
-              )
+              router.push({ pathname: '/edit-profile', params: { tab: 'personal' } })
             }
             onOpenExploreTab={function (
               tab: "services" | "marketplace" | "exchange" | "events",
@@ -726,3 +725,5 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
 });
+
+

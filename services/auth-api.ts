@@ -55,9 +55,24 @@ export type AuthSession = {
   user: User;
 };
 
-let authToken: string | null = null;
+type AuthSessionInvalidationListener = () => void;
+
+type GlobalAuthTokenHost = typeof globalThis & {
+  __kolsheAuthToken?: string | null;
+};
+
+function getAuthTokenHost() {
+  return globalThis as GlobalAuthTokenHost;
+}
+
+function readPersistedAuthToken() {
+  return normalizeToken(getAuthTokenHost().__kolsheAuthToken) ?? null;
+}
+
+let authToken: string | null = readPersistedAuthToken();
 let secureStoreAvailability: Promise<boolean> | null = null;
 let storageOperationQueue: Promise<void> = Promise.resolve();
+const authSessionInvalidationListeners = new Set<AuthSessionInvalidationListener>();
 
 export type University = {
   id: number;
@@ -292,11 +307,29 @@ function parseStoredAuthSession(value: unknown): AuthSession | null {
 }
 
 export function getAuthToken() {
-  return authToken;
+  const persistedToken = readPersistedAuthToken();
+
+  if (!authToken && persistedToken) {
+    authToken = persistedToken;
+  }
+
+  return authToken ?? persistedToken;
 }
 
 export function setAuthToken(token: string | null) {
-  authToken = normalizeToken(token) ?? null;
+  const normalizedToken = normalizeToken(token) ?? null;
+  authToken = normalizedToken;
+  getAuthTokenHost().__kolsheAuthToken = normalizedToken;
+}
+
+export function subscribeToAuthSessionInvalidation(
+  listener: AuthSessionInvalidationListener,
+) {
+  authSessionInvalidationListeners.add(listener);
+
+  return () => {
+    authSessionInvalidationListeners.delete(listener);
+  };
 }
 
 export async function loadStoredAuthSession(): Promise<AuthSession | null> {
@@ -377,8 +410,80 @@ export async function clearAuthSession() {
   }
 }
 
+export async function invalidateAuthSession() {
+  await clearAuthSession();
+
+  for (const listener of authSessionInvalidationListeners) {
+    listener();
+  }
+}
+
 function trimValue(value: string) {
   return value.trim();
+}
+
+function normalizeTextValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value).trim();
+  }
+
+  return '';
+}
+
+function normalizeNullableTextValue(value: unknown) {
+  const normalizedValue = normalizeTextValue(value);
+  return normalizedValue || null;
+}
+
+function appendCacheBustingParam(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  if (
+    value.startsWith('data:') ||
+    value.startsWith('file:') ||
+    value.startsWith('blob:') ||
+    value.startsWith('content:')
+  ) {
+    return value;
+  }
+
+  const separator = value.includes('?') ? '&' : '?';
+  return `${value}${separator}v=${Date.now()}`;
+}
+
+function normalizeNullablePositiveNumber(value: unknown) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function normalizeAccountProfile(value: unknown): AccountProfile | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<AccountProfile> & Record<string, unknown>;
+
+  return {
+    fullName: normalizeTextValue(candidate.fullName),
+    email: normalizeTextValue(candidate.email),
+    phoneNumber: normalizeNullableTextValue(candidate.phoneNumber),
+    bio: normalizeNullableTextValue(candidate.bio),
+    websiteUrl: normalizeNullableTextValue(candidate.websiteUrl),
+    profileImageUrl: appendCacheBustingParam(
+      normalizeNullableTextValue(candidate.profileImageUrl),
+    ),
+    universityName: normalizeNullableTextValue(candidate.universityName),
+    universityId: normalizeNullablePositiveNumber(candidate.universityId),
+    major: normalizeNullableTextValue(candidate.major),
+    studyYear: normalizeNullableTextValue(candidate.studyYear),
+    universityNumber: normalizeNullableTextValue(candidate.universityNumber),
+  };
 }
 
 function requireValue(value: string, errorMessage: string) {
@@ -517,11 +622,7 @@ async function postMultipart<TResponse>(
   fallbackMessage: string,
 ): Promise<TResponse> {
   try {
-    const response = await apiClient.post<TResponse>(path, body, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.post<TResponse>(path, body);
     return response.data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, fallbackMessage));
@@ -644,7 +745,7 @@ export async function getAccountProfile(): Promise<AccountProfile | null> {
     AUTH_ERROR_MESSAGES.profileFailed,
   );
 
-  return response.data ?? null;
+  return normalizeAccountProfile(response.data);
 }
 
 export async function completeProfile(input: CompleteProfileInput): Promise<string | null> {

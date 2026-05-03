@@ -9,6 +9,7 @@ import {
 
 import {
   clearAuthSession,
+  subscribeToAuthSessionInvalidation,
   restoreAuthSession,
   saveAuthenticatedUser,
 } from '@/services/auth-api';
@@ -55,13 +56,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  useEffect(() => {
+    return subscribeToAuthSessionInvalidation(() => {
+      setUser(null);
+      queryClient.setQueryData(queryKeys.auth.user, null);
+      queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
+      queryClient.removeQueries({ queryKey: queryKeys.auth.universities });
+    });
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       signIn: (nextUser) => {
         setUser(nextUser);
         queryClient.setQueryData(queryKeys.auth.user, nextUser);
-        queryClient.removeQueries({ queryKey: queryKeys.auth.profile });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auth.profile });
         void saveAuthenticatedUser(nextUser);
       },
       signOut: () => {
