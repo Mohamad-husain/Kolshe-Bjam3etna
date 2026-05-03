@@ -127,10 +127,18 @@ function blurActiveWebElement() {
 }
 
 function validateFullName(value: string) {
+  if (value !== value.trim()) {
+    return 'الاسم لا يجب أن يبدأ أو ينتهي بمسافات.';
+  }
+
   const normalizedValue = normalizeValue(value);
 
   if (!normalizedValue) {
     return 'الاسم الكامل مطلوب.';
+  }
+
+  if (/^\d/.test(normalizedValue)) {
+    return 'الاسم لا يجب أن يبدأ برقم.';
   }
 
   if (normalizedValue.length < 4) {
@@ -139,6 +147,10 @@ function validateFullName(value: string) {
 
   if (/\d/.test(normalizedValue)) {
     return 'الاسم الكامل لا يجب أن يحتوي على أرقام.';
+  }
+
+  if (!/^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF\s]*$/.test(normalizedValue)) {
+    return 'الاسم الكامل يجب أن يحتوي على أحرف ومسافات فقط.';
   }
 
   return true;
@@ -290,6 +302,7 @@ export function EditProfileScreen() {
     clearErrors,
     control,
     formState: { errors },
+    getFieldState,
     getValues,
     reset,
     setError,
@@ -380,6 +393,18 @@ export function EditProfileScreen() {
     }, 2600);
   };
 
+  const getFirstValidationMessage = (fieldNames: (keyof AdminEditProfileFormValues)[]) => {
+    for (const fieldName of fieldNames) {
+      const message = getFieldState(fieldName).error?.message;
+
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+
+    return null;
+  };
+
   const markSaved = (tab: AdminEditProfileTab, message: string) => {
     if (savedTimerRef.current) {
       clearTimeout(savedTimerRef.current);
@@ -443,8 +468,8 @@ export function EditProfileScreen() {
 
     setValue('profileImage', {
       uri: asset.uri,
-      name: asset.fileName,
-      type: asset.mimeType,
+      name: asset.fileName ?? asset.file?.name ?? `profile-${Date.now()}.jpg`,
+      type: asset.mimeType ?? asset.file?.type ?? 'image/jpeg',
       file: asset.file,
       isRemote: false,
     });
@@ -509,7 +534,11 @@ export function EditProfileScreen() {
     clearErrors('profileImage');
 
     if (!valid) {
-      showToast('يرجى مراجعة البيانات الشخصية قبل الحفظ.', 'error');
+      showToast(
+        getFirstValidationMessage(['fullName', 'universityEmail', 'phoneNumber', 'bio']) ??
+          'يرجى مراجعة البيانات الشخصية قبل الحفظ.',
+        'error',
+      );
       return;
     }
 
@@ -548,7 +577,11 @@ export function EditProfileScreen() {
     const valid = await trigger(['universityId', 'major', 'studyYear', 'universityNumber']);
 
     if (!valid) {
-      showToast('يرجى مراجعة البيانات الأكاديمية قبل الحفظ.', 'error');
+      showToast(
+        getFirstValidationMessage(['universityId', 'major', 'studyYear', 'universityNumber']) ??
+          'يرجى مراجعة البيانات الأكاديمية قبل الحفظ.',
+        'error',
+      );
       return;
     }
 
@@ -595,7 +628,14 @@ export function EditProfileScreen() {
     const valid = await trigger(['currentPassword', 'newPassword', 'confirmNewPassword']);
 
     if (!valid) {
-      showToast('يرجى مراجعة حقول كلمة المرور.', 'error');
+      showToast(
+        getFirstValidationMessage([
+          'currentPassword',
+          'newPassword',
+          'confirmNewPassword',
+        ]) ?? 'يرجى مراجعة حقول كلمة المرور.',
+        'error',
+      );
       return;
     }
 

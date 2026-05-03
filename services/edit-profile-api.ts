@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 
 import { getPreferredStudyYearApiValue } from '@/lib/edit-profile-config';
+import { getAuthToken } from '@/services/auth-api';
 import { apiClient, getApiErrorMessage } from '@/services/http-client';
 import type {
   AdminEditProfileAcademicInput,
@@ -12,12 +13,78 @@ type ApiMessageResponse = {
   message?: string;
 };
 
+type UploadableProfileImage = NonNullable<AdminEditProfilePersonalInput['profileImage']>;
+type WebUploadPart = Blob | File;
+
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
+const isWebRuntime = typeof window !== 'undefined' && typeof document !== 'undefined';
+
 function trimValue(value: string) {
   return value.trim();
 }
 
 function getResponseMessage(payload: ApiMessageResponse | null | undefined, fallback: string) {
   return payload?.message?.trim() || fallback;
+}
+
+async function parseUnknownResponse(response: Response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return response.json() as Promise<unknown>;
+  }
+
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
+function getFetchErrorMessage(payload: unknown, fallback: string) {
+  if (typeof payload === 'string' && payload.trim()) {
+    return payload.trim();
+  }
+
+  if (payload && typeof payload === 'object' && 'message' in payload) {
+    const message = (payload as { message?: unknown }).message;
+
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+  }
+
+  return fallback;
+}
+
+async function postWebMultipart<TResponse>(
+  path: string,
+  body: FormData,
+  fallbackMessage: string,
+): Promise<TResponse> {
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+    body,
+  });
+  const payload = await parseUnknownResponse(response);
+
+  if (!response.ok) {
+    throw new Error(getFetchErrorMessage(payload, fallbackMessage));
+  }
+
+  return payload as TResponse;
 }
 
 function shouldRetryWithFallback(error: unknown, retryStatuses: number[]) {
@@ -64,10 +131,50 @@ function normalizeUniversityNumber(value: string) {
   return value.replace(/\D/g, '');
 }
 
-function appendProfileImage(formData: FormData, input: AdminEditProfilePersonalInput) {
+async function createWebProfileImagePart(image: UploadableProfileImage): Promise<WebUploadPart> {
+  if (image.file) {
+    return image.file;
+  }
+
+  try {
+    const response = await fetch(image.uri);
+
+    if (!response.ok) {
+      throw new Error(`Image fetch failed with status ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const fileName = image.name?.trim() || `profile-${Date.now()}.jpg`;
+    const mimeType = image.type?.trim() || blob.type || 'image/jpeg';
+
+    if (typeof File !== 'undefined') {
+      return new File([blob], fileName, { type: mimeType });
+    }
+
+    return blob;
+  } catch {
+    throw new Error('تعذر تجهيز الصورة الجديدة للرفع. حاول اختيار الصورة مرة أخرى.');
+  }
+}
+
+function appendProfileImage(
+  formData: FormData,
+  input: AdminEditProfilePersonalInput,
+  webPart?: WebUploadPart | null,
+) {
   const image = input.profileImage;
 
   if (!image?.uri || image.isRemote) {
+    return;
+  }
+
+  if (webPart) {
+    if (typeof Blob !== 'undefined' && webPart instanceof Blob) {
+      formData.append('ProfileImage', webPart, image.name ?? `profile-${Date.now()}.jpg`);
+      return;
+    }
+
+    formData.append('ProfileImage', webPart as never);
     return;
   }
 
@@ -110,19 +217,33 @@ async function uploadAdminEditProfilePhoto(input: AdminEditProfilePersonalInput)
   }
 
   const formData = new FormData();
-  appendProfileImage(formData, input);
+  const webPart =
+    isWebRuntime && API_BASE_URL ? await createWebProfileImagePart(input.profileImage) : null;
 
-  const response = await apiClient.post<ApiMessageResponse>('/api/Account/profile/photo', formData).catch((error) => {
-    throw new Error(getApiErrorMessage(error, 'تعذر تحديث الصورة الشخصية'));
-  });
+  appendProfileImage(formData, input, webPart);
+
+  if (isWebRuntime && API_BASE_URL) {
+    const payload = await postWebMultipart<ApiMessageResponse | null>(
+      '/api/Account/profile/photo',
+      formData,
+      'تعذر تحديث الصورة الشخصية',
+    );
+
+    return getResponseMessage(payload, 'تم تحديث الصورة الشخصية');
+  }
+
+  const response = await apiClient
+    .post<ApiMessageResponse>('/api/Account/profile/photo', formData)
+    .catch((error) => {
+      throw new Error(getApiErrorMessage(error, 'تعذر تحديث الصورة الشخصية'));
+    });
 
   return getResponseMessage(response.data, 'تم تحديث الصورة الشخصية');
 }
 
 export async function updateAdminEditProfilePersonal(input: AdminEditProfilePersonalInput) {
-  const photoMessage = await uploadAdminEditProfilePhoto(input);
-
   if (input.skipPersonalDetailsUpdate) {
+    const photoMessage = await uploadAdminEditProfilePhoto(input);
     return photoMessage ?? 'تم حفظ البيانات الشخصية';
   }
 
@@ -140,8 +261,10 @@ export async function updateAdminEditProfilePersonal(input: AdminEditProfilePers
     'تعذر حفظ البيانات الشخصية',
     [404, 405, 415],
   );
+  const personalMessage = getResponseMessage(response.data, 'تم حفظ البيانات الشخصية');
+  const photoMessage = await uploadAdminEditProfilePhoto(input);
 
-  return getResponseMessage(response.data, photoMessage ?? 'تم حفظ البيانات الشخصية');
+  return photoMessage ?? personalMessage;
 }
 
 export async function updateAdminEditProfileAcademic(input: AdminEditProfileAcademicInput) {
