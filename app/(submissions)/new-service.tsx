@@ -1,5 +1,5 @@
-import { SubmissionSectionScreen } from '@/components/submissions/submission-section-screen';
+import { NewServiceScreen } from '@/components/submissions/new-service-screen';
 
 export default function NewServiceRoute() {
-  return <SubmissionSectionScreen title="إضافة طلب خدمة" />;
+  return <NewServiceScreen />;
 }

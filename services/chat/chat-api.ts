@@ -1,4 +1,9 @@
 import { apiClient } from "../http-client"
+import {
+    decodeJwtPayload,
+    getJwtStringClaim,
+    jwtClaimKeys,
+} from "@/lib/auth/jwt"
 import { getAuthToken } from "@/services/auth-api"
 import type {
     ChatConversation,
@@ -27,24 +32,8 @@ const toApiCollection = <T>(value: unknown): T[] =>
     Array.isArray(value) ? (value as T[]) : []
 
 const getCurrentUserIdFromToken = () => {
-    const token = getAuthToken()?.trim()
-
-    if (!token) {
-        return ""
-    }
-
-    try {
-        const payload = JSON.parse(atob(token.split(".")[1]))
-
-        return (
-            payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ||
-            payload.nameid ||
-            payload.sub ||
-            ""
-        )
-    } catch {
-        return ""
-    }
+    const payload = decodeJwtPayload(getAuthToken())
+    return getJwtStringClaim(payload, jwtClaimKeys.nameIdentifier)
 }
 
 const getMessageImageUrl = (message: ChatMessageApi) => {

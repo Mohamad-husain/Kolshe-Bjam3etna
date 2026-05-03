@@ -3,15 +3,34 @@ import type { QueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import type { ChatConversation, ChatMessage, ChatUploadInput } from "@/types/chat"
 
-export const DELETED_MESSAGE_PREVIEW = "تم حذف رسالة"
+export const DELETED_MESSAGE_PREVIEW = "تم حذف الرسالة"
 export const EDITED_MESSAGE_PREVIEW = "تم تعديل رسالة"
 
 const getAttachmentPreviewUri = (attachment?: ChatUploadInput | null) =>
     attachment?.previewUrl?.trim() || attachment?.uri?.trim() || ""
 
+const getMessageTime = (value?: string | null) => {
+    const parsed = Date.parse(value?.trim() || "")
+    return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed
+}
+
 export type ChatMutationSnapshot = {
     previousMessages: ChatMessage[]
     previousConversations: ChatConversation[]
+}
+
+export const isDeletedMessageContent = (value?: string | null) => {
+    const text = value?.trim()
+
+    if (!text) {
+        return false
+    }
+
+    return (
+        text === DELETED_MESSAGE_PREVIEW ||
+        /^\[(deleted|removed)\]$/i.test(text) ||
+        /^deleted$/i.test(text)
+    )
 }
 
 export const cancelChatQueries = async (
@@ -138,3 +157,40 @@ export const createOptimisticMessage = ({
     isRead: true,
     isMine: true,
 })
+
+export const createDeletedMessage = (message: ChatMessage): ChatMessage => ({
+    ...message,
+    content: DELETED_MESSAGE_PREVIEW,
+    imageUrl: null,
+    fileUrl: null,
+    fileName: "",
+    fileMimeType: "",
+})
+
+export const mergeMessagesWithDeletedTombstones = (
+    messages: ChatMessage[],
+    deletedMessages: ChatMessage[]
+) => {
+    if (!deletedMessages.length) {
+        return messages
+    }
+
+    const deletedById = new Map(
+        deletedMessages.map((message) => [message.id, createDeletedMessage(message)])
+    )
+
+    const merged = messages.map(
+        (message) => deletedById.get(message.id) ?? message
+    )
+
+    for (const deletedMessage of deletedMessages) {
+        if (!merged.some((message) => message.id === deletedMessage.id)) {
+            merged.push(createDeletedMessage(deletedMessage))
+        }
+    }
+
+    return merged.sort(
+        (firstMessage, secondMessage) =>
+            getMessageTime(firstMessage.createdAt) - getMessageTime(secondMessage.createdAt)
+    )
+}
