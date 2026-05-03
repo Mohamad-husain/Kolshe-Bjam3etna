@@ -1,6 +1,4 @@
-import { isAxiosError } from 'axios';
-
-import { getPreferredStudyYearApiValue } from '@/lib/edit-profile-config';
+import { getPreferredStudyYearApiValue, normalizeWebsiteUrl } from '@/lib/edit-profile-config';
 import { getAuthToken } from '@/services/auth-api';
 import { apiClient, getApiErrorMessage } from '@/services/http-client';
 import type {
@@ -21,6 +19,11 @@ const isWebRuntime = typeof window !== 'undefined' && typeof document !== 'undef
 
 function trimValue(value: string) {
   return value.trim();
+}
+
+function normalizeNullableValue(value: string) {
+  const trimmedValue = trimValue(value);
+  return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
 function getResponseMessage(payload: ApiMessageResponse | null | undefined, fallback: string) {
@@ -87,43 +90,16 @@ async function postWebMultipart<TResponse>(
   return payload as TResponse;
 }
 
-function shouldRetryWithFallback(error: unknown, retryStatuses: number[]) {
-  if (!isAxiosError(error)) {
-    return false;
-  }
-
-  const status = error.response?.status ?? 0;
-  return retryStatuses.includes(status);
-}
-
-async function requestWithFallback<TResponse>(
-  requests: (() => Promise<TResponse>)[],
+async function putJson<TResponse>(
+  path: string,
+  body: Record<string, unknown>,
   fallbackMessage: string,
-  retryStatuses: number[] = [404, 405],
-) {
-  let lastError: unknown = null;
-
-  for (const request of requests) {
-    try {
-      return await request();
-    } catch (error) {
-      lastError = error;
-
-      if (!shouldRetryWithFallback(error, retryStatuses)) {
-        throw new Error(getApiErrorMessage(error, fallbackMessage));
-      }
-    }
-  }
-
-  throw new Error(getApiErrorMessage(lastError, fallbackMessage));
-}
-
-function appendFormFields(
-  formData: FormData,
-  payload: Record<string, string | number | null | undefined>,
-) {
-  for (const [key, value] of Object.entries(payload)) {
-    formData.append(key, value == null ? '' : String(value));
+): Promise<TResponse> {
+  try {
+    const response = await apiClient.put<TResponse>(path, body);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, fallbackMessage));
   }
 }
 
@@ -194,20 +170,22 @@ function appendProfileImage(
 }
 
 function buildPersonalPayload(input: AdminEditProfilePersonalInput) {
+  const websiteUrl = normalizeNullableValue(input.websiteUrl);
+
   return {
-    FullName: trimValue(input.fullName),
-    PhoneNumber: trimValue(input.phoneNumber),
-    Bio: trimValue(input.bio),
+    fullName: trimValue(input.fullName),
+    phoneNumber: normalizeNullableValue(input.phoneNumber),
+    bio: normalizeNullableValue(input.bio),
+    websiteUrl: websiteUrl ? normalizeWebsiteUrl(websiteUrl) : null,
   };
 }
 
 function buildAcademicPayload(input: AdminEditProfileAcademicInput) {
   return {
-    UniversityId: input.universityId,
-    UniversityName: trimValue(input.universityName),
-    Major: trimValue(input.major),
-    StudyYear: getPreferredStudyYearApiValue(input.studyYear),
-    UniversityNumber: normalizeUniversityNumber(input.universityNumber),
+    universityId: input.universityId,
+    major: trimValue(input.major),
+    studyYear: getPreferredStudyYearApiValue(input.studyYear),
+    universityNumber: normalizeUniversityNumber(input.universityNumber),
   };
 }
 
@@ -232,13 +210,12 @@ async function uploadAdminEditProfilePhoto(input: AdminEditProfilePersonalInput)
     return getResponseMessage(payload, 'تم تحديث الصورة الشخصية');
   }
 
-  const response = await apiClient
-    .post<ApiMessageResponse>('/api/Account/profile/photo', formData)
-    .catch((error) => {
-      throw new Error(getApiErrorMessage(error, 'تعذر تحديث الصورة الشخصية'));
-    });
-
-  return getResponseMessage(response.data, 'تم تحديث الصورة الشخصية');
+  try {
+    const response = await apiClient.post<ApiMessageResponse>('/api/Account/profile/photo', formData);
+    return getResponseMessage(response.data, 'تم تحديث الصورة الشخصية');
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'تعذر تحديث الصورة الشخصية'));
+  }
 }
 
 export async function updateAdminEditProfilePersonal(input: AdminEditProfilePersonalInput) {
@@ -248,20 +225,12 @@ export async function updateAdminEditProfilePersonal(input: AdminEditProfilePers
   }
 
   const payload = buildPersonalPayload(input);
-  const formData = new FormData();
-
-  appendFormFields(formData, payload);
-  formData.append('request', JSON.stringify(payload));
-
-  const response = await requestWithFallback(
-    [
-      () => apiClient.put<ApiMessageResponse>('/api/Account/profile/personal', formData),
-      () => apiClient.put<ApiMessageResponse>('/api/Account/profile', formData),
-    ],
+  const response = await putJson<ApiMessageResponse>(
+    '/api/Account/profile/personal',
+    payload,
     'تعذر حفظ البيانات الشخصية',
-    [404, 405, 415],
   );
-  const personalMessage = getResponseMessage(response.data, 'تم حفظ البيانات الشخصية');
+  const personalMessage = getResponseMessage(response, 'تم حفظ البيانات الشخصية');
   const photoMessage = await uploadAdminEditProfilePhoto(input);
 
   return photoMessage ?? personalMessage;
@@ -269,51 +238,26 @@ export async function updateAdminEditProfilePersonal(input: AdminEditProfilePers
 
 export async function updateAdminEditProfileAcademic(input: AdminEditProfileAcademicInput) {
   const payload = buildAcademicPayload(input);
-  const formData = new FormData();
+  const response = await putJson<ApiMessageResponse>(
+    '/api/Account/profile/academic',
+    payload,
+    'تعذر حفظ البيانات الأكاديمية',
+  );
 
-  appendFormFields(formData, payload);
-  formData.append('request', JSON.stringify(payload));
-
-  try {
-    const response = await apiClient.put<ApiMessageResponse>(
-      '/api/Account/profile/academic',
-      payload,
-    );
-    return getResponseMessage(response.data, 'تم حفظ البيانات الأكاديمية');
-  } catch (error) {
-    if (!shouldRetryWithFallback(error, [415])) {
-      throw new Error(getApiErrorMessage(error, 'تعذر حفظ البيانات الأكاديمية'));
-    }
-  }
-
-  try {
-    const response = await apiClient.put<ApiMessageResponse>(
-      '/api/Account/profile/academic',
-      formData,
-    );
-    return getResponseMessage(response.data, 'تم حفظ البيانات الأكاديمية');
-  } catch (error) {
-    throw new Error(getApiErrorMessage(error, 'تعذر حفظ البيانات الأكاديمية'));
-  }
+  return getResponseMessage(response, 'تم حفظ البيانات الأكاديمية');
 }
 
 export async function updateAdminEditProfilePassword(input: AdminEditProfilePasswordInput) {
   const payload = {
-    CurrentPassword: input.currentPassword.trim(),
-    OldPassword: input.currentPassword.trim(),
-    NewPassword: input.newPassword.trim(),
-    ConfirmNewPassword: input.confirmNewPassword.trim(),
-    ConfirmPassword: input.confirmNewPassword.trim(),
+    currentPassword: trimValue(input.currentPassword),
+    newPassword: trimValue(input.newPassword),
+    confirmNewPassword: trimValue(input.confirmNewPassword),
   };
-
-  const response = await requestWithFallback(
-    [
-      () => apiClient.put<ApiMessageResponse>('/api/Account/profile/password', payload),
-      () => apiClient.post<ApiMessageResponse>('/api/Account/change-password', payload),
-      () => apiClient.post<ApiMessageResponse>('/api/Account/profile/change-password', payload),
-    ],
+  const response = await putJson<ApiMessageResponse>(
+    '/api/Account/profile/password',
+    payload,
     'تعذر تحديث كلمة المرور',
   );
 
-  return getResponseMessage(response.data, 'تم تحديث كلمة المرور');
+  return getResponseMessage(response, 'تم تحديث كلمة المرور');
 }

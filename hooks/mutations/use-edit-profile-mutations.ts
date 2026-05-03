@@ -37,6 +37,7 @@ export function useAdminEditProfilePersonalMutation() {
         fullName: input.fullName.trim(),
         phoneNumber: input.phoneNumber.trim() || null,
         bio: input.bio.trim() || null,
+        websiteUrl: input.websiteUrl.trim() || null,
         profileImageUrl: input.profileImage?.uri ?? undefined,
       });
 

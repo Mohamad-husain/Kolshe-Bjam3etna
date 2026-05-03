@@ -484,6 +484,7 @@ export function EditProfileScreen() {
       normalizeValue(values.fullName) !== normalizeValue(initialValues.fullName) ||
       normalizeValue(values.phoneNumber) !== normalizeValue(initialValues.phoneNumber) ||
       normalizeValue(values.bio) !== normalizeValue(initialValues.bio) ||
+      normalizeValue(values.websiteUrl) !== normalizeValue(initialValues.websiteUrl) ||
       (values.profileImage?.uri ?? '') !== (initialValues.profileImage?.uri ?? '')
     );
   };
@@ -494,7 +495,8 @@ export function EditProfileScreen() {
     return (
       normalizeValue(values.fullName) !== normalizeValue(initialValues.fullName) ||
       normalizeValue(values.phoneNumber) !== normalizeValue(initialValues.phoneNumber) ||
-      normalizeValue(values.bio) !== normalizeValue(initialValues.bio)
+      normalizeValue(values.bio) !== normalizeValue(initialValues.bio) ||
+      normalizeValue(values.websiteUrl) !== normalizeValue(initialValues.websiteUrl)
     );
   };
 
@@ -520,7 +522,7 @@ export function EditProfileScreen() {
 
   const handleSavePersonal = async () => {
     const values = getValues();
-    const valid = await trigger(['fullName', 'universityEmail', 'phoneNumber', 'bio']);
+    const valid = await trigger(['fullName', 'phoneNumber', 'bio']);
 
     if (!values.profileImage?.uri?.trim()) {
       setError('profileImage', {
@@ -535,7 +537,7 @@ export function EditProfileScreen() {
 
     if (!valid) {
       showToast(
-        getFirstValidationMessage(['fullName', 'universityEmail', 'phoneNumber', 'bio']) ??
+        getFirstValidationMessage(['fullName', 'phoneNumber', 'bio']) ??
           'يرجى مراجعة البيانات الشخصية قبل الحفظ.',
         'error',
       );
@@ -552,6 +554,7 @@ export function EditProfileScreen() {
         fullName: values.fullName,
         phoneNumber: values.phoneNumber,
         bio: values.bio,
+        websiteUrl: values.websiteUrl,
         profileImage: values.profileImage,
         skipPersonalDetailsUpdate: !hasPersonalDetailsChanges(),
       },

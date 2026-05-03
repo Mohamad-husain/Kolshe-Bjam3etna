@@ -33,6 +33,7 @@ export type AdminEditProfilePersonalInput = {
   fullName: string;
   phoneNumber: string;
   bio: string;
+  websiteUrl: string;
   profileImage: AdminEditProfileImageValue | null;
   skipPersonalDetailsUpdate?: boolean;
 };
