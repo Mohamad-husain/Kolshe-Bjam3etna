@@ -131,7 +131,13 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
   if (isAxiosError(error)) {
     if (error.response) {
       const payload = parseResponsePayload(error.response.data);
-      return extractMessage(payload, fallback);
+      const message = extractMessage(payload, '');
+
+      if (message) {
+        return message;
+      }
+
+      return `${fallback} (HTTP ${error.response.status})`;
     }
 
     const details = error.message ? ` (${error.message})` : '';
