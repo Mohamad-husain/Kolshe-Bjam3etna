@@ -175,8 +175,7 @@ function mapCoordinatorDashboard(
     activeEventsCount:
       getNumberField(record, ["activeEventsCount", "ActiveEventsCount"]) ?? 0,
     totalRegistrations:
-      getNumberField(record, ["totalRegistrations", "TotalRegistrations"]) ??
-      0,
+      getNumberField(record, ["totalRegistrations", "TotalRegistrations"]) ?? 0,
     requestsCount:
       getNumberField(record, ["requestsCount", "RequestsCount"]) ?? 0,
     registrationRatePercent:
@@ -230,8 +229,7 @@ function mapCoordinatorEvent(record: ApiRecord): CoordinatorEvent {
         "AgendaJson",
         "agenda",
         "agendaItems",
-      ]) ??
-      "[]",
+      ]) ?? "[]",
   };
 }
 export async function deleteEvent(eventId: number): Promise<void> {
@@ -273,13 +271,11 @@ export async function updateEvent(input: UpdateEventInput): Promise<void> {
     let file: any;
 
     if (input.coverImage.uri.startsWith("blob")) {
-      // 👇 نحول blob إلى file حقيقي
       const response = await fetch(input.coverImage.uri);
       const blob = await response.blob();
 
       file = new File([blob], "cover.jpg", { type: blob.type });
     } else {
-      // 👇 موبايل (file://)
       file = {
         uri: input.coverImage.uri,
         name: input.coverImage.name || "cover.jpg",
@@ -330,9 +326,7 @@ export async function getCoordinatorDashboard(): Promise<CoordinatorDashboardSum
 
     return mapCoordinatorDashboard(responseData);
   } catch (error) {
-    throw new Error(
-      getApiErrorMessage(error, "تعذر تحميل إحصائيات المنسق"),
-    );
+    throw new Error(getApiErrorMessage(error, "تعذر تحميل إحصائيات المنسق"));
   }
 }
 

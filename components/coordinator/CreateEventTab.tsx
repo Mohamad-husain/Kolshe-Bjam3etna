@@ -1,14 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
-import { Fragment, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
+import {
+  useCreateEventMutation,
+  useUpdateEventMutation,
+} from "@/hooks/queries/use-coordinator-queries";
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Keyboard,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -17,25 +19,22 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import {
-  useCreateEventMutation,
-  useUpdateEventMutation,
-} from "@/hooks/queries/use-coordinator-queries";
-import type { CoordinatorEvent } from "@/services/coordinator-api";
-import {
+  Colors,
   Dimensions,
   FontFamily,
   FontSize,
   FontWeight,
   SemanticColors,
+  Spacing,
 } from "@/styles/ui-theme";
+import type { CoordinatorEvent } from "@/services/coordinator-api";
+import { useState } from "react";
 
-type CoverImage = {
-  uri: string;
-  name: string;
-  type: string;
+type AgendaItem = {
+  startTime: string;
+  endTime: string;
+  title: string;
 };
 
 type FormValues = {
@@ -47,13 +46,13 @@ type FormValues = {
   capacity: string;
   description: string;
   content: string;
-  coverImage?: CoverImage;
-};
-
-type ScheduleItem = {
-  id: number;
-  title: string;
-  time: string;
+  speakers: string;
+  agenda: AgendaItem[];
+  coverImage?: {
+    uri: string;
+    name: string;
+    type: string;
+  };
 };
 
 type CreateEventTabProps = {
@@ -68,157 +67,32 @@ const EVENT_TYPES = [
   { id: "meetup", label: "لقاء" },
 ];
 
-const INITIAL_SCHEDULE: ScheduleItem[] = [
-  { id: 1, title: "", time: "" },
-  { id: 2, title: "", time: "" },
-];
-
-function getEmptySchedule() {
-  return INITIAL_SCHEDULE.map((item) => ({ ...item }));
-}
-
-function getStringValue(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function parseAgendaItems(agendaJson?: string | null): ScheduleItem[] {
-  if (!agendaJson?.trim()) {
-    return getEmptySchedule();
-  }
-
-  try {
-    const parsed = JSON.parse(agendaJson);
-
-    if (!Array.isArray(parsed)) {
-      return getEmptySchedule();
-    }
-
-    const items = parsed
-      .map((entry, index) => {
-        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-          return null;
-        }
-
-        const record = entry as Record<string, unknown>;
-        const title =
-          getStringValue(record.title) ||
-          getStringValue(record.name) ||
-          getStringValue(record.sessionName);
-        const time =
-          getStringValue(record.time) || getStringValue(record.startTime);
-
-        if (!title && !time) {
-          return null;
-        }
-
-        return {
-          id: index + 1,
-          title,
-          time,
-        };
-      })
-      .filter((item): item is ScheduleItem => item !== null);
-
-    return items.length > 0 ? items : getEmptySchedule();
-  } catch {
-    return getEmptySchedule();
-  }
-}
-
-function getTypeLabel(typeId: string) {
-  return EVENT_TYPES.find((type) => type.id === typeId)?.label ?? "ورشة عمل";
-}
-
-function normalizeDigits(value: string) {
-  const arabicZero = "٠".charCodeAt(0);
-  const persianZero = "۰".charCodeAt(0);
-
-  return value.replace(/[٠-٩۰-۹]/g, (digit) => {
-    const code = digit.charCodeAt(0);
-    const normalized =
-      code >= persianZero ? code - persianZero : code - arabicZero;
-
-    return String(normalized);
-  });
-}
-
-function formatDateInput(value: string) {
-  const digits = normalizeDigits(value).replace(/\D/g, "").slice(0, 8);
-
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
-}
-
-function getDatePickerValue(value: string) {
-  const parsed = new Date(`${value}T00:00:00`);
-
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
-
-function getTimePickerValue(value: string) {
-  const date = new Date();
-  const [hours, minutes] = value.split(":").map(Number);
-
-  if (Number.isFinite(hours) && Number.isFinite(minutes)) {
-    date.setHours(hours, minutes, 0, 0);
-  }
-
-  return date;
-}
-
-function formatPickedTime(date: Date) {
-  const hours = date.getHours().toString().padStart(2, "0");
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-
-  return `${hours}:${minutes}`;
-}
-
 export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
-  const insets = useSafeAreaInsets();
-  const scrollViewRef = useRef<ScrollView>(null);
   const isEditing = !!editingEvent;
-  const [isTypePickerOpen, setIsTypePickerOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [activeScheduleTimePickerId, setActiveScheduleTimePickerId] =
-    useState<number | null>(null);
-  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(() =>
-    parseAgendaItems(editingEvent?.agendaJson),
-  );
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [agendaStartTimePickers, setAgendaStartTimePickers] = useState<
+    Record<number, boolean>
+  >({});
+  const [agendaEndTimePickers, setAgendaEndTimePickers] = useState<
+    Record<number, boolean>
+  >({});
+
   const { mutate: createEvent, isPending: isCreating } =
     useCreateEventMutation();
   const { mutate: updateEvent, isPending: isUpdating } =
     useUpdateEventMutation();
   const isPending = isCreating || isUpdating;
-  const shouldUsePickerSheet = Platform.OS !== "web";
-  const keyboardOffset = Platform.OS === "ios" ? Math.max(insets.top, 12) : 0;
-  const formBottomPadding = Math.max(insets.bottom + 144, 168);
 
-  const openMainTimePicker = () => {
-    Keyboard.dismiss();
-    setShowTimePicker(true);
-  };
-
-  const openScheduleTimePicker = (id: number) => {
-    Keyboard.dismiss();
-    setActiveScheduleTimePickerId(id);
-  };
-
-  const scrollFocusedInputIntoView = (target: number) => {
-    if (Platform.OS === "web") {
-      return;
+  let defaultAgenda: AgendaItem[] = [];
+  if (editingEvent?.agendaJson) {
+    try {
+      defaultAgenda = JSON.parse(editingEvent.agendaJson);
+    } catch {
+      defaultAgenda = [];
     }
-
-    setTimeout(() => {
-      scrollViewRef.current?.scrollResponderScrollNativeHandleToKeyboard(
-        target,
-        104,
-        true,
-      );
-    }, 120);
-  };
+  }
 
   const {
     control,
@@ -234,91 +108,56 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
       time: editingEvent?.dateTimeUtc?.split("T")[1]?.slice(0, 5) ?? "",
       capacity: editingEvent?.capacity ? String(editingEvent.capacity) : "",
       description: editingEvent?.description ?? "",
-      content: editingEvent?.content ?? "",
+      content: editingEvent?.description ?? "",
+      speakers: "",
+      agenda: defaultAgenda.length > 0 ? defaultAgenda : [],
       coverImage: undefined,
     },
   });
 
-  const pickImage = async (onChange: (value: CoverImage) => void) => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "agenda",
+  });
 
+  const pickImage = async (onChange: (value: any) => void) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("إذن مطلوب", "اسمح للتطبيق بالوصول للصور");
+      alert("اعطي إذن للوصول للصور");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
     });
-
     if (!result.canceled) {
       const asset = result.assets[0];
-
-      onChange({
-        uri: asset.uri,
-        name: "cover.jpg",
-        type: "image/jpeg",
-      });
+      onChange({ uri: asset.uri, name: "cover.jpg", type: "image/jpeg" });
     }
-  };
-
-  const updateScheduleItem = (
-    id: number,
-    field: keyof Pick<ScheduleItem, "title" | "time">,
-    value: string,
-  ) => {
-    setScheduleItems((items) =>
-      items.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
-    );
-  };
-
-  const addScheduleItem = () => {
-    setScheduleItems((items) => {
-      const nextId = Math.max(0, ...items.map((item) => item.id)) + 1;
-      return [...items, { id: nextId, title: "", time: "" }];
-    });
-  };
-
-  const removeScheduleItem = (id: number) => {
-    setScheduleItems((items) => {
-      if (items.length <= 1) {
-        return [{ ...items[0], title: "", time: "" }];
-      }
-
-      return items.filter((item) => item.id !== id);
-    });
   };
 
   const onSubmit = handleSubmit((values) => {
     if (!values.date || !values.time) {
-      Alert.alert("خطأ", "التاريخ والوقت مطلوبان");
+      Alert.alert("خطأ", "التاريخ والوقت مطلوب");
       return;
     }
-
     const dateTime = new Date(`${values.date}T${values.time}:00Z`);
-    if (Number.isNaN(dateTime.getTime())) {
+    if (isNaN(dateTime.getTime())) {
       Alert.alert("خطأ", "التاريخ أو الوقت غير صالح");
       return;
     }
-
-    const agendaItems = scheduleItems
-      .map((item, index) => ({
-        order: index + 1,
-        title: item.title.trim(),
-        time: item.time.trim(),
-      }))
-      .filter((item) => item.title || item.time);
+    const dateTimeUtc = dateTime.toISOString();
+    const agendaJson = JSON.stringify(values.agenda ?? []);
 
     const eventData = {
       title: values.title,
       type: values.type,
       location: values.location,
-      dateTimeUtc: dateTime.toISOString(),
+      dateTimeUtc,
       capacity: Number(values.capacity),
       description: values.description,
       content: values.content || values.description,
-      agendaJson: JSON.stringify(agendaItems),
+      agendaJson,
       coverImage: values.coverImage,
     };
 
@@ -338,42 +177,32 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           },
         },
       );
-      return;
+    } else {
+      createEvent(eventData, {
+        onSuccess: () => {
+          Alert.alert("تم", "تم نشر الفعالية بنجاح");
+          reset();
+          onDone?.();
+        },
+        onError: (error) => {
+          Alert.alert(
+            "خطأ",
+            error instanceof Error ? error.message : "تعذر إنشاء الفعالية",
+          );
+        },
+      });
     }
-
-    createEvent(eventData, {
-      onSuccess: () => {
-        Alert.alert("تم", "تم نشر الفعالية بنجاح");
-        reset();
-        setScheduleItems(getEmptySchedule());
-        onDone?.();
-      },
-      onError: (error) => {
-        Alert.alert(
-          "خطأ",
-          error instanceof Error ? error.message : "تعذر إنشاء الفعالية",
-        );
-      },
-    });
   });
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={keyboardOffset}
-      style={styles.keyboardContainer}
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        ref={scrollViewRef}
         style={styles.container}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: formBottomPadding },
-        ]}
-        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
-        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        scrollIndicatorInsets={{ bottom: formBottomPadding - 48 }}
         keyboardShouldPersistTaps="handled"
       >
         <Controller
@@ -381,27 +210,22 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           name="coverImage"
           render={({ field: { onChange, value } }) => (
             <Pressable
-              style={({ pressed }) => [
-                styles.uploadCard,
-                pressed && styles.pressedSubtle,
-              ]}
+              style={styles.imagePicker}
               onPress={() => pickImage(onChange)}
             >
-              <View style={styles.uploadIconCircle}>
-                <Ionicons
-                  name={value ? "checkmark-outline" : "cloud-upload-outline"}
-                  size={23}
-                  color="#34C759"
-                />
-              </View>
-              <Text style={styles.uploadText}>
-                {value ? "تم اختيار صورة الفعالية" : "أضف صورة أو بوستر الفعالية"}
+              <Ionicons
+                name="cloud-upload-outline"
+                size={32}
+                color={SemanticColors.green}
+              />
+              <Text style={styles.imagePickerText}>
+                {value ? "تم اختيار صورة ✓" : "أضف صورة أو بوستر للفعالية"}
               </Text>
             </Pressable>
           )}
         />
 
-        <Text style={styles.label}>عنوان الفعالية</Text>
+        <Text style={styles.label}>عنوان الفعالية *</Text>
         <Controller
           control={control}
           name="title"
@@ -410,190 +234,79 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
             <TextInput
               style={[styles.input, errors.title && styles.inputError]}
               placeholder="مثال: ورشة عمل البرمجة بالبايثون"
-              placeholderTextColor="#A7A7AE"
+              placeholderTextColor={Colors.mutedForeground}
               value={value}
               onChangeText={onChange}
-              onFocus={(event) =>
-                scrollFocusedInputIntoView(event.nativeEvent.target)
-              }
               textAlign="right"
             />
           )}
         />
-        {errors.title ? (
+        {errors.title && (
           <Text style={styles.errorText}>{errors.title.message}</Text>
-        ) : null}
+        )}
 
         <Text style={styles.label}>نوع الفعالية</Text>
         <Controller
           control={control}
           name="type"
           render={({ field: { onChange, value } }) => (
-            <>
+            <View style={styles.dropdownWrapper}>
               <Pressable
-                style={({ pressed }) => [
-                  styles.selectField,
-                  pressed && styles.pressedSubtle,
-                ]}
-                onPress={() => setIsTypePickerOpen(true)}
+                style={[styles.input, styles.dropdownTrigger]}
+                onPress={() => setTypeDropdownOpen((prev) => !prev)}
               >
                 <Ionicons
-                  name="chevron-down-outline"
-                  size={17}
-                  color="#C9CAD1"
+                  name={typeDropdownOpen ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={Colors.mutedForeground}
                 />
-                <Text style={styles.selectText}>{getTypeLabel(value)}</Text>
+                <Text style={styles.dropdownValue}>
+                  {EVENT_TYPES.find((t) => t.id === value)?.label ??
+                    "اختر نوع الفعالية"}
+                </Text>
               </Pressable>
 
-              <Modal
-                visible={isTypePickerOpen}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setIsTypePickerOpen(false)}
-              >
-                <Pressable
-                  style={styles.modalOverlay}
-                  onPress={() => setIsTypePickerOpen(false)}
-                >
-                  <Pressable style={styles.typeSheet}>
-                    <View style={styles.sheetHandle} />
-                    <Text style={styles.typeSheetTitle}>اختاري نوع الفعالية</Text>
-                    {EVENT_TYPES.map((type) => {
-                      const isActive = type.id === value;
-
-                      return (
-                        <Pressable
-                          key={type.id}
-                          style={[
-                            styles.typeOption,
-                            isActive && styles.typeOptionActive,
-                          ]}
-                          onPress={() => {
-                            onChange(type.id);
-                            setIsTypePickerOpen(false);
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              isActive
-                                ? "checkmark-circle"
-                                : "ellipse-outline"
-                            }
-                            size={20}
-                            color={isActive ? "#34C759" : "#C9CAD1"}
-                          />
-                          <Text
-                            style={[
-                              styles.typeOptionText,
-                              isActive && styles.typeOptionTextActive,
-                            ]}
-                          >
-                            {type.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </Pressable>
-                </Pressable>
-              </Modal>
-            </>
+              {typeDropdownOpen && (
+                <View style={styles.dropdownMenu}>
+                  {EVENT_TYPES.map((type, index) => (
+                    <Pressable
+                      key={type.id}
+                      style={[
+                        styles.dropdownItem,
+                        index < EVENT_TYPES.length - 1 &&
+                          styles.dropdownItemBorder,
+                        value === type.id && styles.dropdownItemActive,
+                      ]}
+                      onPress={() => {
+                        onChange(type.id);
+                        setTypeDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          value === type.id && styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        {type.label}
+                      </Text>
+                      {value === type.id && (
+                        <Ionicons
+                          name="checkmark"
+                          size={16}
+                          color={SemanticColors.green}
+                        />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
           )}
         />
 
-        <View style={styles.twoColumnRow}>
-          <View style={styles.fieldColumn}>
-            <Text style={styles.label}>التاريخ</Text>
-            <Controller
-              control={control}
-              name="date"
-              rules={{ required: "التاريخ مطلوب" }}
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <View
-                    style={[styles.inputShell, errors.date && styles.inputError]}
-                  >
-                    <Pressable
-                      hitSlop={10}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#1F2937"
-                      />
-                    </Pressable>
-                    <TextInput
-                      style={styles.shellInput}
-                      placeholder="yyyy-mm-dd"
-                      placeholderTextColor="#A7A7AE"
-                      value={value}
-                      onChangeText={(text) => onChange(formatDateInput(text))}
-                      onFocus={(event) =>
-                        scrollFocusedInputIntoView(event.nativeEvent.target)
-                      }
-                      textAlign="right"
-                      keyboardType="numbers-and-punctuation"
-                    />
-                  </View>
-
-                  {showDatePicker ? (
-                    shouldUsePickerSheet ? (
-                      <Modal
-                        visible
-                        transparent
-                        animationType="fade"
-                        onRequestClose={() => setShowDatePicker(false)}
-                      >
-                        <Pressable
-                          style={styles.pickerOverlay}
-                          onPress={() => setShowDatePicker(false)}
-                        >
-                          <Pressable style={styles.pickerSheet}>
-                            <View style={styles.pickerHeader}>
-                              <Pressable
-                                onPress={() => setShowDatePicker(false)}
-                              >
-                                <Text style={styles.pickerDoneText}>تم</Text>
-                              </Pressable>
-                              <Text style={styles.pickerTitle}>
-                                اختاري التاريخ
-                              </Text>
-                            </View>
-                            <DateTimePicker
-                              value={getDatePickerValue(value)}
-                              mode="date"
-                              display="spinner"
-                              onChange={(event, selectedDate) => {
-                                if (selectedDate) {
-                                  onChange(
-                                    selectedDate.toISOString().split("T")[0],
-                                  );
-                                }
-                              }}
-                            />
-                          </Pressable>
-                        </Pressable>
-                      </Modal>
-                    ) : (
-                      <DateTimePicker
-                        value={getDatePickerValue(value)}
-                        mode="date"
-                        display="default"
-                        onChange={(event, selectedDate) => {
-                          setShowDatePicker(false);
-                          if (selectedDate) {
-                            onChange(selectedDate.toISOString().split("T")[0]);
-                          }
-                        }}
-                      />
-                    )
-                  ) : null}
-                </>
-              )}
-            />
-          </View>
-
-          <View style={styles.fieldColumn}>
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
             <Text style={styles.label}>الوقت</Text>
             <Controller
               control={control}
@@ -602,124 +315,99 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               render={({ field: { onChange, value } }) => (
                 <>
                   <Pressable
-                    hitSlop={8}
-                    onPressIn={openMainTimePicker}
-                    style={({ pressed }) => [
-                      styles.inputShell,
-                      errors.time && styles.inputError,
-                      pressed && styles.pressedSubtle,
-                    ]}
+                    onPress={() => setShowTimePicker(true)}
+                    style={[styles.input, styles.pickerTrigger]}
                   >
                     <Ionicons
                       name="time-outline"
                       size={16}
-                      color="#1F2937"
+                      color={Colors.mutedForeground}
                     />
                     <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.shellText,
-                        !value && styles.placeholderText,
-                      ]}
+                      style={
+                        value
+                          ? styles.pickerValueFilled
+                          : styles.pickerValueEmpty
+                      }
                     >
                       {value || "--:--"}
                     </Text>
                   </Pressable>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={new Date()}
+                      mode="time"
+                      is24Hour
+                      display="default"
+                      onChange={(_, selectedTime) => {
+                        setShowTimePicker(false);
+                        if (selectedTime) {
+                          const h = selectedTime
+                            .getHours()
+                            .toString()
+                            .padStart(2, "0");
+                          const m = selectedTime
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, "0");
+                          onChange(`${h}:${m}`);
+                        }
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            />
+          </View>
 
-                  {showTimePicker ? (
-                    shouldUsePickerSheet ? (
-                      <Modal
-                        visible
-                        transparent
-                        animationType="fade"
-                        onRequestClose={() => setShowTimePicker(false)}
-                      >
-                        <Pressable
-                          style={styles.pickerOverlay}
-                          onPress={() => setShowTimePicker(false)}
-                        >
-                          <Pressable style={styles.pickerSheet}>
-                            <View style={styles.pickerHeader}>
-                              <Pressable
-                                onPress={() => setShowTimePicker(false)}
-                              >
-                                <Text style={styles.pickerDoneText}>تم</Text>
-                              </Pressable>
-                              <Text style={styles.pickerTitle}>
-                                اختاري الوقت
-                              </Text>
-                            </View>
-                            <DateTimePicker
-                              value={getTimePickerValue(value)}
-                              mode="time"
-                              is24Hour
-                              display="spinner"
-                              onChange={(event, selectedTime) => {
-                                if (selectedTime) {
-                                  onChange(formatPickedTime(selectedTime));
-                                }
-                              }}
-                            />
-                          </Pressable>
-                        </Pressable>
-                      </Modal>
-                    ) : (
-                      <DateTimePicker
-                        value={getTimePickerValue(value)}
-                        mode="time"
-                        is24Hour
-                        display="clock"
-                        onChange={(event, selectedTime) => {
-                          setShowTimePicker(false);
-                          if (selectedTime) {
-                            onChange(formatPickedTime(selectedTime));
-                          }
-                        }}
-                      />
-                    )
-                  ) : null}
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>التاريخ</Text>
+            <Controller
+              control={control}
+              name="date"
+              rules={{ required: "التاريخ مطلوب" }}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    style={[styles.input, styles.pickerTrigger]}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={Colors.mutedForeground}
+                    />
+                    <Text
+                      style={
+                        value
+                          ? styles.pickerValueFilled
+                          : styles.pickerValueEmpty
+                      }
+                    >
+                      {value || "mm/dd/yyyy"}
+                    </Text>
+                  </Pressable>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={value ? new Date(value) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(_, selectedDate) => {
+                        setShowDatePicker(false);
+                        if (selectedDate) {
+                          onChange(selectedDate.toISOString().split("T")[0]);
+                        }
+                      }}
+                    />
+                  )}
                 </>
               )}
             />
           </View>
         </View>
 
-        <View style={styles.twoColumnRow}>
-          <View style={styles.fieldColumn}>
-            <Text style={styles.label}>المكان</Text>
-            <Controller
-              control={control}
-              name="location"
-              rules={{ required: "المكان مطلوب" }}
-              render={({ field: { onChange, value } }) => (
-                <View
-                  style={[
-                    styles.iconInputWrapper,
-                    errors.location && styles.inputError,
-                  ]}
-                >
-                  <Ionicons
-                    name="location-outline"
-                    size={16}
-                    color="#C6C7CE"
-                  />
-                  <TextInput
-                    style={styles.iconInput}
-                    placeholder="مثال: قاعة الحاسوب"
-                    placeholderTextColor="#A7A7AE"
-                    value={value}
-                    onChangeText={onChange}
-                    onFocus={(event) =>
-                      scrollFocusedInputIntoView(event.nativeEvent.target)
-                    }
-                    textAlign="right"
-                  />
-                </View>
-              )}
-            />
-          </View>
-
-          <View style={styles.fieldColumn}>
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
             <Text style={styles.label}>الحد الأقصى</Text>
             <Controller
               control={control}
@@ -728,26 +416,54 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               render={({ field: { onChange, value } }) => (
                 <View
                   style={[
-                    styles.iconInputWrapper,
+                    styles.inputWithIcon,
                     errors.capacity && styles.inputError,
                   ]}
                 >
                   <Ionicons
                     name="people-outline"
                     size={16}
-                    color="#C6C7CE"
+                    color={Colors.mutedForeground}
                   />
                   <TextInput
-                    style={styles.iconInput}
-                    placeholder="مثال: 50"
-                    placeholderTextColor="#A7A7AE"
+                    style={styles.inputInner}
+                    placeholder="50"
+                    placeholderTextColor={Colors.mutedForeground}
                     value={value}
                     onChangeText={onChange}
-                    onFocus={(event) =>
-                      scrollFocusedInputIntoView(event.nativeEvent.target)
-                    }
                     textAlign="right"
                     keyboardType="numeric"
+                  />
+                </View>
+              )}
+            />
+          </View>
+
+          <View style={styles.rowItem}>
+            <Text style={styles.label}>المكان</Text>
+            <Controller
+              control={control}
+              name="location"
+              rules={{ required: "المكان مطلوب" }}
+              render={({ field: { onChange, value } }) => (
+                <View
+                  style={[
+                    styles.inputWithIcon,
+                    errors.location && styles.inputError,
+                  ]}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={16}
+                    color={Colors.mutedForeground}
+                  />
+                  <TextInput
+                    style={styles.inputInner}
+                    placeholder="قاعة الحاسوب"
+                    placeholderTextColor={Colors.mutedForeground}
+                    value={value}
+                    onChangeText={onChange}
+                    textAlign="right"
                   />
                 </View>
               )}
@@ -764,180 +480,202 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
             <TextInput
               style={[
                 styles.input,
-                styles.detailsArea,
+                styles.textArea,
                 errors.description && styles.inputError,
               ]}
               placeholder="اشرح هدف الفعالية، ماذا سيستفيد المشاركون، والمحاور الرئيسية..."
-              placeholderTextColor="#A7A7AE"
+              placeholderTextColor={Colors.mutedForeground}
               value={value}
               onChangeText={onChange}
-              onFocus={(event) =>
-                scrollFocusedInputIntoView(event.nativeEvent.target)
-              }
               textAlign="right"
               multiline
+              numberOfLines={4}
               textAlignVertical="top"
             />
           )}
         />
-        {errors.description ? (
+        {errors.description && (
           <Text style={styles.errorText}>{errors.description.message}</Text>
-        ) : null}
+        )}
 
-        <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionOptional}>اختياري</Text>
-          <Text style={styles.sectionTitle}>المتحدثون</Text>
+        <View style={styles.optionalHeader}>
+          <Text style={styles.optionalBadge}>اختياري</Text>
+          <Text style={styles.label}>المتحدثون</Text>
         </View>
         <Controller
           control={control}
-          name="content"
+          name="speakers"
           render={({ field: { onChange, value } }) => (
             <TextInput
-              style={[styles.input, styles.speakersArea]}
-              placeholder={
-                "مثال:\nأ. محمد الأحمد — مهندس برمجيات في Google\nد. سارة نبيل — أستاذة في الجامعة الأردنية"
-              }
-              placeholderTextColor="#A7A7AE"
+              style={[styles.input, styles.textArea]}
+              placeholder={`مثال:\nأ. محمد الأحمد — مهندس برمجيات في Google\nد. سارة نبيل — أستاذة في الجامعة الأردنية`}
+              placeholderTextColor={Colors.mutedForeground}
               value={value}
               onChangeText={onChange}
-              onFocus={(event) =>
-                scrollFocusedInputIntoView(event.nativeEvent.target)
-              }
               textAlign="right"
               multiline
+              numberOfLines={4}
               textAlignVertical="top"
             />
           )}
         />
 
-        <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionOptional}>اختياري</Text>
-          <Text style={styles.sectionTitle}>الجدول الزمني</Text>
+        <View style={styles.optionalHeader}>
+          <Text style={styles.optionalBadge}>اختياري</Text>
+          <Text style={styles.label}>الجدول الزمني</Text>
         </View>
 
-        <View style={styles.scheduleList}>
-          {scheduleItems.map((item, index) => (
-            <Fragment key={item.id}>
-              <View style={styles.scheduleRow}>
-                <Pressable
-                  onPress={() => removeScheduleItem(item.id)}
-                  style={styles.deleteSessionButton}
-                >
-                  <Ionicons name="close-outline" size={18} color="#FF3B30" />
-                </Pressable>
-
-                <View style={styles.sessionNameInput}>
-                  <TextInput
-                    style={styles.sessionInputText}
-                    placeholder="اسم الجلسة أو النشاط"
-                    placeholderTextColor="#B7B8C0"
-                    value={item.title}
-                    onChangeText={(value) =>
-                      updateScheduleItem(item.id, "title", value)
-                    }
-                    onFocus={(event) =>
-                      scrollFocusedInputIntoView(event.nativeEvent.target)
-                    }
-                    textAlign="right"
-                  />
-                </View>
-
-                <Pressable
-                  hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.sessionTimeInput,
-                    pressed && styles.pressedSubtle,
-                  ]}
-                  onPressIn={() => openScheduleTimePicker(item.id)}
-                >
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.sessionTimeText,
-                      !item.time && styles.placeholderText,
-                    ]}
-                  >
-                    {item.time || "--:--"}
-                  </Text>
-                  <Ionicons name="time-outline" size={12} color="#111827" />
-                </Pressable>
-
-                <View style={styles.sessionNumber}>
-                  <Text style={styles.sessionNumberText}>{index + 1}</Text>
-                </View>
-              </View>
-
-              {activeScheduleTimePickerId === item.id ? (
-                shouldUsePickerSheet ? (
-                  <Modal
-                    visible
-                    transparent
-                    animationType="fade"
-                    onRequestClose={() => setActiveScheduleTimePickerId(null)}
-                  >
+        {fields.map((field, index) => (
+          <View key={field.id} style={styles.agendaItem}>
+            <View style={styles.agendaTimeRow}>
+              <Controller
+                control={control}
+                name={`agenda.${index}.endTime`}
+                render={({ field: { onChange, value } }) => (
+                  <>
                     <Pressable
-                      style={styles.pickerOverlay}
-                      onPress={() => setActiveScheduleTimePickerId(null)}
-                    >
-                      <Pressable style={styles.pickerSheet}>
-                        <View style={styles.pickerHeader}>
-                          <Pressable
-                            onPress={() => setActiveScheduleTimePickerId(null)}
-                          >
-                            <Text style={styles.pickerDoneText}>تم</Text>
-                          </Pressable>
-                          <Text style={styles.pickerTitle}>اختاري الوقت</Text>
-                        </View>
-                        <DateTimePicker
-                          value={getTimePickerValue(item.time)}
-                          mode="time"
-                          is24Hour
-                          display="spinner"
-                          onChange={(event, selectedTime) => {
-                            if (selectedTime) {
-                              updateScheduleItem(
-                                item.id,
-                                "time",
-                                formatPickedTime(selectedTime),
-                              );
-                            }
-                          }}
-                        />
-                      </Pressable>
-                    </Pressable>
-                  </Modal>
-                ) : (
-                  <DateTimePicker
-                    value={getTimePickerValue(item.time)}
-                    mode="time"
-                    is24Hour
-                    display="clock"
-                    onChange={(event, selectedTime) => {
-                      setActiveScheduleTimePickerId(null);
-                      if (selectedTime) {
-                        updateScheduleItem(
-                          item.id,
-                          "time",
-                          formatPickedTime(selectedTime),
-                        );
+                      style={styles.agendaTimePicker}
+                      onPress={() =>
+                        setAgendaEndTimePickers((prev) => ({
+                          ...prev,
+                          [index]: true,
+                        }))
                       }
-                    }}
-                  />
-                )
-              ) : null}
-            </Fragment>
-          ))}
-        </View>
+                    >
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={Colors.mutedForeground}
+                      />
+                      <Text
+                        style={
+                          value
+                            ? styles.pickerValueFilled
+                            : styles.pickerValueEmpty
+                        }
+                      >
+                        {value || "--:--"}
+                      </Text>
+                    </Pressable>
+                    {agendaEndTimePickers[index] && (
+                      <DateTimePicker
+                        value={new Date()}
+                        mode="time"
+                        is24Hour
+                        display="default"
+                        onChange={(_, t) => {
+                          setAgendaEndTimePickers((prev) => ({
+                            ...prev,
+                            [index]: false,
+                          }));
+                          if (t) {
+                            const h = t.getHours().toString().padStart(2, "0");
+                            const m = t
+                              .getMinutes()
+                              .toString()
+                              .padStart(2, "0");
+                            onChange(`${h}:${m}`);
+                          }
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              />
+
+              <Ionicons
+                name="arrow-back-outline"
+                size={14}
+                color={Colors.mutedForeground}
+              />
+
+              <Controller
+                control={control}
+                name={`agenda.${index}.startTime`}
+                render={({ field: { onChange, value } }) => (
+                  <>
+                    <Pressable
+                      style={styles.agendaTimePicker}
+                      onPress={() =>
+                        setAgendaStartTimePickers((prev) => ({
+                          ...prev,
+                          [index]: true,
+                        }))
+                      }
+                    >
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={Colors.mutedForeground}
+                      />
+                      <Text
+                        style={
+                          value
+                            ? styles.pickerValueFilled
+                            : styles.pickerValueEmpty
+                        }
+                      >
+                        {value || "--:--"}
+                      </Text>
+                    </Pressable>
+                    {agendaStartTimePickers[index] && (
+                      <DateTimePicker
+                        value={new Date()}
+                        mode="time"
+                        is24Hour
+                        display="default"
+                        onChange={(_, t) => {
+                          setAgendaStartTimePickers((prev) => ({
+                            ...prev,
+                            [index]: false,
+                          }));
+                          if (t) {
+                            const h = t.getHours().toString().padStart(2, "0");
+                            const m = t
+                              .getMinutes()
+                              .toString()
+                              .padStart(2, "0");
+                            onChange(`${h}:${m}`);
+                          }
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              />
+
+              <Pressable
+                style={styles.agendaDeleteBtn}
+                onPress={() => remove(index)}
+              >
+                <Text style={styles.agendaDeleteText}>{index + 1}</Text>
+              </Pressable>
+            </View>
+
+            {/* اسم الجلسة */}
+            <Controller
+              control={control}
+              name={`agenda.${index}.title`}
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={styles.agendaTitleInput}
+                  placeholder="اسم الجلسة أو النشاط"
+                  placeholderTextColor={Colors.mutedForeground}
+                  value={value}
+                  onChangeText={onChange}
+                  textAlign="right"
+                />
+              )}
+            />
+          </View>
+        ))}
 
         <Pressable
-          onPress={addScheduleItem}
-          style={({ pressed }) => [
-            styles.addSessionButton,
-            pressed && styles.pressedSubtle,
-          ]}
+          style={styles.addSessionBtn}
+          onPress={() => append({ startTime: "", endTime: "", title: "" })}
         >
+          <Ionicons name="add" size={18} color={SemanticColors.green} />
           <Text style={styles.addSessionText}>إضافة جلسة</Text>
-          <Ionicons name="add-outline" size={18} color="#34C759" />
         </Pressable>
 
         <Pressable
@@ -950,17 +688,17 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           disabled={isPending}
         >
           {isPending ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#fff" />
           ) : (
             <>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#fff"
+              />
               <Text style={styles.submitButtonText}>
                 {isEditing ? "حفظ التعديلات" : "نشر الفعالية"}
               </Text>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={24}
-                color="#FFFFFF"
-              />
             </>
           )}
         </Pressable>
@@ -970,428 +708,256 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
 }
 
 const styles = StyleSheet.create({
-  keyboardContainer: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 22,
-    paddingTop: 0,
-    paddingBottom: 168,
-    gap: 8,
-  },
-  uploadCard: {
-    minHeight: 155,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 11,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 7,
-    elevation: 2,
-  },
-  uploadIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: Dimensions.radiusFull,
-    backgroundColor: "rgba(52,199,89,0.13)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  uploadText: {
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: "#A7A7AE",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  label: {
-    marginTop: 12,
-    marginBottom: 6,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: "#27272A",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  input: {
-    minHeight: 50,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.09)",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    color: "#27272A",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-    writingDirection: "rtl",
-  },
-  inputError: {
-    borderColor: SemanticColors.red,
-  },
-  selectField: {
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.09)",
-    paddingHorizontal: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  selectText: {
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    color: "#3F3F46",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  twoColumnRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-start",
-  },
-  fieldColumn: {
-    flex: 1,
-    gap: 6,
-  },
-  inputShell: {
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.09)",
-    paddingHorizontal: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  shellText: {
-    flex: 1,
-    marginHorizontal: 6,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    color: "#27272A",
-    textAlign: "right",
-  },
-  placeholderText: {
-    color: "#A7A7AE",
-  },
-  shellInput: {
-    flex: 1,
-    height: "100%",
-    paddingVertical: 0,
-    marginHorizontal: 6,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    color: "#27272A",
-    writingDirection: "ltr",
-  },
-  iconInputWrapper: {
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.09)",
-    paddingHorizontal: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  iconInput: {
-    flex: 1,
-    paddingVertical: 0,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    color: "#27272A",
-    writingDirection: "rtl",
-  },
-  detailsArea: {
-    minHeight: 109,
-    paddingTop: 15,
-    lineHeight: 22,
-  },
-  speakersArea: {
-    minHeight: 96,
-    paddingTop: 16,
-    lineHeight: 24,
-  },
-  sectionTitleRow: {
-    marginTop: 13,
-    marginBottom: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: "#27272A",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  sectionOptional: {
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: "#A7A7AE",
-    textAlign: "left",
-    writingDirection: "rtl",
-  },
-  scheduleList: {
-    gap: 7,
-    marginTop: 2,
-  },
-  scheduleRow: {
-    height: 39,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  deleteSessionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: Dimensions.radiusFull,
-    backgroundColor: "rgba(255,59,48,0.14)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sessionNameInput: {
-    flex: 1,
-    height: 39,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.09)",
-    paddingHorizontal: 14,
-    justifyContent: "center",
-  },
-  sessionTimeInput: {
-    width: 80,
-    height: 39,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60,60,67,0.09)",
-    paddingHorizontal: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sessionInputText: {
-    flex: 1,
-    paddingVertical: 0,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-    color: "#27272A",
-    writingDirection: "rtl",
-  },
-  sessionTimeText: {
-    flex: 1,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-    color: "#27272A",
-    textAlign: "center",
-  },
-  sessionNumber: {
-    width: 34,
-    height: 34,
-    borderRadius: Dimensions.radiusFull,
-    backgroundColor: "#34C759",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sessionNumberText: {
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: "#FFFFFF",
-  },
-  addSessionButton: {
-    height: 44,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "rgba(52,199,89,0.38)",
+  container: { flex: 1 },
+  content: { padding: Spacing.md, paddingBottom: 100 },
+
+  imagePicker: {
+    backgroundColor: SemanticColors.green + "10",
+    borderRadius: Dimensions.radiusCard,
+    borderWidth: 1.5,
+    borderColor: SemanticColors.green + "40",
     borderStyle: "dashed",
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    paddingVertical: Spacing.xl,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
   },
-  addSessionText: {
+  imagePickerText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: "#34C759",
-    writingDirection: "rtl",
+    color: Colors.mutedForeground,
   },
-  submitButton: {
-    height: 56,
-    marginTop: 18,
-    borderRadius: 15,
-    backgroundColor: "#34C759",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: "#34C759",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  submitButtonPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.99 }],
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
+
+  label: {
     fontFamily: FontFamily.cairo,
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.extrabold,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.foreground,
+    textAlign: "right",
+    marginBottom: Spacing.xs,
   },
-  pressedSubtle: {
-    opacity: 0.78,
+
+  optionalHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
   },
+  optionalBadge: {
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.xs,
+    color: Colors.mutedForeground,
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Dimensions.radiusFull,
+    overflow: "hidden",
+  },
+
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: Dimensions.radiusButton,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    color: Colors.foreground,
+    marginBottom: Spacing.md,
+  },
+  inputError: { borderColor: SemanticColors.red },
+  textArea: { height: 100, paddingTop: Spacing.sm },
   errorText: {
-    marginTop: -6,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     color: SemanticColors.red,
     textAlign: "right",
-    writingDirection: "rtl",
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15,23,42,0.34)",
-    justifyContent: "flex-end",
-    padding: 18,
-  },
-  typeSheet: {
-    borderRadius: 24,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 16,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  sheetHandle: {
-    alignSelf: "center",
-    width: 42,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: "#E4E4E7",
-    marginBottom: 12,
-  },
-  typeSheetTitle: {
-    marginBottom: 10,
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.bold,
-    color: "#27272A",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  typeOption: {
-    minHeight: 48,
-    borderRadius: 16,
-    paddingHorizontal: 13,
-    flexDirection: "row",
+
+  inputWithIcon: {
+    flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: Dimensions.radiusButton,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
   },
-  typeOptionActive: {
-    backgroundColor: "rgba(52,199,89,0.1)",
-  },
-  typeOptionText: {
+  inputInner: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
+    color: Colors.foreground,
+  },
+
+  pickerTrigger: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  pickerValueFilled: {
+    flex: 1,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    color: Colors.foreground,
+    textAlign: "right",
+  },
+  pickerValueEmpty: {
+    flex: 1,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    color: Colors.mutedForeground,
+    textAlign: "right",
+  },
+
+  dropdownWrapper: { marginBottom: Spacing.md },
+  dropdownTrigger: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 0,
+  },
+  dropdownValue: {
+    flex: 1,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    color: Colors.foreground,
+    textAlign: "right",
+  },
+  dropdownMenu: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: Dimensions.radiusButton,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    overflow: "hidden",
+    marginTop: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  dropdownItem: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+  },
+  dropdownItemBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  dropdownItemActive: { backgroundColor: SemanticColors.green + "08" },
+  dropdownItemText: {
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    color: Colors.foreground,
+    textAlign: "right",
+  },
+  dropdownItemTextActive: {
+    color: SemanticColors.green,
     fontWeight: FontWeight.semibold,
-    color: "#52525B",
-    textAlign: "right",
-    writingDirection: "rtl",
   },
-  typeOptionTextActive: {
-    color: "#249E47",
+
+  row: { flexDirection: "row-reverse", gap: Spacing.sm },
+  rowItem: { flex: 1 },
+
+  agendaItem: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: Dimensions.radiusButton,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  agendaTimeRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  agendaTimePicker: {
+    flex: 1,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.secondary,
+    borderRadius: Dimensions.radiusButton,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+  },
+  agendaTitleInput: {
+    backgroundColor: Colors.secondary,
+    borderRadius: Dimensions.radiusButton,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.sm,
+    color: Colors.foreground,
+  },
+  agendaDeleteBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: SemanticColors.green,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  agendaDeleteText: {
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.xs,
+    color: "#fff",
     fontWeight: FontWeight.bold,
   },
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15,23,42,0.34)",
-    justifyContent: "flex-end",
-  },
-  pickerSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 28,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  pickerHeader: {
-    flexDirection: "row",
+
+  addSessionBtn: {
+    flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    justifyContent: "center",
+    gap: Spacing.xs,
+    borderRadius: Dimensions.radiusButton,
+    borderWidth: 1.5,
+    borderColor: SemanticColors.green + "50",
+    borderStyle: "dashed",
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
-  pickerTitle: {
+  addSessionText: {
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.sm,
+    color: SemanticColors.green,
+    fontWeight: FontWeight.semibold,
+  },
+
+  submitButton: {
+    backgroundColor: SemanticColors.green,
+    borderRadius: Dimensions.radiusButton,
+    paddingVertical: Spacing.md,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    shadowColor: SemanticColors.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  submitButtonDisabled: { opacity: 0.7 },
+  submitButtonText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: "#27272A",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  pickerDoneText: {
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: "#34C759",
-    writingDirection: "rtl",
+    color: "#fff",
   },
 });
