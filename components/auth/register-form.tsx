@@ -8,6 +8,7 @@ import {
   AuthErrorText,
   authFormStyles,
   AuthSubmitButton,
+  getAuthErrorMessage,
 } from '@/components/auth/auth-form-shared';
 import { useRegisterMutation } from '@/hooks/mutations/use-auth-mutations';
 import { AUTH_COPY, AUTH_VALIDATION } from '@/lib/auth/auth-copy';
@@ -39,20 +40,18 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     mode: 'onChange',
   });
 
-  const serverError =
-    registerMutation.isError && registerMutation.error
-      ? registerMutation.error instanceof Error
-        ? registerMutation.error.message
-        : AUTH_COPY.registerFailed
-      : '';
+  const isSubmitting = registerMutation.isPending;
+  const registerError = registerMutation.isError
+    ? getAuthErrorMessage(registerMutation.error, AUTH_COPY.registerFailed)
+    : '';
 
-  const clearServerError = () => {
+  const clearRegisterError = () => {
     if (registerMutation.isError) {
       registerMutation.reset();
     }
   };
 
-  const handleRegister = handleSubmit((values) => {
+  const submitRegister = handleSubmit((values) => {
     registerMutation.mutate(values, { onSuccess });
   });
 
@@ -69,7 +68,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             icon="person-outline"
             onBlur={onBlur}
             onChangeText={(nextValue) => {
-              clearServerError();
+              clearRegisterError();
               onChange(nextValue);
             }}
             placeholder={AUTH_COPY.fullNamePlaceholder}
@@ -93,7 +92,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             keyboardType="email-address"
             onBlur={onBlur}
             onChangeText={(nextValue) => {
-              clearServerError();
+              clearRegisterError();
               onChange(nextValue);
             }}
             placeholder={AUTH_COPY.universityEmailPlaceholder}
@@ -116,7 +115,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             icon="lock-closed-outline"
             onBlur={onBlur}
             onChangeText={(nextValue) => {
-              clearServerError();
+              clearRegisterError();
               onChange(nextValue);
             }}
             placeholder={AUTH_COPY.passwordPlaceholder}
@@ -132,13 +131,13 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <AuthHintCard message={AUTH_COPY.registerHint} />
 
-      <AuthErrorText message={serverError} />
+      <AuthErrorText message={registerError} />
 
       <AuthSubmitButton
-        isPending={registerMutation.isPending}
+        isPending={isSubmitting}
         label={AUTH_COPY.registerButton}
         onPress={() => {
-          void handleRegister();
+          void submitRegister();
         }}
         pendingLabel={AUTH_COPY.registerButtonPending}
       />

@@ -22,6 +22,14 @@ type AuthSubmitButtonProps = {
   icon?: ComponentProps<typeof Ionicons>['name'];
 };
 
+export function getAuthErrorMessage(error: unknown, fallbackMessage: string) {
+  if (!error) {
+    return '';
+  }
+
+  return error instanceof Error ? error.message : fallbackMessage;
+}
+
 export function AuthErrorText({ message }: AuthErrorTextProps) {
   if (!message) {
     return null;
