@@ -18,14 +18,14 @@ import {
   getErrorMessage,
 } from '@/hooks/password-recovery/utils';
 
-type UsePasswordRecoveryFlowArgs = PasswordRecoveryFlowProps;
+function createEmptyCodeDigits() {
+  return Array.from({ length: CODE_LENGTH }, () => '');
+}
 
-export function usePasswordRecoveryFlow({ onDone }: UsePasswordRecoveryFlowArgs) {
+export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
   const [step, setStep] = useState<RecoveryStep>('forgot');
   const [email, setEmail] = useState('');
-  const [codeDigits, setCodeDigits] = useState<string[]>(
-    Array.from({ length: CODE_LENGTH }, () => ''),
-  );
+  const [codeDigits, setCodeDigits] = useState<string[]>(createEmptyCodeDigits);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -46,36 +46,46 @@ export function usePasswordRecoveryFlow({ onDone }: UsePasswordRecoveryFlowArgs)
     resetPasswordMutation.isPending;
 
   const resetCodeDigits = () => {
-    setCodeDigits(Array.from({ length: CODE_LENGTH }, () => ''));
+    setCodeDigits(createEmptyCodeDigits());
+  };
+
+  const isEmailValid = () => EMAIL_PATTERN.test(normalizedEmail);
+
+  const focusCodeInput = (index: number) => {
+    codeRefs.current[index]?.focus();
+  };
+
+  const saveCodeDigit = (index: number, digit: string) => {
+    setCodeDigits((currentDigits) => {
+      const nextDigits = [...currentDigits];
+      nextDigits[index] = digit;
+      return nextDigits;
+    });
   };
 
   const handleBack = () => {
     setError('');
 
-    switch (step) {
-      case 'forgot':
-        onDone();
-        break;
-      case 'sent':
-        setStep('forgot');
-        break;
-      case 'verify':
-        setStep('sent');
-        break;
-      case 'reset':
-        setStep('verify');
-        break;
-      case 'success':
-        onDone();
-        break;
-      default:
-        onDone();
-        break;
+    if (step === 'forgot' || step === 'success') {
+      onDone();
+      return;
     }
+
+    if (step === 'sent') {
+      setStep('forgot');
+      return;
+    }
+
+    if (step === 'verify') {
+      setStep('sent');
+      return;
+    }
+
+    setStep('verify');
   };
 
   const handleSendCode = async () => {
-    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+    if (!isEmailValid()) {
       setError('يرجى إدخال بريد جامعي صحيح');
       return;
     }
@@ -92,7 +102,7 @@ export function usePasswordRecoveryFlow({ onDone }: UsePasswordRecoveryFlowArgs)
   };
 
   const handleResendCode = async () => {
-    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+    if (!isEmailValid()) {
       setError('يرجى إدخال بريد جامعي صحيح');
       return;
     }
@@ -153,51 +163,45 @@ export function usePasswordRecoveryFlow({ onDone }: UsePasswordRecoveryFlowArgs)
   };
 
   const handleCodeChange: CodeValueChangeHandler = (value, index) => {
-    const normalized = value.replace(/\D/g, '');
+    const digitsOnly = value.replace(/\D/g, '');
 
-    if (!normalized) {
-      setCodeDigits((prev) => {
-        const next = [...prev];
-        next[index] = '';
-        return next;
-      });
+    if (!digitsOnly) {
+      saveCodeDigit(index, '');
       return;
     }
 
-    if (normalized.length > 1) {
-      setCodeDigits((prev) => {
-        const next = [...prev];
-        for (let i = 0; i < normalized.length; i += 1) {
-          const targetIndex = index + i;
+    // Allow pasting the full code into one box.
+    if (digitsOnly.length > 1) {
+      setCodeDigits((currentDigits) => {
+        const nextDigits = [...currentDigits];
+        for (let offset = 0; offset < digitsOnly.length; offset += 1) {
+          const targetIndex = index + offset;
 
           if (targetIndex >= CODE_LENGTH) {
             break;
           }
 
-          next[targetIndex] = normalized[i] ?? '';
+          nextDigits[targetIndex] = digitsOnly[offset] ?? '';
         }
-        return next;
+
+        return nextDigits;
       });
 
-      const nextFocus = Math.min(index + normalized.length, CODE_LENGTH - 1);
-      codeRefs.current[nextFocus]?.focus();
+      const nextFocusIndex = Math.min(index + digitsOnly.length, CODE_LENGTH - 1);
+      focusCodeInput(nextFocusIndex);
       return;
     }
 
-    setCodeDigits((prev) => {
-      const next = [...prev];
-      next[index] = normalized;
-      return next;
-    });
+    saveCodeDigit(index, digitsOnly);
 
     if (index < CODE_LENGTH - 1) {
-      codeRefs.current[index + 1]?.focus();
+      focusCodeInput(index + 1);
     }
   };
 
   const handleCodeKeyPress: CodeKeyPressHandler = (event, index) => {
     if (event.nativeEvent.key === 'Backspace' && !codeDigits[index] && index > 0) {
-      codeRefs.current[index - 1]?.focus();
+      focusCodeInput(index - 1);
     }
   };
 
@@ -209,8 +213,16 @@ export function usePasswordRecoveryFlow({ onDone }: UsePasswordRecoveryFlowArgs)
     setError('');
     setStep('verify');
     setTimeout(() => {
-      codeRefs.current[0]?.focus();
+      focusCodeInput(0);
     }, 30);
+  };
+
+  const toggleShowNewPassword = () => {
+    setShowNewPassword((currentValue) => !currentValue);
+  };
+
+  const toggleShowConfirmPassword = () => {
+    setShowConfirmPassword((currentValue) => !currentValue);
   };
 
   return {
@@ -228,8 +240,8 @@ export function usePasswordRecoveryFlow({ onDone }: UsePasswordRecoveryFlowArgs)
     setEmail,
     setNewPassword,
     setConfirmPassword,
-    toggleShowNewPassword: () => setShowNewPassword((prev) => !prev),
-    toggleShowConfirmPassword: () => setShowConfirmPassword((prev) => !prev),
+    toggleShowNewPassword,
+    toggleShowConfirmPassword,
     handleBack,
     handleSendCode,
     handleResendCode,

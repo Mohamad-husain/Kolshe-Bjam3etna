@@ -11,6 +11,22 @@ import { VerifyCodeScreen } from './screens/verify-code-screen';
 export default function PasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
   const flow = usePasswordRecoveryFlow({ onDone });
 
+  const sendCode = () => {
+    void flow.handleSendCode();
+  };
+
+  const resendCode = () => {
+    void flow.handleResendCode();
+  };
+
+  const verifyCode = () => {
+    void flow.handleVerifyCode();
+  };
+
+  const savePassword = () => {
+    void flow.handleSavePassword();
+  };
+
   return (
     <RecoveryScaffold
       showBackButton={flow.showBackButton}
@@ -23,9 +39,7 @@ export default function PasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowPro
           error={flow.error}
           loading={flow.loading}
           onChangeEmail={flow.setEmail}
-          onSendCode={() => {
-            void flow.handleSendCode();
-          }}
+          onSendCode={sendCode}
         />
       ) : null}
 
@@ -35,9 +49,7 @@ export default function PasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowPro
           error={flow.error}
           loading={flow.loading}
           onEnterCode={flow.moveToVerifyStep}
-          onResendCode={() => {
-            void flow.handleResendCode();
-          }}
+          onResendCode={resendCode}
         />
       ) : null}
 
@@ -49,12 +61,8 @@ export default function PasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowPro
           onCodeChange={flow.handleCodeChange}
           onCodeKeyPress={flow.handleCodeKeyPress}
           onSetCodeRef={flow.setCodeRef}
-          onVerifyCode={() => {
-            void flow.handleVerifyCode();
-          }}
-          onResendCode={() => {
-            void flow.handleResendCode();
-          }}
+          onVerifyCode={verifyCode}
+          onResendCode={resendCode}
         />
       ) : null}
 
@@ -70,9 +78,7 @@ export default function PasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowPro
           onChangeConfirmPassword={flow.setConfirmPassword}
           onToggleShowNewPassword={flow.toggleShowNewPassword}
           onToggleShowConfirmPassword={flow.toggleShowConfirmPassword}
-          onSavePassword={() => {
-            void flow.handleSavePassword();
-          }}
+          onSavePassword={savePassword}
         />
       ) : null}
 
