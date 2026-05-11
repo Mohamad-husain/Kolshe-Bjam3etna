@@ -14,6 +14,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ServiceRequestBasicStep } from '@/components/submissions/service-request/service-request-basic-step';
@@ -37,19 +38,52 @@ import {
   isValidDateInput,
 } from '@/components/submissions/service-request/shared';
 
+type ServiceRequestFormValues = {
+  title: string;
+  categoryId: number | null;
+  budgetPresetId: string;
+  customBudget: string;
+  deadline: string;
+  description: string;
+};
+
+const formUpdateOptions = {
+  shouldDirty: true,
+  shouldTouch: true,
+  shouldValidate: true,
+} as const;
+
 export function NewServiceScreen() {
   const insets = useSafeAreaInsets();
   const mutation = useCreateServiceRequestMutation();
   const [activeStep, setActiveStep] = useState<ServiceRequestStep>(1);
   const [submitted, setSubmitted] = useState(false);
-  const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [budgetPresetId, setBudgetPresetId] = useState('');
-  const [customBudget, setCustomBudget] = useState('');
-  const [deadline, setDeadline] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerDate, setPickerDate] = useState(() => startOfDay(new Date()));
-  const [description, setDescription] = useState('');
+  const {
+    handleSubmit: handleFormSubmit,
+    setValue,
+    watch,
+  } = useForm<ServiceRequestFormValues>({
+    defaultValues: {
+      title: '',
+      categoryId: null,
+      budgetPresetId: '',
+      customBudget: '',
+      deadline: '',
+      description: '',
+    },
+    mode: 'onChange',
+  });
+
+  const {
+    title,
+    categoryId,
+    budgetPresetId,
+    customBudget,
+    deadline,
+    description,
+  } = watch();
 
   useEffect(() => {
     if (!submitted) {
@@ -143,21 +177,29 @@ export function NewServiceScreen() {
       return;
     }
 
-    setDeadline(formatDateInputValue(normalizedDate));
+    setValue('deadline', formatDateInputValue(normalizedDate), formUpdateOptions);
   };
 
-  const handleSubmit = () => {
-    if (!selectedCategory || budgetValue === null || !canSubmit) {
+  const submitServiceRequest: SubmitHandler<ServiceRequestFormValues> = (values) => {
+    const category = SERVICE_REQUEST_CATEGORIES.find((item) => item.id === values.categoryId);
+    const budgetPreset = SERVICE_REQUEST_BUDGET_PRESETS.find(
+      (item) => item.id === values.budgetPresetId,
+    );
+    const parsedBudget = values.customBudget.trim()
+      ? parseBudgetValue(values.customBudget)
+      : budgetPreset?.value ?? null;
+
+    if (!category || parsedBudget === null || !canSubmit) {
       return;
     }
 
     mutation.mutate(
       {
-        title,
-        categoryId: selectedCategory.id,
-        budget: budgetValue,
-        deadline,
-        description,
+        title: values.title,
+        categoryId: category.id,
+        budget: parsedBudget,
+        deadline: values.deadline,
+        description: values.description,
       },
       {
         onSuccess: () => setSubmitted(true),
@@ -167,6 +209,10 @@ export function NewServiceScreen() {
         },
       },
     );
+  };
+
+  const handleSubmit = () => {
+    void handleFormSubmit(submitServiceRequest)();
   };
 
   if (submitted) {
@@ -206,8 +252,8 @@ export function NewServiceScreen() {
                 titleError={titleError}
                 selectedCategoryId={categoryId}
                 canProceed={step1Done}
-                onTitleChange={setTitle}
-                onCategoryChange={setCategoryId}
+                onTitleChange={(value) => setValue('title', value, formUpdateOptions)}
+                onCategoryChange={(value) => setValue('categoryId', value, formUpdateOptions)}
                 onNext={() => setActiveStep(2)}
               />
             ) : null}
@@ -223,18 +269,18 @@ export function NewServiceScreen() {
                 descriptionError={descriptionError}
                 canProceed={step2Done}
                 onBudgetPresetChange={(presetId) => {
-                  setBudgetPresetId(presetId);
-                  setCustomBudget('');
+                  setValue('budgetPresetId', presetId, formUpdateOptions);
+                  setValue('customBudget', '', formUpdateOptions);
                 }}
                 onCustomBudgetChange={(value) => {
-                  setCustomBudget(value);
+                  setValue('customBudget', value, formUpdateOptions);
 
                   if (value.trim()) {
-                    setBudgetPresetId('');
+                    setValue('budgetPresetId', '', formUpdateOptions);
                   }
                 }}
                 onOpenDatePicker={openDatePicker}
-                onDescriptionChange={setDescription}
+                onDescriptionChange={(value) => setValue('description', value, formUpdateOptions)}
                 onNext={() => setActiveStep(3)}
               />
             ) : null}
@@ -293,7 +339,7 @@ export function NewServiceScreen() {
 
                 <Pressable
                   onPress={() => {
-                    setDeadline(formatDateInputValue(pickerDate));
+                    setValue('deadline', formatDateInputValue(pickerDate), formUpdateOptions);
                     setShowDatePicker(false);
                   }}
                   style={({ pressed }) => [

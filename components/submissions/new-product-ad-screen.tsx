@@ -10,6 +10,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProductAdBasicStep } from '@/components/submissions/product-ad/product-ad-basic-step';
@@ -32,6 +33,22 @@ import { useCreateProductAdMutation } from '@/hooks/mutations/use-product-ad-mut
 import type { ProductAdCondition, ProductAdPhotoInput } from '@/services/marketplace-api';
 import { Spacing } from '@/styles/ui-theme';
 
+type ProductAdFormValues = {
+  title: string;
+  categoryId: number | null;
+  pricePresetId: string;
+  customPrice: string;
+  condition: ProductAdCondition | '';
+  description: string;
+  photos: ProductAdPhotoInput[];
+};
+
+const formUpdateOptions = {
+  shouldDirty: true,
+  shouldTouch: true,
+  shouldValidate: true,
+} as const;
+
 function mapAssetToPhoto(asset: ImagePicker.ImagePickerAsset, index: number): ProductAdPhotoInput {
   return {
     uri: asset.uri,
@@ -45,13 +62,33 @@ export function NewProductAdScreen() {
   const mutation = useCreateProductAdMutation();
   const [activeStep, setActiveStep] = useState<ProductAdStep>(1);
   const [submitted, setSubmitted] = useState(false);
-  const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [pricePresetId, setPricePresetId] = useState('');
-  const [customPrice, setCustomPrice] = useState('');
-  const [condition, setCondition] = useState<ProductAdCondition | ''>('');
-  const [description, setDescription] = useState('');
-  const [photos, setPhotos] = useState<ProductAdPhotoInput[]>([]);
+  const {
+    getValues,
+    handleSubmit: handleFormSubmit,
+    setValue,
+    watch,
+  } = useForm<ProductAdFormValues>({
+    defaultValues: {
+      title: '',
+      categoryId: null,
+      pricePresetId: '',
+      customPrice: '',
+      condition: '',
+      description: '',
+      photos: [],
+    },
+    mode: 'onChange',
+  });
+
+  const {
+    title,
+    categoryId,
+    pricePresetId,
+    customPrice,
+    condition,
+    description,
+    photos,
+  } = watch();
 
   useEffect(() => {
     if (!submitted) {
@@ -105,7 +142,8 @@ export function NewProductAdScreen() {
   };
 
   const handlePickPhotos = async () => {
-    const remainingSlots = PRODUCT_AD_MAX_PHOTOS - photos.length;
+    const currentPhotos = getValues('photos');
+    const remainingSlots = PRODUCT_AD_MAX_PHOTOS - currentPhotos.length;
 
     if (remainingSlots <= 0) {
       Alert.alert('تم الوصول للحد الأقصى', `يمكنك إضافة ${PRODUCT_AD_MAX_PHOTOS} صور فقط`);
@@ -134,22 +172,32 @@ export function NewProductAdScreen() {
       .slice(0, remainingSlots)
       .map((asset, index) => mapAssetToPhoto(asset, index));
 
-    setPhotos((current) => [...current, ...selectedPhotos].slice(0, PRODUCT_AD_MAX_PHOTOS));
+    setValue(
+      'photos',
+      [...getValues('photos'), ...selectedPhotos].slice(0, PRODUCT_AD_MAX_PHOTOS),
+      formUpdateOptions,
+    );
   };
 
-  const handleSubmit = () => {
-    if (!selectedCategory || priceValue === null || !condition || !canSubmit) {
+  const submitProductAd: SubmitHandler<ProductAdFormValues> = (values) => {
+    const category = PRODUCT_AD_CATEGORIES.find((item) => item.id === values.categoryId);
+    const pricePreset = PRODUCT_AD_PRICE_PRESETS.find((item) => item.id === values.pricePresetId);
+    const parsedPrice = values.customPrice.trim()
+      ? parsePriceValue(values.customPrice)
+      : pricePreset?.value ?? null;
+
+    if (!category || parsedPrice === null || !values.condition || !canSubmit) {
       return;
     }
 
     mutation.mutate(
       {
-        title,
-        categoryId: selectedCategory.id,
-        price: priceValue,
-        condition,
-        description,
-        photos,
+        title: values.title,
+        categoryId: category.id,
+        price: parsedPrice,
+        condition: values.condition,
+        description: values.description,
+        photos: values.photos,
       },
       {
         onSuccess: () => setSubmitted(true),
@@ -159,6 +207,10 @@ export function NewProductAdScreen() {
         },
       },
     );
+  };
+
+  const handleSubmit = () => {
+    void handleFormSubmit(submitProductAd)();
   };
 
   if (submitted) {
@@ -198,11 +250,15 @@ export function NewProductAdScreen() {
                 selectedCategoryId={categoryId}
                 photos={photos}
                 canProceed={step1Done}
-                onTitleChange={setTitle}
-                onCategoryChange={setCategoryId}
+                onTitleChange={(value) => setValue('title', value, formUpdateOptions)}
+                onCategoryChange={(value) => setValue('categoryId', value, formUpdateOptions)}
                 onPickPhotos={handlePickPhotos}
                 onRemovePhoto={(index) =>
-                  setPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                  setValue(
+                    'photos',
+                    getValues('photos').filter((_, itemIndex) => itemIndex !== index),
+                    formUpdateOptions,
+                  )
                 }
                 onNext={() => setActiveStep(2)}
               />
@@ -216,18 +272,18 @@ export function NewProductAdScreen() {
                 description={description}
                 canProceed={step2Done}
                 onPricePresetChange={(presetId) => {
-                  setPricePresetId(presetId);
-                  setCustomPrice('');
+                  setValue('pricePresetId', presetId, formUpdateOptions);
+                  setValue('customPrice', '', formUpdateOptions);
                 }}
                 onCustomPriceChange={(value) => {
-                  setCustomPrice(value);
+                  setValue('customPrice', value, formUpdateOptions);
 
                   if (value.trim()) {
-                    setPricePresetId('');
+                    setValue('pricePresetId', '', formUpdateOptions);
                   }
                 }}
-                onConditionChange={setCondition}
-                onDescriptionChange={setDescription}
+                onConditionChange={(value) => setValue('condition', value, formUpdateOptions)}
+                onDescriptionChange={(value) => setValue('description', value, formUpdateOptions)}
                 onPrevious={() => setActiveStep(1)}
                 onNext={() => setActiveStep(3)}
               />

@@ -6,7 +6,7 @@ import {
     getPersistentStorageItem,
     setPersistentStorageItem,
 } from "@/lib/storage/persistent-storage"
-import { getAuthToken } from "@/services/http-client"
+import { getAuthToken } from "@/services/auth-api"
 import {
     decodeJwtPayload,
     getJwtStringClaim,
