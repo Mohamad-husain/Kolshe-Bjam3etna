@@ -25,8 +25,8 @@ type AddMenuItem = {
 
 const menuItems: AddMenuItem[] = [
   {
-    title: 'إضافة طلب خدمة',
-    description: 'لطلب مساعدة دراسية أو عرض مهارة',
+    title: 'طلب خدمة',
+    description: 'اطلب مساعدة دراسية أو اعرض مهاراتك',
     href: '/new-service',
     icon: 'briefcase-outline',
     color: SemanticColors.blue,

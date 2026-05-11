@@ -55,9 +55,25 @@ export type AuthSession = {
   user: User;
 };
 
-let authToken: string | null = null;
+type AuthSessionInvalidationListener = () => void;
+
+type GlobalAuthTokenHost = typeof globalThis & {
+  __kolsheAuthToken?: string | null;
+};
+
+function getAuthTokenHost() {
+  return globalThis as GlobalAuthTokenHost;
+}
+
+function readPersistedAuthToken() {
+  return normalizeToken(getAuthTokenHost().__kolsheAuthToken) ?? null;
+}
+
+let authToken: string | null = readPersistedAuthToken();
 let secureStoreAvailability: Promise<boolean> | null = null;
+// Keep storage writes in order so save/logout do not race each other.
 let storageOperationQueue: Promise<void> = Promise.resolve();
+const authSessionInvalidationListeners = new Set<AuthSessionInvalidationListener>();
 
 export type University = {
   id: number;
@@ -131,8 +147,6 @@ type ApiLoginResponse = ApiMessageResponse & {
 type ApiUniversitiesResponse = ApiMessageResponse & {
   data?: University[];
 };
-
-type ApiCompleteProfileResponse = ApiMessageResponse;
 
 type ApiProfileResponse = ApiMessageResponse & {
   data?: AccountProfile;
@@ -292,11 +306,29 @@ function parseStoredAuthSession(value: unknown): AuthSession | null {
 }
 
 export function getAuthToken() {
-  return authToken;
+  const persistedToken = readPersistedAuthToken();
+
+  if (!authToken && persistedToken) {
+    authToken = persistedToken;
+  }
+
+  return authToken ?? persistedToken;
 }
 
 export function setAuthToken(token: string | null) {
-  authToken = normalizeToken(token) ?? null;
+  const normalizedToken = normalizeToken(token) ?? null;
+  authToken = normalizedToken;
+  getAuthTokenHost().__kolsheAuthToken = normalizedToken;
+}
+
+export function subscribeToAuthSessionInvalidation(
+  listener: AuthSessionInvalidationListener,
+) {
+  authSessionInvalidationListeners.add(listener);
+
+  return () => {
+    authSessionInvalidationListeners.delete(listener);
+  };
 }
 
 export async function loadStoredAuthSession(): Promise<AuthSession | null> {
@@ -377,38 +409,108 @@ export async function clearAuthSession() {
   }
 }
 
-function trimValue(value: string) {
+export async function invalidateAuthSession() {
+  await clearAuthSession();
+
+  for (const listener of authSessionInvalidationListeners) {
+    listener();
+  }
+}
+
+function trimText(value: string) {
   return value.trim();
 }
 
-function requireValue(value: string, errorMessage: string) {
+function normalizeTextValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value).trim();
+  }
+
+  return '';
+}
+
+function normalizeNullableTextValue(value: unknown) {
+  const normalizedValue = normalizeTextValue(value);
+  return normalizedValue || null;
+}
+
+function appendCacheBustingParam(value: string | null) {
   if (!value) {
+    return null;
+  }
+
+  if (
+    value.startsWith('data:') ||
+    value.startsWith('file:') ||
+    value.startsWith('blob:') ||
+    value.startsWith('content:')
+  ) {
+    return value;
+  }
+
+  const separator = value.includes('?') ? '&' : '?';
+  return `${value}${separator}v=${Date.now()}`;
+}
+
+function normalizeNullablePositiveNumber(value: unknown) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function normalizeAccountProfile(value: unknown): AccountProfile | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<AccountProfile> & Record<string, unknown>;
+
+  return {
+    fullName: normalizeTextValue(candidate.fullName),
+    email: normalizeTextValue(candidate.email),
+    phoneNumber: normalizeNullableTextValue(candidate.phoneNumber),
+    bio: normalizeNullableTextValue(candidate.bio),
+    websiteUrl: normalizeNullableTextValue(candidate.websiteUrl),
+    profileImageUrl: appendCacheBustingParam(
+      normalizeNullableTextValue(candidate.profileImageUrl),
+    ),
+    universityName: normalizeNullableTextValue(candidate.universityName),
+    universityId: normalizeNullablePositiveNumber(candidate.universityId),
+    major: normalizeNullableTextValue(candidate.major),
+    studyYear: normalizeNullableTextValue(candidate.studyYear),
+    universityNumber: normalizeNullableTextValue(candidate.universityNumber),
+  };
+}
+
+function requireText(value: string, errorMessage: string) {
+  const trimmedValue = trimText(value);
+
+  if (!trimmedValue) {
     throw new Error(errorMessage);
   }
 
-  return value;
-}
-
-function requireTrimmedValue(value: string, errorMessage: string) {
-  return requireValue(trimValue(value), errorMessage);
+  return trimmedValue;
 }
 
 function assertMinTrimmedLength(value: string, minLength: number, errorMessage: string) {
-  if (trimValue(value).length < minLength) {
+  if (trimText(value).length < minLength) {
     throw new Error(errorMessage);
   }
 }
 
 function normalizeEmail(email: string) {
-  return trimValue(email).toLowerCase();
+  return trimText(email).toLowerCase();
 }
 
 function normalizeRequiredEmail(email: string) {
-  return requireValue(normalizeEmail(email), AUTH_COPY.emailRequired);
+  return requireText(normalizeEmail(email), AUTH_COPY.emailRequired);
 }
 
 function normalizeRequiredCode(code: string) {
-  return requireTrimmedValue(code, AUTH_ERROR_MESSAGES.verificationCodeRequired);
+  return requireText(code, AUTH_ERROR_MESSAGES.verificationCodeRequired);
 }
 
 function normalizePositiveNumber(value: number, errorMessage: string) {
@@ -517,18 +619,14 @@ async function postMultipart<TResponse>(
   fallbackMessage: string,
 ): Promise<TResponse> {
   try {
-    const response = await apiClient.post<TResponse>(path, body, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.post<TResponse>(path, body);
     return response.data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, fallbackMessage));
   }
 }
 
-async function submitMessageAction(
+async function postMessageAction(
   path: string,
   body: Record<string, unknown>,
   fallbackMessage: string,
@@ -539,12 +637,13 @@ async function submitMessageAction(
 
 export async function login(input: LoginInput): Promise<User> {
   const email = normalizeEmail(input.email);
+  const password = input.password;
 
   const response = await postJson<ApiLoginResponse>(
     AUTH_ENDPOINTS.login,
     {
       email,
-      password: input.password,
+      password,
     },
     AUTH_COPY.loginFailed,
   );
@@ -568,9 +667,10 @@ export async function login(input: LoginInput): Promise<User> {
 
 export async function register(input: RegisterInput): Promise<User> {
   const email = normalizeEmail(input.email);
-  const name = requireTrimmedValue(input.name, AUTH_COPY.fullNameRequired);
+  const name = requireText(input.name, AUTH_COPY.fullNameRequired);
+  const password = input.password;
 
-  assertMinTrimmedLength(input.password, 8, AUTH_COPY.registerPasswordMinLength);
+  assertMinTrimmedLength(password, 8, AUTH_COPY.registerPasswordMinLength);
 
   await postJson<ApiMessageResponse>(
     AUTH_ENDPOINTS.register,
@@ -578,14 +678,14 @@ export async function register(input: RegisterInput): Promise<User> {
       fullName: name,
       userName: buildUserName(name, email),
       email,
-      password: input.password,
+      password,
     },
     AUTH_COPY.registerFailed,
   );
 
   const user = await login({
     email,
-    password: input.password,
+    password,
   });
 
   return { ...user, name };
@@ -594,7 +694,7 @@ export async function register(input: RegisterInput): Promise<User> {
 export async function forgotPassword(input: ForgotPasswordInput): Promise<string | null> {
   const email = normalizeRequiredEmail(input.email);
 
-  return submitMessageAction(
+  return postMessageAction(
     AUTH_ENDPOINTS.forgotPassword,
     { email },
     AUTH_ERROR_MESSAGES.forgotPasswordFailed,
@@ -605,7 +705,7 @@ export async function verifyResetCode(input: VerifyResetCodeInput): Promise<stri
   const email = normalizeRequiredEmail(input.email);
   const code = normalizeRequiredCode(input.code);
 
-  return submitMessageAction(
+  return postMessageAction(
     AUTH_ENDPOINTS.verifyResetCode,
     { email, code },
     AUTH_ERROR_MESSAGES.invalidVerificationCode,
@@ -615,15 +715,16 @@ export async function verifyResetCode(input: VerifyResetCodeInput): Promise<stri
 export async function resetPassword(input: ResetPasswordInput): Promise<string | null> {
   const email = normalizeRequiredEmail(input.email);
   const code = normalizeRequiredCode(input.code);
+  const newPassword = trimText(input.newPassword);
 
-  assertMinTrimmedLength(input.newPassword, 8, AUTH_COPY.registerPasswordMinLength);
+  assertMinTrimmedLength(newPassword, 8, AUTH_COPY.registerPasswordMinLength);
 
-  return submitMessageAction(
+  return postMessageAction(
     AUTH_ENDPOINTS.resetPassword,
     {
       email,
       code,
-      newPassword: input.newPassword.trim(),
+      newPassword,
     },
     AUTH_ERROR_MESSAGES.resetPasswordFailed,
   );
@@ -644,7 +745,7 @@ export async function getAccountProfile(): Promise<AccountProfile | null> {
     AUTH_ERROR_MESSAGES.profileFailed,
   );
 
-  return response.data ?? null;
+  return normalizeAccountProfile(response.data);
 }
 
 export async function completeProfile(input: CompleteProfileInput): Promise<string | null> {
@@ -652,22 +753,22 @@ export async function completeProfile(input: CompleteProfileInput): Promise<stri
     input.universityId,
     AUTH_ERROR_MESSAGES.universityRequired,
   );
-  const major = requireTrimmedValue(input.major, AUTH_ERROR_MESSAGES.majorRequired);
-  const profileImageUri = requireValue(
-    trimValue(input.profileImage?.uri ?? ''),
+  const major = requireText(input.major, AUTH_ERROR_MESSAGES.majorRequired);
+  const profileImageUri = requireText(
+    input.profileImage?.uri ?? '',
     AUTH_ERROR_MESSAGES.profileImageRequired,
   );
 
   const formData = new FormData();
   formData.append('UniversityId', String(universityId));
   formData.append('Major', major);
-  formData.append('Bio', trimValue(input.bio));
+  formData.append('Bio', trimText(input.bio));
   appendProfileImage(formData, {
     ...input.profileImage,
     uri: profileImageUri,
   });
 
-  const response = await postMultipart<ApiCompleteProfileResponse>(
+  const response = await postMultipart<ApiMessageResponse>(
     AUTH_ENDPOINTS.completeProfile,
     formData,
     AUTH_ERROR_MESSAGES.completeProfileFailed,

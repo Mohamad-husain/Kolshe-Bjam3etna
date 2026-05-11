@@ -1,5 +1,5 @@
-import { SubmissionSectionScreen } from '@/components/submissions/submission-section-screen';
+import { NewExchangeScreen } from '@/components/submissions/new-exchange-screen';
 
 export default function NewExchangeRoute() {
-  return <SubmissionSectionScreen title="إضافة طلب تبادل" />;
+  return <NewExchangeScreen />;
 }

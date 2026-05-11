@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import type { ServiceCardData } from '@/components/explore/ServiceCard';
+import type { ServiceCardData } from '@/types/explore';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';

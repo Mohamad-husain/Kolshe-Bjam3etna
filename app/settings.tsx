@@ -66,13 +66,13 @@ export default function SettingsRoute() {
   };
 
   const handleLogout = () => {
-    Alert.alert('تسجيل الخروج', 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', [
+    Alert.alert('طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬', 'ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ط£ظ†ظƒ طھط±ظٹط¯ طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬ ظ…ظ† ط­ط³ط§ط¨ظƒطں', [
       {
-        text: 'إلغاء',
+        text: 'ط¥ظ„ط؛ط§ط،',
         style: 'cancel',
       },
       {
-        text: 'تسجيل الخروج',
+        text: 'طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬',
         style: 'destructive',
         onPress: signOut,
       },
@@ -116,32 +116,28 @@ export default function SettingsRoute() {
             showOnlineStatus={showOnlineStatus}
             onToggleShowOnline={() => setShowOnlineStatus((current) => !current)}
             onChangePassword={() =>
-              showSoonAlert(
-                'تغيير كلمة المرور',
-                'واجهة تغيير كلمة المرور جاهزة للتوصيل لاحقاً مع الـ API.',
-              )
+              router.push({ pathname: '/edit-profile', params: { tab: 'security' } })
             }
             onOpenTwoFactor={() =>
               showSoonAlert(
-                'المصادقة الثنائية',
-                'ميزة المصادقة الثنائية ستُربط لاحقاً ضمن إعدادات الأمان.',
+                'ط§ظ„ظ…طµط§ط¯ظ‚ط© ط§ظ„ط«ظ†ط§ط¦ظٹط©',
+                'ظ…ظٹط²ط© ط§ظ„ظ…طµط§ط¯ظ‚ط© ط§ظ„ط«ظ†ط§ط¦ظٹط© ط³طھظڈط±ط¨ط· ظ„ط§ط­ظ‚ط§ظ‹ ط¶ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط£ظ…ط§ظ†.',
               )
             }
           />
 
           <SettingsAccountSection
             onEditProfile={() =>
-              showSoonAlert(
-                'تعديل الملف الشخصي',
-                'واجهة التعديل الحالية موجودة في صفحة البروفايل وسيتم ربط نموذج مستقل لاحقاً.',
-              )
+              router.push({ pathname: '/edit-profile', params: { tab: 'personal' } })
             }
-            onChangeUniversity={() => router.push('/(auth)/select-university')}
+            onChangeUniversity={() =>
+              router.push({ pathname: '/edit-profile', params: { tab: 'academic' } })
+            }
           />
 
           <SettingsLogoutSection onPress={handleLogout} />
 
-          <Text style={styles.footerText}>كلشي بجامعتنا © {new Date().getFullYear()}</Text>
+          <Text style={styles.footerText}>ظƒظ„ط´ظٹ ط¨ط¬ط§ظ…ط¹طھظ†ط§ آ© {new Date().getFullYear()}</Text>
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -169,3 +165,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+

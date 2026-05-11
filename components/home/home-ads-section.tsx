@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import type { MarketplaceCardData } from '@/components/explore/MarketplaceCard';
+import type { MarketplaceCardData } from '@/types/explore';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';

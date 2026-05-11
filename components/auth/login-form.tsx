@@ -7,6 +7,7 @@ import {
   AuthErrorText,
   authFormStyles,
   AuthSubmitButton,
+  getAuthErrorMessage,
 } from '@/components/auth/auth-form-shared';
 import { useLoginMutation } from '@/hooks/mutations/use-auth-mutations';
 import { AUTH_COPY, AUTH_VALIDATION } from '@/lib/auth/auth-copy';
@@ -37,20 +38,18 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
     mode: 'onChange',
   });
 
-  const serverError =
-    loginMutation.isError && loginMutation.error
-      ? loginMutation.error instanceof Error
-        ? loginMutation.error.message
-        : AUTH_COPY.loginFailed
-      : '';
+  const isSubmitting = loginMutation.isPending;
+  const loginError = loginMutation.isError
+    ? getAuthErrorMessage(loginMutation.error, AUTH_COPY.loginFailed)
+    : '';
 
-  const clearServerError = () => {
+  const clearLoginError = () => {
     if (loginMutation.isError) {
       loginMutation.reset();
     }
   };
 
-  const handleLogin = handleSubmit((values) => {
+  const submitLogin = handleSubmit((values) => {
     loginMutation.mutate(values, { onSuccess });
   });
 
@@ -69,7 +68,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
             keyboardType="email-address"
             onBlur={onBlur}
             onChangeText={(nextValue) => {
-              clearServerError();
+              clearLoginError();
               onChange(nextValue);
             }}
             placeholder={AUTH_COPY.universityEmailPlaceholder}
@@ -92,7 +91,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
             icon="lock-closed-outline"
             onBlur={onBlur}
             onChangeText={(nextValue) => {
-              clearServerError();
+              clearLoginError();
               onChange(nextValue);
             }}
             placeholder={AUTH_COPY.passwordPlaceholder}
@@ -108,20 +107,20 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
 
       <Pressable
         accessibilityRole="button"
-        disabled={!onForgotPassword || loginMutation.isPending}
+        disabled={!onForgotPassword || isSubmitting}
         onPress={onForgotPassword}
         style={authFormStyles.inlineButton}
       >
         <Text style={authFormStyles.inlineButtonText}>{AUTH_COPY.forgotPassword}</Text>
       </Pressable>
 
-      <AuthErrorText message={serverError} />
+      <AuthErrorText message={loginError} />
 
       <AuthSubmitButton
-        isPending={loginMutation.isPending}
+        isPending={isSubmitting}
         label={AUTH_COPY.loginButton}
         onPress={() => {
-          void handleLogin();
+          void submitLogin();
         }}
         pendingLabel={AUTH_COPY.loginButtonPending}
       />
