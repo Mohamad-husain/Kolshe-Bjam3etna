@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { EventCardData } from '@/components/explore/EventCard';
+import type { EventCardData } from '@/types/explore';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';

@@ -1,4 +1,4 @@
-import type { MarketplaceCardData } from '@/components/explore/MarketplaceCard';
+import type { MarketplaceCardData } from '@/types/explore';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
 import { SemanticColors } from '@/styles/ui-theme';
