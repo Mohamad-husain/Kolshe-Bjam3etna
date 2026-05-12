@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
   Pressable,
@@ -23,13 +24,29 @@ import {
   FontWeight,
 } from '@/styles/ui-theme';
 
+type CompleteProfileFormValues = {
+  major: string;
+  bio: string;
+  profileImage: ImagePicker.ImagePickerAsset | null;
+};
+
 export default function CompleteProfileRoute() {
   const { user, signIn } = useAuth();
   const params = useLocalSearchParams<{ universityId?: string; universityName?: string }>();
   const completeProfileMutation = useCompleteProfileMutation();
-  const [major, setMajor] = useState('');
-  const [bio, setBio] = useState('');
-  const [profileImage, setProfileImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const {
+    control,
+    clearErrors,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CompleteProfileFormValues>({
+    defaultValues: {
+      major: '',
+      bio: '',
+      profileImage: null,
+    },
+    mode: 'onChange',
+  });
   const universityId = Number(params.universityId);
 
   useEffect(() => {
@@ -61,7 +78,9 @@ export default function CompleteProfileRoute() {
     }
   }
 
-  async function handlePickImage() {
+  async function handlePickImage(
+    onChange: (value: CompleteProfileFormValues['profileImage']) => void,
+  ) {
     clearServerError();
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -82,21 +101,26 @@ export default function CompleteProfileRoute() {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0] ?? null);
+      const selectedImage = result.assets[0] ?? null;
+      onChange(selectedImage);
+
+      if (selectedImage) {
+        clearErrors('profileImage');
+      }
     }
   }
 
-  function handleSubmit() {
+  const submitCompleteProfile = handleSubmit((values) => {
     completeProfileMutation.mutate(
       {
         universityId,
-        major,
-        bio,
+        major: values.major,
+        bio: values.bio,
         profileImage: {
-          uri: profileImage?.uri ?? '',
-          name: profileImage?.fileName,
-          type: profileImage?.mimeType,
-          file: profileImage?.file,
+          uri: values.profileImage?.uri ?? '',
+          name: values.profileImage?.fileName,
+          type: values.profileImage?.mimeType,
+          file: values.profileImage?.file,
         },
       },
       {
@@ -110,7 +134,7 @@ export default function CompleteProfileRoute() {
         },
       },
     );
-  }
+  });
 
   return (
     <ProfileSetupLayout
@@ -136,7 +160,9 @@ export default function CompleteProfileRoute() {
 
           <Pressable
             disabled={completeProfileMutation.isPending}
-            onPress={handleSubmit}
+            onPress={() => {
+              void submitCompleteProfile();
+            }}
             style={({ pressed }) => [
               styles.primaryButton,
               pressed && !completeProfileMutation.isPending && styles.primaryButtonPressed,
@@ -150,25 +176,35 @@ export default function CompleteProfileRoute() {
         </View>
       }
     >
-      <View style={styles.avatarSection}>
-        <Pressable
-          onPress={() => {
-            void handlePickImage();
-          }}
-          style={({ pressed }) => [
-            styles.avatarButton,
-            pressed && styles.avatarButtonPressed,
-            profileImage ? styles.avatarButtonFilled : null,
-          ]}
-        >
-          {profileImage ? (
-            <Image contentFit="cover" source={{ uri: profileImage.uri }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="camera-outline" size={34} color="#b8b8bf" />
-          )}
-        </Pressable>
-        <Text style={styles.uploadHint}>رفع صورة شخصية</Text>
-      </View>
+      <Controller
+        control={control}
+        name="profileImage"
+        rules={{ required: 'يرجى اختيار صورة شخصية' }}
+        render={({ field: { onChange, value } }) => (
+          <View style={styles.avatarSection}>
+            <Pressable
+              onPress={() => {
+                void handlePickImage(onChange);
+              }}
+              style={({ pressed }) => [
+                styles.avatarButton,
+                pressed && styles.avatarButtonPressed,
+                value ? styles.avatarButtonFilled : null,
+              ]}
+            >
+              {value ? (
+                <Image contentFit="cover" source={{ uri: value.uri }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="camera-outline" size={34} color="#b8b8bf" />
+              )}
+            </Pressable>
+            <Text style={styles.uploadHint}>رفع صورة شخصية</Text>
+            {!!errors.profileImage?.message ? (
+              <Text style={styles.errorText}>{errors.profileImage.message}</Text>
+            ) : null}
+          </View>
+        )}
+      />
 
       {!!params.universityName ? (
         <View style={styles.universityBadge}>
@@ -179,33 +215,53 @@ export default function CompleteProfileRoute() {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>التخصص / القسم</Text>
-        <TextInput
-          onChangeText={(value) => {
-            clearServerError();
-            setMajor(value);
-          }}
-          placeholder="مثال: هندسة برمجيات"
-          placeholderTextColor="#a1a1aa"
-          style={styles.input}
-          textAlign="right"
-          value={major}
+        <Controller
+          control={control}
+          name="major"
+          rules={{ required: 'يرجى إدخال التخصص أو القسم' }}
+          render={({ field: { onBlur, onChange, value } }) => (
+            <>
+              <TextInput
+                onBlur={onBlur}
+                onChangeText={(nextValue) => {
+                  clearServerError();
+                  onChange(nextValue);
+                }}
+                placeholder="مثال: هندسة برمجيات"
+                placeholderTextColor="#a1a1aa"
+                style={styles.input}
+                textAlign="right"
+                value={value}
+              />
+              {!!errors.major?.message ? (
+                <Text style={styles.errorText}>{errors.major.message}</Text>
+              ) : null}
+            </>
+          )}
         />
       </View>
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>نبذة عنك</Text>
-        <TextInput
-          multiline
-          onChangeText={(value) => {
-            clearServerError();
-            setBio(value);
-          }}
-          placeholder="أنا طالب سنة ثالثة مهتم بتطوير التطبيقات..."
-          placeholderTextColor="#a1a1aa"
-          style={[styles.input, styles.textArea]}
-          textAlign="right"
-          textAlignVertical="top"
-          value={bio}
+        <Controller
+          control={control}
+          name="bio"
+          render={({ field: { onBlur, onChange, value } }) => (
+            <TextInput
+              multiline
+              onBlur={onBlur}
+              onChangeText={(nextValue) => {
+                clearServerError();
+                onChange(nextValue);
+              }}
+              placeholder="أنا طالب سنة ثالثة مهتم بتطوير التطبيقات..."
+              placeholderTextColor="#a1a1aa"
+              style={[styles.input, styles.textArea]}
+              textAlign="right"
+              textAlignVertical="top"
+              value={value}
+            />
+          )}
         />
       </View>
 

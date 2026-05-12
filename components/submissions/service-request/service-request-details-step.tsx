@@ -126,7 +126,11 @@ export function ServiceRequestDetailsStep({
           {deadlineError ? <Text style={styles.errorText}>{deadlineError}</Text> : null}
         </View>
 
-        <View style={styles.fieldBlock}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 118 : 88}
+          style={styles.fieldBlock}
+        >
           <View style={styles.fieldTopRow}>
             <Text
               style={[
@@ -170,7 +174,7 @@ export function ServiceRequestDetailsStep({
             </View>
           </View>
           {descriptionError ? <Text style={styles.errorText}>{descriptionError}</Text> : null}
-        </View>
+        </KeyboardAvoidingView>
 
         <View style={styles.actionsRow}>
           <Pressable

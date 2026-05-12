@@ -96,7 +96,7 @@ export const useDeleteMessage = () => {
             void persistDeletedMessageCache(
                 variables.conversationId,
                 context?.previousDeletedMessages || []
-            )
+            ).catch(() => undefined)
         },
 
         onSettled: (_data, _error, variables) => {
