@@ -1,11 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Colors } from '@/styles/ui-theme';
+import {
+  Colors,
+  FontFamily,
+  FontSize,
+  FontWeight,
+  SemanticColors,
+} from '@/styles/ui-theme';
 
 import {
   SERVICE_REQUEST_CATEGORIES,
-  serviceRequestStyles as styles,
   type ServiceRequestCategoryOption,
 } from './shared';
 import { ServiceRequestSectionHeader } from './service-request-section-header';
@@ -137,3 +142,129 @@ export function ServiceRequestBasicStep({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 2,
+    gap: 18,
+  },
+  fieldBlock: { gap: 10 },
+  fieldTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  labelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  fieldLabel: {
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: 15,
+    fontWeight: FontWeight.semibold,
+    textAlign: 'right',
+  },
+  counter: {
+    color: Colors.mutedForeground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.x11,
+    fontWeight: FontWeight.medium,
+  },
+  fieldRow: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(60,60,67,0.06)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  fieldRowError: {
+    borderColor: 'rgba(255,59,48,0.38)',
+    borderWidth: 1.4,
+  },
+  input: {
+    flex: 1,
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  errorText: {
+    color: SemanticColors.red,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.x11,
+    fontWeight: FontWeight.medium,
+    textAlign: 'right',
+  },
+  grid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  categoryButton: {
+    width: '31.2%',
+    minHeight: 112,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(60,60,67,0.06)',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 15,
+    marginBottom: 12,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  categoryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(120,120,128,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryText: {
+    marginTop: 12,
+    color: Colors.mutedForeground,
+    fontFamily: FontFamily.cairo,
+    fontSize: 12,
+    fontWeight: FontWeight.semibold,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  primaryButton: {
+    minHeight: 56,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  primaryButtonDisabled: { backgroundColor: '#e7e8ef', shadowOpacity: 0, elevation: 0 },
+  primaryText: {
+    color: '#ffffff',
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+  },
+  primaryTextDisabled: { color: Colors.mutedForeground },
+  pressed: { transform: [{ scale: 0.98 }] },
+});

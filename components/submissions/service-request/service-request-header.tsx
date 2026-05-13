@@ -1,9 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors } from '@/styles/ui-theme';
+import {
+  Colors,
+  Dimensions,
+  FontFamily,
+  FontWeight,
+  Spacing,
+} from '@/styles/ui-theme';
 
-import { getStepCopy, serviceRequestStyles as styles, type ServiceRequestStep } from './shared';
+import { getStepCopy, type ServiceRequestStep } from './shared';
 
 type Props = {
   activeStep: ServiceRequestStep;
@@ -59,3 +65,68 @@ export function ServiceRequestHeader({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    minHeight: 90,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(60,60,67,0.08)',
+    backgroundColor: 'rgba(246,247,251,0.96)',
+  },
+  progressRow: {
+    position: 'absolute',
+    left: Spacing.md,
+    top: 16,
+    flexDirection: 'row-reverse',
+    gap: 6,
+  },
+  progressDot: {
+    width: 7,
+    height: 7,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: Colors.border,
+  },
+  progressDotActive: {
+    width: 22,
+    backgroundColor: Colors.primary,
+  },
+  progressDotDone: {
+    backgroundColor: 'rgba(37,99,235,0.35)',
+  },
+  headerCenter: { alignItems: 'center', paddingHorizontal: 64 },
+  headerTitle: {
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: 19,
+    fontWeight: FontWeight.extrabold,
+  },
+  headerSubtitle: {
+    color: Colors.mutedForeground,
+    fontFamily: FontFamily.cairo,
+    fontSize: 12,
+    fontWeight: FontWeight.medium,
+    marginTop: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    right: Spacing.md,
+    top: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(60,60,67,0.05)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  pressed: { transform: [{ scale: 0.98 }] },
+});

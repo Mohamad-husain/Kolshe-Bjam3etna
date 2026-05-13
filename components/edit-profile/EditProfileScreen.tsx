@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getValidImageUri } from '@/components/chat/chat-ui';
 import { useAuth } from '@/contexts/auth-context';
 import {
   adminEditProfileStudyYearOptions,
@@ -47,6 +46,37 @@ import { EditProfileSelectField } from './EditProfileSelectField';
 import { EditProfileTabs } from './EditProfileTabs';
 import { EditProfileTextField } from './EditProfileTextField';
 import { EditProfileToastBanner } from './EditProfileToast';
+
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
+
+function getValidImageUri(value?: string | null) {
+  const uri = value?.trim();
+
+  if (!uri) {
+    return null;
+  }
+
+  if (
+    uri.startsWith('http://') ||
+    uri.startsWith('https://') ||
+    uri.startsWith('data:') ||
+    uri.startsWith('file:') ||
+    uri.startsWith('blob:') ||
+    uri.startsWith('content:')
+  ) {
+    return uri;
+  }
+
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  if (uri.startsWith('/')) {
+    return `${API_BASE_URL}${uri}`;
+  }
+
+  return `${API_BASE_URL}/${uri.replace(/^\/+/, '')}`;
+}
 
 function buildFormValues(
   profile: AccountProfile | null | undefined,
