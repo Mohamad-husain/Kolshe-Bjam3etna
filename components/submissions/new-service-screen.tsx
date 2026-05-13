@@ -1,42 +1,38 @@
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
-  Text,
+  StyleSheet,
   View,
 } from 'react-native';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ServiceRequestBasicStep } from '@/components/submissions/service-request/service-request-basic-step';
+import { ServiceRequestDatePicker } from '@/components/submissions/service-request/service-request-date-picker';
 import { ServiceRequestDetailsStep } from '@/components/submissions/service-request/service-request-details-step';
 import { ServiceRequestHeader } from '@/components/submissions/service-request/service-request-header';
 import { ServiceRequestReviewStep } from '@/components/submissions/service-request/service-request-review-step';
 import { ServiceRequestSuccess } from '@/components/submissions/service-request/service-request-success';
-import { useCreateServiceRequestMutation } from '@/hooks/mutations/use-service-request-mutations';
 import {
   createDateFromInput,
   DESCRIPTION_MIN_LENGTH,
   formatDateInputValue,
   getBudgetLabel,
+  isValidDateInput,
   parseBudgetValue,
   SERVICE_REQUEST_BUDGET_PRESETS,
   SERVICE_REQUEST_CATEGORIES,
-  serviceRequestStyles as styles,
   startOfDay,
-  type ServiceRequestStep,
   TITLE_MIN_LENGTH,
-  isValidDateInput,
+  type ServiceRequestStep,
 } from '@/components/submissions/service-request/shared';
+import { useCreateServiceRequestMutation } from '@/hooks/mutations/use-service-request-mutations';
+import { Spacing } from '@/styles/ui-theme';
 
 type ServiceRequestFormValues = {
   title: string;
@@ -157,27 +153,9 @@ export function NewServiceScreen() {
     setShowDatePicker(true);
   };
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-
-    if (event.type !== 'set' || !selectedDate) {
-      return;
-    }
-
-    const normalizedDate = startOfDay(selectedDate);
-
-    if (normalizedDate.getTime() < today.getTime()) {
-      return;
-    }
-
-    if (Platform.OS === 'ios') {
-      setPickerDate(normalizedDate);
-      return;
-    }
-
-    setValue('deadline', formatDateInputValue(normalizedDate), formUpdateOptions);
+  const confirmDate = (date = pickerDate) => {
+    setValue('deadline', formatDateInputValue(date), formUpdateOptions);
+    setShowDatePicker(false);
   };
 
   const submitServiceRequest: SubmitHandler<ServiceRequestFormValues> = (values) => {
@@ -300,72 +278,46 @@ export function NewServiceScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <Modal
-          visible={showDatePicker && Platform.OS === 'ios'}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setShowDatePicker(false)} />
-
-            <View style={styles.pickerSheet}>
-              <View style={styles.calendarHandle} />
-              <Text style={styles.pickerSheetTitle}>اختر الموعد النهائي</Text>
-
-              <DateTimePicker
-                value={pickerDate}
-                mode="date"
-                display="spinner"
-                minimumDate={today}
-                onChange={handleDateChange}
-                locale="ar"
-                textColor="#111827"
-                themeVariant="light"
-                style={styles.iosDatePicker}
-              />
-
-              <View style={styles.pickerActions}>
-                <Pressable
-                  onPress={() => setShowDatePicker(false)}
-                  style={({ pressed }) => [
-                    styles.pickerActionButton,
-                    styles.pickerSecondaryAction,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.pickerSecondaryActionText}>إلغاء</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => {
-                    setValue('deadline', formatDateInputValue(pickerDate), formUpdateOptions);
-                    setShowDatePicker(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.pickerActionButton,
-                    styles.pickerPrimaryAction,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.pickerPrimaryActionText}>تم</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {showDatePicker && Platform.OS === 'android' ? (
-          <DateTimePicker
-            value={selectedDeadlineDate ?? today}
-            mode="date"
-            minimumDate={today}
-            onChange={handleDateChange}
-            positiveButton={{ label: 'تم' }}
-            negativeButton={{ label: 'إلغاء' }}
-          />
-        ) : null}
+        <ServiceRequestDatePicker
+          visible={showDatePicker}
+          value={pickerDate}
+          minimumDate={today}
+          onChange={setPickerDate}
+          onConfirm={confirmDate}
+          onCancel={() => setShowDatePicker(false)}
+        />
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#f6f7fb' },
+  screen: { flex: 1, backgroundColor: '#f6f7fb' },
+  keyboardAvoiding: { flex: 1 },
+  topBubble: {
+    position: 'absolute',
+    top: 110,
+    left: -90,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(37,99,235,0.05)',
+  },
+  bottomBubble: {
+    position: 'absolute',
+    right: -100,
+    bottom: 26,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(90,200,250,0.06)',
+  },
+  content: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingTop: 18,
+  },
+});

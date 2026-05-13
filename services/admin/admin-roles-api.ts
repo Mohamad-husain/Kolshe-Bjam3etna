@@ -1,4 +1,3 @@
-import { getAvatarColor, getAvatarInitial } from '@/components/chat/chat-ui';
 import { getRoleOption } from '@/lib/admin/admin-config';
 import { apiClient } from '@/services/http-client';
 import type {
@@ -19,6 +18,33 @@ import {
   isRecord,
   throwAdminError,
 } from './admin-utils';
+
+const CHAT_AVATAR_COLORS = [
+  '#2563EB',
+  '#22C55E',
+  '#38BDF8',
+  '#F59E0B',
+  '#A855F7',
+  '#F97316',
+] as const;
+
+function getAvatarColor(seed?: string | null) {
+  const value = (seed ?? '').trim();
+
+  if (!value) {
+    return CHAT_AVATAR_COLORS[0];
+  }
+
+  const index =
+    value.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % CHAT_AVATAR_COLORS.length;
+
+  return CHAT_AVATAR_COLORS[index];
+}
+
+function getAvatarInitial(name?: string | null) {
+  const value = (name ?? '').trim();
+  return value[0]?.toUpperCase() ?? 'م';
+}
 
 function normalizeRoleValue(value: string | null): AdminRoleValue | null {
   if (!value) {
