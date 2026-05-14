@@ -111,6 +111,28 @@ const getChatComposerErrorMessage = (
     fallbackMessage: string
 ) => error?.response?.data?.message || error?.message || fallbackMessage
 
+const requestChatComposerCameraPermission = async () => {
+    try {
+        const permission = await ImagePicker.requestCameraPermissionsAsync()
+
+        if (!permission.granted) {
+            Alert.alert(
+                "صلاحية مطلوبة",
+                "يرجى السماح بالوصول إلى الكاميرا لالتقاط صورة وإرسالها."
+            )
+            return false
+        }
+
+        return true
+    } catch (error) {
+        Alert.alert(
+            "فشل طلب صلاحية الكاميرا",
+            error instanceof Error ? error.message : "تعذر طلب صلاحية الكاميرا"
+        )
+        return false
+    }
+}
+
 const pickChatComposerImage = async (text: string) => {
     try {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -144,17 +166,13 @@ const pickChatComposerImage = async (text: string) => {
 }
 
 const captureChatComposerImage = async (text: string) => {
+    const hasPermission = await requestChatComposerCameraPermission()
+
+    if (!hasPermission) {
+        return null
+    }
+
     try {
-        const permission = await ImagePicker.requestCameraPermissionsAsync()
-
-        if (!permission.granted) {
-            Alert.alert(
-                "صلاحية مطلوبة",
-                "يرجى السماح بالوصول إلى الكاميرا لالتقاط صورة وإرسالها."
-            )
-            return null
-        }
-
         const result = await ImagePicker.launchCameraAsync(CAMERA_OPTIONS)
 
         if (result.canceled || !result.assets?.length) {
