@@ -620,31 +620,6 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 22,
   },
-  successState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  successIconWrap: {
-    width: 118,
-    height: 118,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successTitle: {
-    marginTop: 22,
-    fontFamily,
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  successDescription: {
-    marginTop: 10,
-    textAlign: 'center',
-    fontFamily,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   pressed: {
     transform: [{ scale: 0.98 }],
   },

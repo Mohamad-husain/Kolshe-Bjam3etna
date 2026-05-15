@@ -44,6 +44,23 @@ export function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
+export function createFieldValidator<
+  TValues extends Record<string, unknown>,
+  TFieldName extends keyof TValues & string,
+  TErrors extends Partial<Record<TFieldName, string>>,
+>(getValues: () => TValues, validateForm: (values: TValues) => TErrors) {
+  return (fieldName: TFieldName) => (value: TValues[TFieldName]): true | string => {
+    const nextValues = {
+      ...getValues(),
+      [fieldName]: value,
+    } as TValues;
+
+    const nextError = validateForm(nextValues)[fieldName];
+
+    return typeof nextError === 'string' ? nextError : true;
+  };
+}
+
 function countLetters(value: string) {
   return Array.from(normalizeText(value)).filter((char) => /\p{L}/u.test(char)).length;
 }

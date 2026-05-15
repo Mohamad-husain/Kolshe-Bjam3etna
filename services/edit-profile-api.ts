@@ -1,4 +1,7 @@
-import { getPreferredStudyYearApiValue, normalizeWebsiteUrl } from '@/lib/edit-profile-config';
+import {
+  getPreferredStudyYearApiValue,
+  normalizeWebsiteUrl,
+} from '@/lib/edit-profile/edit-profile-config';
 import { getAuthToken } from '@/services/auth-api';
 import { apiClient, getApiErrorMessage } from '@/services/http-client';
 import type {

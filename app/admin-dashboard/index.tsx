@@ -1,7 +1,9 @@
 import { Redirect } from 'expo-router';
 
-import { AdminDashboardAccessState } from '@/components/admin/admin-dashboard/AdminDashboardAccessState';
-import { AdminDashboardScreen } from '@/components/admin/admin-dashboard/AdminDashboardScreen';
+import {
+  AdminDashboardAccessState,
+  AdminDashboardScreen,
+} from '@/components/admin/admin-dashboard/AdminDashboardScreen';
 import { useAuth } from '@/contexts/auth-context';
 import { adminAccessText } from '@/lib/admin/admin-copy';
 
