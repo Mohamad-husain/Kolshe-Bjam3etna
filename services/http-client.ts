@@ -1,6 +1,6 @@
 import axios, { isAxiosError } from 'axios';
 
-import { getAuthToken, invalidateAuthSession } from '@/services/auth-api';
+import { getAuthToken, invalidateAuthSession } from '@/lib/auth/auth-session';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
 
