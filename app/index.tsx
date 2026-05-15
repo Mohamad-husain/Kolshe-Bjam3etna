@@ -1,17 +1,19 @@
-import { Redirect } from 'expo-router';
+import { router } from 'expo-router';
+import { useEffect } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 
 export default function IndexScreen() {
   const { user } = useAuth();
 
-  if (user) {
-    if (!user.isProfileCompleted) {
-      return <Redirect href="/(auth)/select-university" />;
+  useEffect(() => {
+    if (user) {
+      router.navigate(user.isProfileCompleted ? '/(tabs)/home' : '/(auth)/select-university');
+      return;
     }
 
-    return <Redirect href="/(tabs)/home" />;
-  }
+    router.navigate('/(auth)');
+  }, [user]);
 
-  return <Redirect href="/(auth)" />;
+  return null;
 }

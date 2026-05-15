@@ -4,12 +4,16 @@ import {
     Alert,
     FlatList,
     KeyboardAvoidingView,
+    Linking,
     Platform,
     StyleSheet,
     View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router, useLocalSearchParams } from "expo-router"
+import * as FileSystem from "expo-file-system/legacy"
+import * as MediaLibrary from "expo-media-library"
+import * as Sharing from "expo-sharing"
 
 import ChatComposer from "@/components/chat/ChatComposer"
 import ChatDateBadge from "@/components/chat/ChatDateBadge"
@@ -23,17 +27,17 @@ import ChatMessageActionsModal, {
 import ChatMessageBubble from "@/components/chat/ChatMessageBubble"
 import {
     getChatDateLabel,
-    getMessageActionSubtitle,
+    getChatDownloadExtension,
+    getChatDownloadFileName,
+    getFileLabel,
     getMessageActionsState,
-    hasMessageActions,
+    getMessageActionSubtitle,
+    getValidChatAssetUri,
+    isImageChatAsset,
+    openChatAsset,
     resolveMessageOwnership,
 } from "@/components/chat/chat-message-helpers"
-import {
-    downloadChatAsset,
-    getAvatarColor,
-    getFileLabel,
-    openChatAsset,
-} from "@/components/chat/chat-ui"
+import { getAvatarColor } from "@/components/chat/chat-ui"
 import { useAuth } from "@/contexts/auth-context"
 import { useDeleteMessage } from "@/hooks/chat/mutations/use-delete-message"
 import { useMarkRead } from "@/hooks/chat/mutations/use-mark-read"
@@ -50,6 +54,111 @@ const scrollMessagesToEnd = (
     setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true })
     }, 100)
+}
+
+async function saveFileToAndroidDownloads(
+    tempFileUri: string,
+    fileName: string,
+    mimeType?: string | null
+) {
+    const downloadsUri = FileSystem.StorageAccessFramework.getUriForDirectoryInRoot("Download")
+    const permission =
+        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(downloadsUri)
+
+    if (!permission.granted) {
+        return false
+    }
+
+    const targetUri = await FileSystem.StorageAccessFramework.createFileAsync(
+        permission.directoryUri,
+        fileName,
+        mimeType?.trim() || "application/octet-stream"
+    )
+
+    const fileBase64 = await FileSystem.readAsStringAsync(tempFileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+    })
+
+    await FileSystem.StorageAccessFramework.writeAsStringAsync(targetUri, fileBase64, {
+        encoding: FileSystem.EncodingType.Base64,
+    })
+
+    return true
+}
+
+async function downloadChatAsset(
+    uri?: string | null,
+    suggestedName?: string | null,
+    mimeType?: string | null
+) {
+    const downloadUri = getValidChatAssetUri(uri)
+
+    if (!downloadUri) {
+        return false
+    }
+
+    const safeName = getChatDownloadFileName(uri, suggestedName)
+
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+        const link = document.createElement("a")
+        link.href = downloadUri
+        link.download = safeName
+        link.target = "_blank"
+        link.rel = "noopener noreferrer"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        return true
+    }
+
+    if (isImageChatAsset(downloadUri, suggestedName)) {
+        const permission = await MediaLibrary.requestPermissionsAsync()
+
+        if (!permission.granted) {
+            return false
+        }
+
+        const baseDirectory = FileSystem.cacheDirectory || FileSystem.documentDirectory
+
+        if (!baseDirectory) {
+            return false
+        }
+
+        const fileUri = `${baseDirectory}chat-download-${Date.now()}${getChatDownloadExtension(
+            downloadUri,
+            suggestedName
+        )}`
+
+        const result = await FileSystem.downloadAsync(downloadUri, fileUri)
+        await MediaLibrary.createAssetAsync(result.uri)
+        return true
+    }
+
+    const baseDirectory = FileSystem.documentDirectory || FileSystem.cacheDirectory
+
+    if (!baseDirectory) {
+        return false
+    }
+
+    const result = await FileSystem.downloadAsync(downloadUri, `${baseDirectory}${safeName}`)
+
+    if (Platform.OS === "android") {
+        const saved = await saveFileToAndroidDownloads(result.uri, safeName, mimeType)
+
+        if (saved) {
+            return true
+        }
+    }
+
+    if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(result.uri, {
+            dialogTitle: "حفظ الملف",
+        })
+        return true
+    }
+
+    await Linking.openURL(result.uri)
+    return true
 }
 
 export default function ChatScreen() {
@@ -129,7 +238,7 @@ export default function ChatScreen() {
     }
 
     const handleOpenMessageActions = (message: ChatMessage) => {
-        if (!hasMessageActions(message)) {
+        if (!getMessageActionsState(message).hasAny) {
             return
         }
 

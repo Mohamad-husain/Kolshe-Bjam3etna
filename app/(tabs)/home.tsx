@@ -1,8 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HomeAdsSection } from '@/components/home/home-ads-section';
@@ -16,16 +24,38 @@ import type { ExploreTab, SectionKey } from '@/components/home/home-types';
 import { hasText } from '@/components/home/home-utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useProfileQuery } from '@/hooks/queries/use-auth-queries';
-import { useEventsQuery, useMarketplaceQuery, useServicesQuery } from '@/hooks/queries/use-explore-queries';
-import { useNewsQuery, usePartnerOffersQuery } from '@/hooks/queries/use-home-queries';
+import {
+  getCachedHomeDataFromSQLite,
+  syncHomeDataFromApiToSQLite,
+  type HomeData,
+} from '@/services/home-sqlite';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
 import { Colors } from '@/styles/ui-theme';
+
+const emptyHomeData: HomeData = {
+  news: [],
+  services: [],
+  ads: [],
+  offers: [],
+  events: [],
+  updatedAt: null,
+};
 
 function filterHomeItems<T>(items: T[] | undefined, query: string, values: (item: T) => string[], limit: number) {
   return (items ?? [])
     .filter((item) => !query || values(item).some((value) => hasText(value, query)))
     .slice(0, limit);
+}
+
+function hasAnyHomeData(data: HomeData) {
+  return (
+    data.news.length > 0 ||
+    data.services.length > 0 ||
+    data.ads.length > 0 ||
+    data.offers.length > 0 ||
+    data.events.length > 0
+  );
 }
 
 export default function HomeRoute() {
@@ -34,24 +64,57 @@ export default function HomeRoute() {
   const scrollRef = useRef<ScrollView>(null);
   const positions = useRef<Record<SectionKey, number>>({ news: 0, offers: 0 });
   const [search, setSearch] = useState('');
+  const [homeData, setHomeData] = useState<HomeData>(emptyHomeData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLoadError, setHasLoadError] = useState(false);
 
-  const newsQuery = useNewsQuery();
-  const servicesQuery = useServicesQuery();
-  const adsQuery = useMarketplaceQuery();
-  const offersQuery = usePartnerOffersQuery();
-  const eventsQuery = useEventsQuery();
   const profileQuery = useProfileQuery(!!user);
 
+  const loadHomeData = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    setHasLoadError(false);
+
+    try {
+      // Show the latest SQLite cache first, then refresh it from the API.
+      const cachedData = await getCachedHomeDataFromSQLite();
+      setHomeData(cachedData);
+
+      const syncResult = await syncHomeDataFromApiToSQLite();
+      setHomeData(syncResult.data);
+      setHasLoadError(syncResult.apiFailed && !hasAnyHomeData(syncResult.data));
+    } catch {
+      setHasLoadError(true);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadHomeData();
+    }, [loadHomeData]),
+  );
+
   const q = search.trim().toLowerCase();
+  const hasCachedData = hasAnyHomeData(homeData);
+  const showInitialLoading = isLoading && !hasCachedData;
+  const showSectionError = hasLoadError && !hasCachedData;
 
-  const news = useMemo(() => filterHomeItems(newsQuery.data, q, (item) => [item.title, item.source, item.category], 3), [newsQuery.data, q]);
-  const services = useMemo(() => filterHomeItems(servicesQuery.data, q, (item) => [item.title, item.description, item.category, item.owner.name], 3), [servicesQuery.data, q]);
-  const ads = useMemo(() => filterHomeItems(adsQuery.data, q, (item) => [item.title, item.description, item.category, item.condition], 3), [adsQuery.data, q]);
-  const offers = useMemo(() => filterHomeItems(offersQuery.data, q, (item) => [item.name, item.offerTitle, item.location ?? '', item.type], 5), [offersQuery.data, q]);
-  const events = useMemo(() => filterHomeItems(eventsQuery.data, q, (item) => [item.title, item.description, item.club, item.location], 2), [eventsQuery.data, q]);
+  const news = useMemo(() => filterHomeItems(homeData.news, q, (item) => [item.title, item.source, item.category], 3), [homeData.news, q]);
+  const services = useMemo(() => filterHomeItems(homeData.services, q, (item) => [item.title, item.description, item.category, item.owner.name], 3), [homeData.services, q]);
+  const ads = useMemo(() => filterHomeItems(homeData.ads, q, (item) => [item.title, item.description, item.category, item.condition], 3), [homeData.ads, q]);
+  const offers = useMemo(() => filterHomeItems(homeData.offers, q, (item) => [item.name, item.offerTitle, item.location ?? '', item.type], 5), [homeData.offers, q]);
+  const events = useMemo(() => filterHomeItems(homeData.events, q, (item) => [item.title, item.description, item.club, item.location], 2), [homeData.events, q]);
 
-  const ticker = news[0] ?? newsQuery.data?.[0] ?? null;
-  const showOffers = offersQuery.isLoading || offers.length > 0;
+  const ticker = news[0] ?? homeData.news[0] ?? null;
+  const showOffers = showInitialLoading || offers.length > 0;
   const universityName = profileQuery.data?.universityName?.trim() || 'المجتمع الجامعي';
   const universityNumber = profileQuery.data?.universityNumber?.trim() || '';
   const fullName = profileQuery.data?.fullName?.trim() || user?.name || '';
@@ -94,6 +157,14 @@ export default function HomeRoute() {
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => void loadHomeData(true)}
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          }
           showsVerticalScrollIndicator={false}
         >
           <HomeHero
@@ -109,8 +180,8 @@ export default function HomeRoute() {
           <View style={styles.body}>
             <HomeNewsSection
               tickerTitle={ticker?.title ?? 'لا توجد أخبار جديدة حالياً'}
-              isLoading={newsQuery.isLoading}
-              isError={newsQuery.isError}
+              isLoading={showInitialLoading}
+              isError={showSectionError}
               news={news}
               onPressTicker={openNewsScreen}
               onPressMore={openNewsScreen}
@@ -119,16 +190,16 @@ export default function HomeRoute() {
             />
 
             <HomeServicesSection
-              isLoading={servicesQuery.isLoading}
-              isError={servicesQuery.isError}
+              isLoading={showInitialLoading}
+              isError={showSectionError}
               services={services}
               onPressMore={goToServices}
               onPressCard={goToServices}
             />
 
             <HomeAdsSection
-              isLoading={adsQuery.isLoading}
-              isError={adsQuery.isError}
+              isLoading={showInitialLoading}
+              isError={showSectionError}
               ads={ads}
               onPressMore={goToMarketplace}
               onPressCard={goToMarketplace}
@@ -136,8 +207,8 @@ export default function HomeRoute() {
 
             {showOffers ? (
               <HomeOffersSection
-                isLoading={offersQuery.isLoading}
-                isError={offersQuery.isError}
+                isLoading={showInitialLoading}
+                isError={showSectionError}
                 offers={offers}
                 onPressMore={goToOffers}
                 onPressCard={openOfferCard}
@@ -146,8 +217,8 @@ export default function HomeRoute() {
             ) : null}
 
             <HomeEventsSection
-              isLoading={eventsQuery.isLoading}
-              isError={eventsQuery.isError}
+              isLoading={showInitialLoading}
+              isError={showSectionError}
               events={events}
               onPressMore={goToEvents}
               onPressCard={goToEvents}

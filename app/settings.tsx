@@ -5,21 +5,21 @@ import { Alert, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SettingsAccountSection } from '@/components/settings/SettingsAccountSection';
-import {
-  SettingsAppearanceSection,
-} from '@/components/settings/SettingsAppearanceSection';
+import { SettingsAppearanceSection } from '@/components/settings/SettingsAppearanceSection';
 import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import { SettingsLogoutSection } from '@/components/settings/SettingsLogoutSection';
 import { SettingsNotificationsSection } from '@/components/settings/SettingsNotificationsSection';
 import { SettingsPrivacySection } from '@/components/settings/SettingsPrivacySection';
 import type { SettingsThemeValue } from '@/components/settings/SettingsThemeSelector';
 import { useAuth } from '@/contexts/auth-context';
+import { getSavedSettingsTheme, saveSettingsTheme } from '@/lib/storage/settings-preferences';
 import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export default function SettingsRoute() {
   const insets = useSafeAreaInsets();
   const systemColorScheme = useColorScheme();
   const { user, signOut } = useAuth();
+
   const [selectedTheme, setSelectedTheme] = useState<SettingsThemeValue>('system');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [messageNotifications, setMessageNotifications] = useState(true);
@@ -33,6 +33,29 @@ export default function SettingsRoute() {
       router.replace('/(auth)');
     }
   }, [user]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSavedTheme() {
+      const savedTheme = await getSavedSettingsTheme();
+
+      if (isMounted && savedTheme) {
+        setSelectedTheme(savedTheme);
+      }
+    }
+
+    void loadSavedTheme();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleChangeTheme = (theme: SettingsThemeValue) => {
+    setSelectedTheme(theme);
+    void saveSettingsTheme(theme);
+  };
 
   const effectiveTheme = useMemo<'light' | 'dark'>(() => {
     if (selectedTheme === 'system') {
@@ -62,17 +85,18 @@ export default function SettingsRoute() {
   };
 
   const handleToggleThemeMode = () => {
-    setSelectedTheme(isDarkPreview ? 'light' : 'dark');
+    const nextTheme: SettingsThemeValue = isDarkPreview ? 'light' : 'dark';
+    handleChangeTheme(nextTheme);
   };
 
   const handleLogout = () => {
-    Alert.alert('طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬', 'ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ط£ظ†ظƒ طھط±ظٹط¯ طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬ ظ…ظ† ط­ط³ط§ط¨ظƒطں', [
+    Alert.alert('تسجيل الخروج', 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', [
       {
-        text: 'ط¥ظ„ط؛ط§ط،',
+        text: 'إلغاء',
         style: 'cancel',
       },
       {
-        text: 'طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬',
+        text: 'تسجيل الخروج',
         style: 'destructive',
         onPress: signOut,
       },
@@ -96,7 +120,7 @@ export default function SettingsRoute() {
 
           <SettingsAppearanceSection
             selectedTheme={selectedTheme}
-            onChangeTheme={setSelectedTheme}
+            onChangeTheme={handleChangeTheme}
           />
 
           <SettingsNotificationsSection
@@ -120,8 +144,8 @@ export default function SettingsRoute() {
             }
             onOpenTwoFactor={() =>
               showSoonAlert(
-                'ط§ظ„ظ…طµط§ط¯ظ‚ط© ط§ظ„ط«ظ†ط§ط¦ظٹط©',
-                'ظ…ظٹط²ط© ط§ظ„ظ…طµط§ط¯ظ‚ط© ط§ظ„ط«ظ†ط§ط¦ظٹط© ط³طھظڈط±ط¨ط· ظ„ط§ط­ظ‚ط§ظ‹ ط¶ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط£ظ…ط§ظ†.',
+                'المصادقة الثنائية',
+                'ميزة المصادقة الثنائية ستُربط لاحقًا ضمن إعدادات الأمان.',
               )
             }
           />
@@ -137,7 +161,7 @@ export default function SettingsRoute() {
 
           <SettingsLogoutSection onPress={handleLogout} />
 
-          <Text style={styles.footerText}>ظƒظ„ط´ظٹ ط¨ط¬ط§ظ…ط¹طھظ†ط§ آ© {new Date().getFullYear()}</Text>
+          <Text style={styles.footerText}>كلشي بجامعتنا © {new Date().getFullYear()}</Text>
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -165,5 +189,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-

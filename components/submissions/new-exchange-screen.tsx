@@ -10,6 +10,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExchangeDetailsStep } from '@/components/submissions/exchange/exchange-details-step';
@@ -29,6 +30,21 @@ import { useCreateSwapAdMutation } from '@/hooks/mutations/use-swap-ad-mutations
 import type { SwapAdCondition, SwapAdPhotoInput } from '@/services/swap-api';
 import { Spacing } from '@/styles/ui-theme';
 
+type ExchangeFormValues = {
+  offerTitle: string;
+  wantedTitle: string;
+  categoryId: number | null;
+  condition: SwapAdCondition | '';
+  description: string;
+  photos: SwapAdPhotoInput[];
+};
+
+const formUpdateOptions = {
+  shouldDirty: true,
+  shouldTouch: true,
+  shouldValidate: true,
+} as const;
+
 function mapAssetToPhoto(asset: ImagePicker.ImagePickerAsset, index: number): SwapAdPhotoInput {
   return {
     uri: asset.uri,
@@ -42,12 +58,31 @@ export function NewExchangeScreen() {
   const mutation = useCreateSwapAdMutation();
   const [activeStep, setActiveStep] = useState<ExchangeStep>(1);
   const [submitted, setSubmitted] = useState(false);
-  const [offerTitle, setOfferTitle] = useState('');
-  const [wantedTitle, setWantedTitle] = useState('');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [condition, setCondition] = useState<SwapAdCondition | ''>('');
-  const [description, setDescription] = useState('');
-  const [photos, setPhotos] = useState<SwapAdPhotoInput[]>([]);
+  const {
+    getValues,
+    handleSubmit: handleFormSubmit,
+    setValue,
+    watch,
+  } = useForm<ExchangeFormValues>({
+    defaultValues: {
+      offerTitle: '',
+      wantedTitle: '',
+      categoryId: null,
+      condition: '',
+      description: '',
+      photos: [],
+    },
+    mode: 'onChange',
+  });
+
+  const {
+    offerTitle,
+    wantedTitle,
+    categoryId,
+    condition,
+    description,
+    photos,
+  } = watch();
 
   useEffect(() => {
     if (!submitted) {
@@ -99,7 +134,8 @@ export function NewExchangeScreen() {
   };
 
   const handlePickPhotos = async () => {
-    const remainingSlots = EXCHANGE_MAX_PHOTOS - photos.length;
+    const currentPhotos = getValues('photos');
+    const remainingSlots = EXCHANGE_MAX_PHOTOS - currentPhotos.length;
 
     if (remainingSlots <= 0) {
       Alert.alert('تم الوصول للحد الأقصى', `يمكنك إضافة ${EXCHANGE_MAX_PHOTOS} صور فقط`);
@@ -128,24 +164,33 @@ export function NewExchangeScreen() {
       .slice(0, remainingSlots)
       .map((asset, index) => mapAssetToPhoto(asset, index));
 
-    setPhotos((current) => [...current, ...selectedPhotos].slice(0, EXCHANGE_MAX_PHOTOS));
+    setValue(
+      'photos',
+      [...getValues('photos'), ...selectedPhotos].slice(0, EXCHANGE_MAX_PHOTOS),
+      formUpdateOptions,
+    );
   };
 
-  const handleSubmit = () => {
-    if (!selectedCategory || !condition || !canSubmit) {
+  const submitExchange: SubmitHandler<ExchangeFormValues> = (values) => {
+    const category = EXCHANGE_CATEGORIES.find((item) => item.id === values.categoryId);
+    const selectedConditionValue = EXCHANGE_CONDITIONS.find(
+      (item) => item.value === values.condition,
+    );
+
+    if (!category || !values.condition || !canSubmit) {
       return;
     }
 
     mutation.mutate(
       {
-        offerTitle,
-        wantedTitle,
-        categoryId: selectedCategory.id,
-        categoryName: selectedCategory.label,
-        condition,
-        conditionLabel: selectedCondition?.label,
-        description,
-        photos,
+        offerTitle: values.offerTitle,
+        wantedTitle: values.wantedTitle,
+        categoryId: category.id,
+        categoryName: category.label,
+        condition: values.condition,
+        conditionLabel: selectedConditionValue?.label,
+        description: values.description,
+        photos: values.photos,
       },
       {
         onSuccess: () => setSubmitted(true),
@@ -155,6 +200,10 @@ export function NewExchangeScreen() {
         },
       },
     );
+  };
+
+  const handleSubmit = () => {
+    void handleFormSubmit(submitExchange)();
   };
 
   if (submitted) {
@@ -196,12 +245,16 @@ export function NewExchangeScreen() {
                 selectedCategoryId={categoryId}
                 photos={photos}
                 canProceed={step1Done}
-                onOfferTitleChange={setOfferTitle}
-                onWantedTitleChange={setWantedTitle}
-                onCategoryChange={setCategoryId}
+                onOfferTitleChange={(value) => setValue('offerTitle', value, formUpdateOptions)}
+                onWantedTitleChange={(value) => setValue('wantedTitle', value, formUpdateOptions)}
+                onCategoryChange={(value) => setValue('categoryId', value, formUpdateOptions)}
                 onPickPhotos={handlePickPhotos}
                 onRemovePhoto={(index) =>
-                  setPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                  setValue(
+                    'photos',
+                    getValues('photos').filter((_, itemIndex) => itemIndex !== index),
+                    formUpdateOptions,
+                  )
                 }
                 onNext={() => setActiveStep(2)}
               />
@@ -213,8 +266,8 @@ export function NewExchangeScreen() {
                 description={description}
                 descriptionError={descriptionError}
                 canProceed={step2Done}
-                onConditionChange={setCondition}
-                onDescriptionChange={setDescription}
+                onConditionChange={(value) => setValue('condition', value, formUpdateOptions)}
+                onDescriptionChange={(value) => setValue('description', value, formUpdateOptions)}
                 onPrevious={() => setActiveStep(1)}
                 onNext={() => setActiveStep(3)}
               />

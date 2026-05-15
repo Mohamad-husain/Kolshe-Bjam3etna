@@ -1,7 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 
-import { getAvatarColor, getAvatarInitial, getValidImageUri } from '@/components/chat/chat-ui';
+import {
+  getAvatarColor,
+  getAvatarInitial,
+  getValidChatAssetUri,
+} from '@/components/chat/chat-ui';
 
 type Props = {
   name?: string | null;
@@ -16,7 +20,7 @@ export default function ChatAvatar({
   size = 48,
   color,
 }: Props) {
-  const avatarUri = getValidImageUri(imageUrl);
+  const avatarUri = getValidChatAssetUri(imageUrl);
   const backgroundColor = color ?? getAvatarColor(name);
   const initial = getAvatarInitial(name);
 

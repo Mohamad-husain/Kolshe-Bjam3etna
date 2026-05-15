@@ -1,15 +1,17 @@
+import { useMemo } from "react"
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { Image } from "expo-image"
 import { Ionicons } from "@expo/vector-icons"
 
 import ChatAvatar from "@/components/chat/ChatAvatar"
 import {
     formatMessageTime,
-    getAvatarColor,
     getDisplayImageUri,
     getFileLabel,
     getMessageBodyText,
-} from "@/components/chat/chat-ui"
+} from "@/components/chat/chat-message-helpers"
+import { getAvatarColor } from "@/components/chat/chat-ui"
 import type { ChatMessage } from "@/types/chat"
 
 type Props = {
@@ -35,6 +37,18 @@ export default function ChatMessageBubble({
     const hasFile = !!message.fileUrl?.trim() || !!message.fileName.trim()
     const bodyText = getMessageBodyText(message.content, hasImage || hasFile)
     const hasText = !!bodyText
+    const longPressGesture = useMemo(
+        () =>
+            Gesture.LongPress()
+                .enabled(!!onLongPress)
+                .minDuration(260)
+                .maxDistance(16)
+                .runOnJS(true)
+                .onStart(() => {
+                    onLongPress?.(message)
+                }),
+        [message, onLongPress]
+    )
 
     return (
         <View
@@ -65,100 +79,99 @@ export default function ChatMessageBubble({
                     message.isMine ? styles.bubbleWrapMine : styles.bubbleWrapOther,
                 ]}
             >
-                <TouchableOpacity
-                    activeOpacity={0.92}
-                    onLongPress={onLongPress ? () => onLongPress(message) : undefined}
-                    delayLongPress={260}
-                    style={[
-                        styles.container,
-                        (hasImage || hasFile) && styles.containerWithAttachment,
-                        message.isMine ? styles.mine : styles.other,
-                    ]}
-                >
-                    {hasImage ? (
-                        <TouchableOpacity
-                            activeOpacity={0.88}
-                            onPress={
-                                onPressImage
-                                    ? (event) => {
-                                        event.stopPropagation()
-                                        onPressImage(displayImageUri)
-                                    }
-                                    : undefined
-                            }
-                            style={styles.imageButton}
-                        >
-                            <Image
-                                source={{ uri: displayImageUri }}
-                                contentFit="cover"
-                                style={styles.messageImage}
-                            />
-                        </TouchableOpacity>
-                    ) : null}
-
-                    {hasFile ? (
-                        <TouchableOpacity
-                            activeOpacity={0.88}
-                            style={[
-                                styles.fileCard,
-                                message.isMine ? styles.fileCardMine : styles.fileCardOther,
-                                hasImage && styles.fileCardWithImage,
-                            ]}
-                            onPress={onPressFile ? () => onPressFile(message) : undefined}
-                        >
-                            <View style={styles.fileIconWrap}>
-                                <Ionicons
-                                    name="document-attach-outline"
-                                    size={18}
-                                    color={message.isMine ? "#FFFFFF" : "#2563EB"}
+                <GestureDetector gesture={longPressGesture}>
+                    <View
+                        style={[
+                            styles.container,
+                            (hasImage || hasFile) && styles.containerWithAttachment,
+                            message.isMine ? styles.mine : styles.other,
+                        ]}
+                    >
+                        {hasImage ? (
+                            <TouchableOpacity
+                                activeOpacity={0.88}
+                                onPress={
+                                    onPressImage
+                                        ? (event) => {
+                                            event.stopPropagation()
+                                            onPressImage(displayImageUri)
+                                        }
+                                        : undefined
+                                }
+                                style={styles.imageButton}
+                            >
+                                <Image
+                                    source={{ uri: displayImageUri }}
+                                    contentFit="cover"
+                                    style={styles.messageImage}
                                 />
-                            </View>
+                            </TouchableOpacity>
+                        ) : null}
 
-                            <View style={styles.fileTextWrap}>
-                                <Text
-                                    style={[
-                                        styles.fileName,
-                                        message.isMine ? styles.mineText : styles.otherText,
-                                    ]}
-                                    numberOfLines={1}
-                                >
-                                    {fileLabel}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.fileAction,
-                                        message.isMine ? styles.fileActionMine : styles.fileActionOther,
-                                    ]}
-                                >
-                                    فتح الملف
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-                    ) : null}
+                        {hasFile ? (
+                            <TouchableOpacity
+                                activeOpacity={0.88}
+                                style={[
+                                    styles.fileCard,
+                                    message.isMine ? styles.fileCardMine : styles.fileCardOther,
+                                    hasImage && styles.fileCardWithImage,
+                                ]}
+                                onPress={onPressFile ? () => onPressFile(message) : undefined}
+                            >
+                                <View style={styles.fileIconWrap}>
+                                    <Ionicons
+                                        name="document-attach-outline"
+                                        size={18}
+                                        color={message.isMine ? "#FFFFFF" : "#2563EB"}
+                                    />
+                                </View>
 
-                    {hasText ? (
-                        <Text
-                            style={[
-                                styles.text,
-                                (hasImage || hasFile) && styles.textWithAttachment,
-                                message.isMine ? styles.mineText : styles.otherText,
-                            ]}
-                        >
-                            {bodyText}
-                        </Text>
-                    ) : null}
+                                <View style={styles.fileTextWrap}>
+                                    <Text
+                                        style={[
+                                            styles.fileName,
+                                            message.isMine ? styles.mineText : styles.otherText,
+                                        ]}
+                                        numberOfLines={1}
+                                    >
+                                        {fileLabel}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.fileAction,
+                                            message.isMine ? styles.fileActionMine : styles.fileActionOther,
+                                        ]}
+                                    >
+                                        فتح الملف
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        ) : null}
 
-                    {!!formattedTime && (
-                        <Text
-                            style={[
-                                styles.time,
-                                message.isMine ? styles.timeMine : styles.timeOther,
-                            ]}
-                        >
-                            {formattedTime}
-                        </Text>
-                    )}
-                </TouchableOpacity>
+                        {hasText ? (
+                            <Text
+                                style={[
+                                    styles.text,
+                                    (hasImage || hasFile) && styles.textWithAttachment,
+                                    message.isMine ? styles.mineText : styles.otherText,
+                                ]}
+                            >
+                                {bodyText}
+                            </Text>
+                        ) : null}
+
+                        {!!formattedTime && (
+                            <Text
+                                style={[
+                                    styles.time,
+                                    message.isMine ? styles.timeMine : styles.timeOther,
+                                ]}
+                            >
+                                {formattedTime}
+                            </Text>
+                        )}
+                    </View>
+                </GestureDetector>
             </View>
         </View>
     )

@@ -1,12 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Colors, SemanticColors } from '@/styles/ui-theme';
+import {
+  Colors,
+  Dimensions,
+  FontFamily,
+  FontSize,
+  FontWeight,
+  SemanticColors,
+} from '@/styles/ui-theme';
 
 import {
   DESCRIPTION_MIN_LENGTH,
   SERVICE_REQUEST_BUDGET_PRESETS,
-  serviceRequestStyles as styles,
 } from './shared';
 import { ServiceRequestSectionHeader } from './service-request-section-header';
 
@@ -126,7 +132,11 @@ export function ServiceRequestDetailsStep({
           {deadlineError ? <Text style={styles.errorText}>{deadlineError}</Text> : null}
         </View>
 
-        <View style={styles.fieldBlock}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 118 : 88}
+          style={styles.fieldBlock}
+        >
           <View style={styles.fieldTopRow}>
             <Text
               style={[
@@ -170,7 +180,7 @@ export function ServiceRequestDetailsStep({
             </View>
           </View>
           {descriptionError ? <Text style={styles.errorText}>{descriptionError}</Text> : null}
-        </View>
+        </KeyboardAvoidingView>
 
         <View style={styles.actionsRow}>
           <Pressable
@@ -197,3 +207,167 @@ export function ServiceRequestDetailsStep({
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 2,
+    gap: 18,
+  },
+  fieldBlock: { gap: 10 },
+  fieldTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  labelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  fieldLabel: {
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: 15,
+    fontWeight: FontWeight.semibold,
+    textAlign: 'right',
+  },
+  counter: {
+    color: Colors.mutedForeground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.x11,
+    fontWeight: FontWeight.medium,
+  },
+  counterActive: { color: Colors.primary },
+  chipWrap: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(60,60,67,0.06)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.025,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  chipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: {
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  chipTextActive: { color: '#ffffff' },
+  fieldRow: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(60,60,67,0.06)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  fieldRowError: {
+    borderColor: 'rgba(255,59,48,0.38)',
+    borderWidth: 1.4,
+  },
+  input: {
+    flex: 1,
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  dateFieldButton: {
+    justifyContent: 'space-between',
+  },
+  dateValueText: {
+    flex: 1,
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+    textAlign: 'left',
+  },
+  dateSelectedText: {
+    color: '#111827',
+  },
+  datePlaceholderText: {
+    color: 'rgba(142,142,147,0.75)',
+  },
+  textareaWrap: {
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(60,60,67,0.06)',
+    overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  textarea: {
+    minHeight: 132,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+    color: Colors.foreground,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  descriptionProgressTrack: {
+    height: 4,
+    marginHorizontal: 16,
+    marginBottom: 14,
+    borderRadius: Dimensions.radiusFull,
+    backgroundColor: Colors.secondary,
+    overflow: 'hidden',
+  },
+  descriptionProgressFill: {
+    height: '100%',
+    borderRadius: Dimensions.radiusFull,
+  },
+  errorText: {
+    color: SemanticColors.red,
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.x11,
+    fontWeight: FontWeight.medium,
+    textAlign: 'right',
+  },
+  actionsRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  flexButton: { flex: 1 },
+  primaryButton: {
+    minHeight: 56,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  primaryButtonDisabled: { backgroundColor: '#e7e8ef', shadowOpacity: 0, elevation: 0 },
+  primaryText: {
+    color: '#ffffff',
+    fontFamily: FontFamily.cairo,
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+  },
+  primaryTextDisabled: { color: Colors.mutedForeground },
+  pressed: { transform: [{ scale: 0.98 }] },
+});

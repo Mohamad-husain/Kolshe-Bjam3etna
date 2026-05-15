@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { SwapAdCondition } from '@/services/swap-api';
 import {
@@ -75,7 +75,11 @@ export function ExchangeDetailsStep({
         </View>
       </View>
 
-      <View style={styles.fieldBlock}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 118 : 88}
+        style={styles.fieldBlock}
+      >
         <View style={styles.topRow}>
           <Text
             style={[
@@ -121,7 +125,7 @@ export function ExchangeDetailsStep({
         </View>
 
         {descriptionError ? <Text style={styles.errorText}>{descriptionError}</Text> : null}
-      </View>
+      </KeyboardAvoidingView>
 
       <View style={styles.actionsRow}>
         <Pressable

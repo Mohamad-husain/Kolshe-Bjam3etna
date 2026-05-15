@@ -126,7 +126,11 @@ export function ProductAdDetailsStep({
           </View>
         </View>
 
-        <View style={styles.fieldBlock}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 118 : 88}
+          style={styles.fieldBlock}
+        >
           <View style={styles.fieldTopRow}>
             <Text
               style={[
@@ -155,7 +159,7 @@ export function ProductAdDetailsStep({
               style={styles.textarea}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
 
         <View style={styles.actionsRow}>
           <Pressable

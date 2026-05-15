@@ -12,10 +12,14 @@ export default function LoginRoute() {
         router.push('/(auth)/password-recovery');
       }}
       onSuccess={(user) => {
-        const nextRoute = user.isProfileCompleted ? '/(tabs)/home' : '/(auth)/select-university';
-
         signIn(user);
-        router.replace(nextRoute);
+
+        if (user.isProfileCompleted) {
+          router.replace('/(tabs)/home');
+          return;
+        }
+
+        router.navigate('/(auth)/select-university');
       }}
     />
   );

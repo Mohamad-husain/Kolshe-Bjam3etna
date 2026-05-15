@@ -3,9 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import ChatAvatar from "@/components/chat/ChatAvatar"
 import {
     formatConversationTimestamp,
-    getAvatarColor,
     getMessagePreviewText,
-} from "@/components/chat/chat-ui"
+} from "@/components/chat/chat-message-helpers"
+import { getAvatarColor } from "@/components/chat/chat-ui"
 
 type Props = {
     item: {
