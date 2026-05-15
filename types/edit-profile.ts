@@ -2,6 +2,7 @@ import type { ProfileImageInput } from '@/services/auth-api';
 import type { AdminToastTone } from '@/types/admin';
 
 export type AdminEditProfileTab = 'personal' | 'academic' | 'security';
+export type AdminEditProfileSelectKey = 'university' | 'major';
 
 export type AdminEditProfileOption<TValue extends string | number = string> = {
   label: string;

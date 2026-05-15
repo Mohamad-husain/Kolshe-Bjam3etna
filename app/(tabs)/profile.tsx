@@ -37,7 +37,7 @@ import {
   useMySwapAdsQuery,
   useOutgoingOffersQuery,
 } from '@/hooks/queries/use-profile-queries';
-import { formatStudyYearLabel } from '@/lib/edit-profile-config';
+import { formatStudyYearLabel } from '@/lib/edit-profile/edit-profile-config';
 import type { IncomingOffer } from '@/services/profile-api';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 

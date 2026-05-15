@@ -14,7 +14,7 @@ import {
   getAdminEditProfileFocusShadow,
   getAdminEditProfileShadow,
   type AdminEditProfileTheme,
-} from '@/lib/edit-profile-theme';
+} from '@/lib/edit-profile/edit-profile-theme';
 import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export function EditProfileTextField({

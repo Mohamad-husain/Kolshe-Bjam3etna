@@ -13,7 +13,6 @@ export * from './AdminQuickAction';
 export * from './AdminSearchInput';
 export * from './AdminSegmentedOptions';
 export * from './AdminSelectField';
-export * from './AdminSuccessState';
 export * from './AdminSwitchRow';
 export * from './AdminTextField';
 export * from './AdminToastBanner';

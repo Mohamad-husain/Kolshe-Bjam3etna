@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { AdminEditProfileTheme } from '@/lib/edit-profile-theme';
+import type { AdminEditProfileTheme } from '@/lib/edit-profile/edit-profile-theme';
 import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export function EditProfileInfoBanner({
