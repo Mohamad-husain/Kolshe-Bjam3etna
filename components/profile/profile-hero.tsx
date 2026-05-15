@@ -27,6 +27,7 @@ type ProfileHeroProps = {
   onOpenExploreTab: (
     tab: "services" | "marketplace" | "exchange" | "events",
   ) => void;
+  showCoordinatorAction?: boolean;
   showAdminAction?: boolean;
   onOpenAdmin: () => void;
   onOpenSettings: () => void;
@@ -37,6 +38,7 @@ type ProfileHeroProps = {
 export function ProfileHero({
   topInset,
   summary,
+  showCoordinatorAction = false,
   showAdminAction = false,
   onOpenAdmin,
   onOpenSettings,
@@ -54,11 +56,13 @@ export function ProfileHero({
         <View style={styles.heroDotThree} />
 
         <View style={[styles.heroActions, { paddingTop: topInset + 4 }]}>
-          <ProfileActionChip
-            label="الفعاليات"
-            icon="calendar-outline"
-            onPress={() => onOpenCoordinator()}
-          />
+          {showCoordinatorAction ? (
+            <ProfileActionChip
+              label="الفعاليات"
+              icon="calendar-outline"
+              onPress={() => onOpenCoordinator()}
+            />
+          ) : null}
           {showAdminAction ? (
             <ProfileActionChip
               label="الإدارة"

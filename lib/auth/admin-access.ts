@@ -116,6 +116,43 @@ export function hasAdminPanelRoles(roles: string[]) {
   });
 }
 
+export function hasCoreAdminRole(roles: string[]) {
+  return roles.some((role) => {
+    const normalizedRole = normalizeRole(role);
+
+    return (
+      normalizedRole === 'admin' ||
+      normalizedRole === 'superadmin' ||
+      normalizedRole === 'administrator' ||
+      normalizedRole === 'superadministrator'
+    );
+  });
+}
+
+export function hasCoordinatorDashboardRole(roles: string[]) {
+  return roles.some((role) => {
+    const normalizedRole = normalizeRole(role);
+
+    return (
+      normalizedRole === 'coordinator' ||
+      normalizedRole === 'eventowner' ||
+      normalizedRole === 'clubowner' ||
+      normalizedRole === 'clubmanager' ||
+      normalizedRole === 'clubadmin' ||
+      normalizedRole === 'owner' ||
+      normalizedRole === 'منسق' ||
+      normalizedRole === 'مالكنادي' ||
+      normalizedRole === 'مالكالنادي' ||
+      normalizedRole === 'مالكفعالية' ||
+      normalizedRole === 'مالكالفعالية'
+    );
+  });
+}
+
+export function canAccessCoordinatorDashboard(roles: string[] = []) {
+  return hasCoreAdminRole(roles) || hasCoordinatorDashboardRole(roles);
+}
+
 export function hasSuperAdminRole(roles: string[]) {
   return roles.some((role) => {
     const normalizedRole = normalizeRole(role);
