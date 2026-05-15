@@ -35,12 +35,12 @@ export default function CompleteProfileRoute() {
 
   useEffect(() => {
     if (!user) {
-      router.navigate('/(auth)');
+      router.replace('/(auth)');
       return;
     }
 
     if (!Number.isFinite(universityId) || universityId <= 0) {
-      router.navigate('/(auth)/select-university');
+      router.replace('/(auth)/select-university');
     }
   }, [universityId, user]);
 
@@ -57,7 +57,7 @@ export default function CompleteProfileRoute() {
         <CompleteProfileFooter
           isSubmitting={completeProfileFlow.isSubmitting}
           onBack={() => {
-            router.navigate({
+            router.replace({
               pathname: '/(auth)/select-university',
               params: { selectedId: String(universityId) },
             });
