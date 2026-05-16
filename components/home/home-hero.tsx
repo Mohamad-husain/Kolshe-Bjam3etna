@@ -5,7 +5,6 @@ import { AppLogoBadge } from '@/components/app-logo-badge';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 type HomeHeroProps = {
-  universityNumber: string;
   universityName: string;
   fullName: string;
   search: string;
@@ -13,7 +12,6 @@ type HomeHeroProps = {
 };
 
 export function HomeHero({
-  universityNumber,
   universityName,
   fullName,
   search,
@@ -34,8 +32,6 @@ export function HomeHero({
             <View style={styles.brandTxt}>
               <Text style={styles.app}>كلشي بجامعتا</Text>
               <View style={styles.meta}>
-                {universityNumber ? <Text style={styles.metaMuted}>{universityNumber}</Text> : null}
-                {universityNumber ? <Text style={styles.metaDot}>•</Text> : null}
                 <Text style={styles.metaStrong}>{universityName}</Text>
               </View>
             </View>
@@ -102,12 +98,6 @@ const styles = StyleSheet.create({
   },
   meta: {
     flexDirection: 'row-reverse', alignItems: 'center', gap: 6
-  },
-  metaMuted: {
-    color: 'rgba(255,255,255,0.55)', fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.medium
-  },
-  metaDot: {
-    color: 'rgba(255,255,255,0.28)', fontSize: FontSize.x11
   },
   metaStrong: {
     color: 'rgba(191,219,254,0.9)', fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.semibold

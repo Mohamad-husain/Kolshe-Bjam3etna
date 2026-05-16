@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-
 import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export function HomeSectionHeader({

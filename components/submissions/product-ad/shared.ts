@@ -18,7 +18,7 @@ export type ProductAdConditionOption = {
 };
 
 export const PRODUCT_AD_ACCENT = SemanticColors.orange;
-export const PRODUCT_AD_CURRENCY = 'د.أ';
+export const PRODUCT_AD_CURRENCY = 'شيقل';
 export const PRODUCT_AD_TITLE_MIN_LENGTH = 4;
 export const PRODUCT_AD_DESCRIPTION_MIN_LENGTH = 15;
 export const PRODUCT_AD_MAX_PHOTOS = 5;

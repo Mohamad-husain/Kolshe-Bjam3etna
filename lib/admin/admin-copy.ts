@@ -50,8 +50,8 @@ export const adminActionText = {
 };
 
 export const adminCopy = {
-  priceMonthly: '15 د.ا',
-  priceYearly: '120 د.ا',
+  priceMonthly: '15 شيقل',
+  priceYearly: '120 شيقل',
   adminAvatarFallback: 'ع',
   clubAvatarFallback: 'ن',
 };

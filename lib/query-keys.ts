@@ -1,8 +1,4 @@
 export const queryKeys = {
-  home: {
-    news: ['home', 'news'] as const,
-    partnerOffers: ['home', 'partner-offers'] as const,
-  },
   auth: {
     user: ['auth', 'user'] as const,
     profile: ['auth', 'profile'] as const,

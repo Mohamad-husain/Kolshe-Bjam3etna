@@ -200,7 +200,7 @@ function formatCurrency(value: number | null, suffix = '') {
     return undefined;
   }
 
-  return `${value} د.أ${suffix}`;
+  return `${value} شيقل${suffix}`;
 }
 
 function formatCondition(condition: string | null) {

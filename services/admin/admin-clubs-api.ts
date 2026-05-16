@@ -93,7 +93,7 @@ function normalizeClubStatus(record: ApiRecord, expiresAt: string): AdminClubSta
 }
 
 function buildPriceLabel(type: AdminClubSubscriptionType) {
-  return type === 'monthly' ? '15 د.ا' : '120 د.ا';
+  return type === 'monthly' ? '15 شيقل' : '120 شيقل';
 }
 
 function mapClub(record: ApiRecord): AdminClubItem {
