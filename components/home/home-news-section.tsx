@@ -1,10 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View, type ViewProps } from 'react-native';
-
 import type { NewsItem } from '@/services/news-api';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
-
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';
 import { newsEmoji } from './home-utils';
 

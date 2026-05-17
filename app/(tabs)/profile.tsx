@@ -37,6 +37,10 @@ import {
   useMySwapAdsQuery,
   useOutgoingOffersQuery,
 } from '@/hooks/queries/use-profile-queries';
+import {
+  hasCoordinatorDashboardRole,
+  hasCoreAdminRole,
+} from '@/lib/auth/admin-access';
 import { formatStudyYearLabel } from '@/lib/edit-profile/edit-profile-config';
 import type { IncomingOffer } from '@/services/profile-api';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
@@ -336,7 +340,10 @@ export default function ProfileRoute() {
               avatarColor: getAvatarColor(fullName),
             }}
             onOpenCoordinator={openCoordinator}
-            showAdminAction={Boolean(user?.canAccessAdmin)}
+            showCoordinatorAction={hasCoordinatorDashboardRole(
+              user?.roles ?? [],
+            )}
+            showAdminAction={hasCoreAdminRole(user?.roles ?? [])}
             onOpenAdmin={() => router.push("/admin-dashboard")}
             onOpenSettings={() => router.push("/settings")}
             onEditProfile={() =>

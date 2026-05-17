@@ -155,8 +155,8 @@ export function AdminDashboardDialogs({ adminDashboard }: AdminDashboardProps) {
               value={renewType}
               onChange={setRenewType}
               options={[
-                { value: 'monthly', label: 'شهري - 15 د.ا', accent: theme.primary },
-                { value: 'yearly', label: 'سنوي - 120 د.ا', accent: theme.primary },
+                { value: 'monthly', label: 'شهري - 15 شيقل', accent: theme.primary },
+                { value: 'yearly', label: 'سنوي - 120 شيقل', accent: theme.primary },
               ]}
             />
           </AdminCard>

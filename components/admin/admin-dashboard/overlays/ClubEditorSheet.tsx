@@ -147,8 +147,8 @@ export function ClubEditorSheet({ adminDashboard }: AdminDashboardProps) {
               value={value}
               onChange={(nextValue: AdminClubSubscriptionType) => onChange(nextValue)}
               options={[
-                { value: 'monthly', label: 'شهري - 15 د.ا', accent: theme.primary },
-                { value: 'yearly', label: 'سنوي - 120 د.ا', accent: theme.primary },
+                { value: 'monthly', label: 'شهري - 15 شيقل', accent: theme.primary },
+                { value: 'yearly', label: 'سنوي - 120 شيقل', accent: theme.primary },
               ]}
             />
           )}

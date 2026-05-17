@@ -18,7 +18,7 @@ export function hasText(value: string, search: string) {
 
 export function price(value: number, suffix = '') {
   const text = Number.isInteger(value) ? `${value}` : value.toFixed(2).replace(/\.00$/, '');
-  return `${text} د.أ${suffix}`;
+  return `${text} شيقل${suffix}`;
 }
 
 export function serviceAccent(category: string) {

@@ -2,17 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View, type LayoutChangeEvent, } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { HomeAdsSection } from '@/components/home/home-ads-section';
 import { HomeEventsSection } from '@/components/home/home-events-section';
 import { HomeHero } from '@/components/home/home-hero';
@@ -24,11 +15,7 @@ import type { ExploreTab, SectionKey } from '@/components/home/home-types';
 import { hasText } from '@/components/home/home-utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useProfileQuery } from '@/hooks/queries/use-auth-queries';
-import {
-  getCachedHomeDataFromSQLite,
-  syncHomeDataFromApiToSQLite,
-  type HomeData,
-} from '@/services/home-sqlite';
+import { getCachedHomeDataFromSQLite, syncHomeDataFromApiToSQLite, type HomeData, } from '@/services/home-sqlite';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
 import { Colors } from '@/styles/ui-theme';
@@ -116,7 +103,6 @@ export default function HomeRoute() {
   const ticker = news[0] ?? homeData.news[0] ?? null;
   const showOffers = showInitialLoading || offers.length > 0;
   const universityName = profileQuery.data?.universityName?.trim() || 'المجتمع الجامعي';
-  const universityNumber = profileQuery.data?.universityNumber?.trim() || '';
   const fullName = profileQuery.data?.fullName?.trim() || user?.name || '';
   const scrollBottomPadding = insets.bottom + 118;
   const fabBottom = insets.bottom + 86;
@@ -168,7 +154,6 @@ export default function HomeRoute() {
           showsVerticalScrollIndicator={false}
         >
           <HomeHero
-            universityNumber={universityNumber}
             universityName={universityName}
             fullName={fullName}
             search={search}

@@ -304,7 +304,7 @@ export const adminClubsFixture: AdminClubItem[] = [
     status: 'active',
     startedAt: '2026-01-01',
     expiresAt: '2026-12-31',
-    priceLabel: '120 د.ا',
+    priceLabel: '120 شيقل',
     ...buildAvatar('نادي البرمجة'),
   },
   {
@@ -317,7 +317,7 @@ export const adminClubsFixture: AdminClubItem[] = [
     status: 'expiring',
     startedAt: '2026-02-01',
     expiresAt: '2026-03-05',
-    priceLabel: '15 د.ا',
+    priceLabel: '15 شيقل',
     ...buildAvatar('نادي ريادة الأعمال'),
   },
   {
@@ -330,7 +330,7 @@ export const adminClubsFixture: AdminClubItem[] = [
     status: 'expired',
     startedAt: '2026-01-10',
     expiresAt: '2026-02-10',
-    priceLabel: '15 د.ا',
+    priceLabel: '15 شيقل',
     ...buildAvatar('نادي الفنون'),
   },
   {
@@ -343,7 +343,7 @@ export const adminClubsFixture: AdminClubItem[] = [
     status: 'active',
     startedAt: '2026-01-15',
     expiresAt: '2027-01-15',
-    priceLabel: '120 د.ا',
+    priceLabel: '120 شيقل',
     ...buildAvatar('مجلس الطلبة'),
   },
 ];
