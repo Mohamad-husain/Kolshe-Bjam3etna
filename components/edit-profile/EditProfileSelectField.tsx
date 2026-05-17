@@ -5,7 +5,7 @@ import {
   getAdminEditProfileFocusShadow,
   getAdminEditProfileShadow,
   type AdminEditProfileTheme,
-} from '@/lib/edit-profile-theme';
+} from '@/lib/edit-profile/edit-profile-theme';
 import type { AdminEditProfileOption } from '@/types/edit-profile';
 import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 

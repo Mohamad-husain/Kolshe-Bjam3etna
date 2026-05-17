@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { adminEditProfileTabs } from '@/lib/edit-profile-config';
-import type { AdminEditProfileTheme } from '@/lib/edit-profile-theme';
+import { adminEditProfileTabs } from '@/lib/edit-profile/edit-profile-config';
+import type { AdminEditProfileTheme } from '@/lib/edit-profile/edit-profile-theme';
 import type { AdminEditProfileTab } from '@/types/edit-profile';
 import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 

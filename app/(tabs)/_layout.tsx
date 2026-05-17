@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Redirect, Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
+import { useEffect } from 'react';
 
 import { BottomNavigation, type Screen } from '@/components/bottom-navigation';
 import { useAuth } from '@/contexts/auth-context';
@@ -20,12 +21,23 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 export default function TabsLayout() {
     const { user } = useAuth();
 
+    useEffect(() => {
+        if (!user) {
+            router.navigate('/(auth)');
+            return;
+        }
+
+        if (!user.isProfileCompleted) {
+            router.navigate('/(auth)/select-university');
+        }
+    }, [user]);
+
     if (!user) {
-        return <Redirect href="/(auth)" />;
+        return null;
     }
 
     if (!user.isProfileCompleted) {
-        return <Redirect href="/(auth)/select-university" />;
+        return null;
     }
 
     return (
