@@ -46,9 +46,6 @@ function formatEventType(type: string): string {
 function mapToEventCard(item: ApiEvent): EventCardData {
   const { date, time } = formatDateTime(item.dateTimeUtc);
   const eventType = formatEventType(item.type);
-  //logs عشان نشوف الصورة مالها
-  // console.log("event keys:", Object.keys(item));
-  // console.log("event item:", item);
 
   return {
     id: String(item.id),

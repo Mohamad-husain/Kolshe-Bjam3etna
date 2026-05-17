@@ -37,13 +37,15 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
   const { search, searchError, handleSearch } = useSearchInput();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useMarketplaceQuery();
-
+  //
   const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
     return items.filter((item) => {
       const matchSearch =
-        search === "" ||
-        item.title.includes(search) ||
-        item.description.includes(search);
+        normalizedSearch === "" ||
+        item.title.toLowerCase().includes(normalizedSearch) ||
+        item.description.toLowerCase().includes(normalizedSearch);
       const matchCategory =
         selectedCategory === "all" || item.category === selectedCategory;
 
