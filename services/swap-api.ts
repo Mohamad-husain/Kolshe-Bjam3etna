@@ -2,7 +2,12 @@ import { apiClient, getApiErrorMessage } from "./http-client";
 import { ExchangeCardData } from "@/types/explore";
 import { toAbsoluteImageUrl } from "./media";
 
-export type SwapAdCondition = "LikeNew" | "Excellent" | "VeryGood" | "Good" | "Acceptable";
+export type SwapAdCondition =
+  | "LikeNew"
+  | "Excellent"
+  | "VeryGood"
+  | "Good"
+  | "Acceptable";
 
 type ApiSwapAd = {
   id: number;
@@ -61,8 +66,8 @@ function mapToExchangeCard(item: ApiSwapAd): ExchangeCardData {
     title: item.description,
     description: item.description,
     category: item.categoryName,
-    have: item.offerTitle, // ← أملك
-    want: item.wantedTitle, // ← أريد
+    have: item.offerTitle,
+    want: item.wantedTitle,
     owner: {
       name: item.user.fullName,
       initials: item.user.fullName.charAt(0),
@@ -75,7 +80,11 @@ function trimValue(value: string) {
   return value.trim();
 }
 
-function assertMinTrimmedLength(value: string, minLength: number, errorMessage: string) {
+function assertMinTrimmedLength(
+  value: string,
+  minLength: number,
+  errorMessage: string,
+) {
   if (trimValue(value).length < minLength) {
     throw new Error(errorMessage);
   }
@@ -115,7 +124,11 @@ function createFormDataImage(photo: SwapAdPhotoInput) {
   } as never;
 }
 
-function appendSwapImage(formData: FormData, photo: SwapAdPhotoInput, index: number) {
+function appendSwapImage(
+  formData: FormData,
+  photo: SwapAdPhotoInput,
+  index: number,
+) {
   formData.append("Images", createFormDataImage(photo));
   formData.append("Photos", createFormDataImage(photo));
 
@@ -145,7 +158,10 @@ export async function createSwapAd(input: CreateSwapAdInput) {
   const description = trimValue(input.description);
   const categoryName = trimValue(input.categoryName ?? "");
   const conditionLabel = trimValue(input.conditionLabel ?? "");
-  const categoryId = normalizePositiveNumber(input.categoryId, SWAP_AD_ERRORS.categoryRequired);
+  const categoryId = normalizePositiveNumber(
+    input.categoryId,
+    SWAP_AD_ERRORS.categoryRequired,
+  );
   const condition = normalizeCondition(input.condition);
 
   assertMinTrimmedLength(offerTitle, 3, SWAP_AD_ERRORS.offerRequired);
@@ -167,14 +183,20 @@ export async function createSwapAd(input: CreateSwapAdInput) {
   formData.append("Description", description);
   if (categoryName) formData.append("CategoryName", categoryName);
   if (conditionLabel) formData.append("ConditionLabel", conditionLabel);
-  input.photos.slice(0, 5).forEach((photo, index) => appendSwapImage(formData, photo, index));
+  input.photos
+    .slice(0, 5)
+    .forEach((photo, index) => appendSwapImage(formData, photo, index));
 
   try {
-    const { data } = await apiClient.post<ApiCreateSwapAdResponse>("/api/SwapAds", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
+    const { data } = await apiClient.post<ApiCreateSwapAdResponse>(
+      "/api/SwapAds",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       },
-    });
+    );
 
     return data.message ?? null;
   } catch (error) {
