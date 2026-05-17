@@ -27,7 +27,6 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
     >
       <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
 
-      {/* Badges */}
       <View style={styles.badges}>
         <View style={[styles.badge, { backgroundColor: accent.strongBg }]}>
           <Text style={[styles.badgeText, { color: accent.color }]}>
@@ -68,15 +67,12 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
         )}
       </View>
 
-      {/* Title */}
       <Text style={styles.title}>{data.title}</Text>
 
-      {/* Description */}
       <Text style={styles.description} numberOfLines={2}>
         {data.description}
       </Text>
 
-      {/* Footer */}
       <View style={styles.footer}>
         {/* Price */}
         <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
@@ -85,7 +81,6 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
           </Text>
         </View>
 
-        {/* Deadline */}
         <View style={styles.deadlineBox}>
           <Ionicons
             name="time-outline"

@@ -7,7 +7,7 @@ export function useSearchInput() {
   const handleSearch = (text: string) => {
     setSearch(text);
 
-    if (text.length > 0 && text.trim() === "") {
+    if (!text.trim() && text.length > 0) {
       setSearchError("لا يمكن البحث بمسافات فارغة");
     } else {
       setSearchError("");

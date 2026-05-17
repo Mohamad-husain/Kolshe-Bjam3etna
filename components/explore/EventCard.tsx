@@ -17,7 +17,6 @@ interface EventCardProps {
 }
 
 export function EventCard({ data, onPress }: EventCardProps) {
-  // devide by zero guard for capacity progress calculation
   const hasValidCapacity = data.maxCount > 0;
   const hasImage = Boolean(data.imageUrl);
   const progress = hasValidCapacity
