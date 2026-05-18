@@ -20,6 +20,7 @@ interface ExchangeCardProps {
 export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
   const accent = getCategoryAccent(data.category);
   const hasImage = Boolean(data.imageUrl);
+  const ownerImageUrl = data.owner.imageUrl?.trim();
 
   return (
     <Pressable
@@ -81,7 +82,15 @@ export function ExchangeCard({ data, onPress }: ExchangeCardProps) {
         <View style={styles.owner}>
           <Text style={styles.ownerName}>{data.owner.name}</Text>
           <View style={[styles.avatar, { backgroundColor: accent.color }]}>
-            <Text style={styles.avatarText}>{data.owner.initials}</Text>
+            {ownerImageUrl ? (
+              <Image
+                source={{ uri: ownerImageUrl }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.avatarText}>{data.owner.initials}</Text>
+            )}
           </View>
         </View>
       </View>
@@ -226,6 +235,11 @@ const styles = StyleSheet.create({
     borderRadius: Dimensions.radiusFull,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   avatarText: {
     fontSize: FontSize.sm,
