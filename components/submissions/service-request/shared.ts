@@ -31,7 +31,6 @@ export const SERVICE_REQUEST_CATEGORIES: ServiceRequestCategoryOption[] = [
   { id: 4, label: 'صيانة', icon: 'construct-outline', color: '#d97706' },
   { id: 5, label: 'تصوير', icon: 'camera-outline', color: '#059669' },
   { id: 6, label: 'موسيقى وفنون', icon: 'musical-notes-outline', color: '#dc2626' },
-  { id: 7, label: 'أخرى', icon: 'ellipsis-horizontal-outline', color: SemanticColors.lightBlue },
 ];
 
 export const SERVICE_REQUEST_BUDGET_PRESETS = [

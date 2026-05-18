@@ -4,6 +4,10 @@ import { Platform } from 'react-native';
 import { hasAdminPanelRoles } from '@/lib/auth/admin-access';
 
 const AUTH_SESSION_KEY = 'auth.session';
+const GLOBAL_AUTH_TOKEN_KEY = '__kolsheAuthToken';
+const IOS_SECURE_STORE_OPTIONS = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+} as const;
 
 export type User = {
   id: string;
@@ -22,63 +26,89 @@ export type AuthSession = {
 export type PersistedAuthSession = AuthSession;
 
 type AuthSessionInvalidationListener = () => void;
-
-const authTokenHost = globalThis as typeof globalThis & {
-  __kolsheAuthToken?: string | null;
+type StorageOperation = () => Promise<void>;
+type GlobalAuthTokenHost = typeof globalThis & {
+  [GLOBAL_AUTH_TOKEN_KEY]?: string | null;
 };
 
-let authToken: string | null = normalizeToken(authTokenHost.__kolsheAuthToken);
-let secureStoreAvailability: Promise<boolean> | null = null;
-let storageOperationQueue: Promise<void> = Promise.resolve();
-const authSessionInvalidationListeners = new Set<AuthSessionInvalidationListener>();
+const globalAuthTokenHost = globalThis as GlobalAuthTokenHost;
+const invalidationListeners = new Set<AuthSessionInvalidationListener>();
 
-function normalizeToken(value: unknown) {
+let currentAuthToken: string | null = readGlobalAuthToken();
+let secureStoreAvailabilityPromise: Promise<boolean> | null = null;
+let storageQueue: Promise<void> = Promise.resolve();
+
+function ignoreStorageResult() {
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function normalizeToken(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-function getSecureStoreOptions() {
-  return Platform.OS === 'ios'
-    ? { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }
-    : undefined;
+function readGlobalAuthToken() {
+  return normalizeToken(globalAuthTokenHost[GLOBAL_AUTH_TOKEN_KEY]);
 }
 
-function enqueueStorageOperation(operation: () => Promise<void>) {
-  const nextOperation = storageOperationQueue.then(operation, operation);
+function writeGlobalAuthToken(token: string | null) {
+  globalAuthTokenHost[GLOBAL_AUTH_TOKEN_KEY] = token;
+}
 
-  storageOperationQueue = nextOperation.then(
-    () => undefined,
-    () => undefined,
-  );
+function getSecureStoreOptions() {
+  return Platform.OS === 'ios' ? IOS_SECURE_STORE_OPTIONS : undefined;
+}
 
-  return nextOperation;
+function enqueueStorageOperation(operation: StorageOperation) {
+  const queuedOperation = storageQueue.then(operation, operation);
+
+  storageQueue = queuedOperation.then(ignoreStorageResult, ignoreStorageResult);
+
+  return queuedOperation;
 }
 
 async function isSecureStoreAvailable() {
-  if (!secureStoreAvailability) {
-    secureStoreAvailability = SecureStore.isAvailableAsync().catch(() => false);
-  }
-
-  return secureStoreAvailability;
+  secureStoreAvailabilityPromise ??= SecureStore.isAvailableAsync().catch(() => false);
+  return secureStoreAvailabilityPromise;
 }
 
-async function getStorageItem(key: string) {
-  return (await isSecureStoreAvailable()) ? SecureStore.getItemAsync(key) : null;
+async function readStoredSessionValue() {
+  if (!(await isSecureStoreAvailable())) {
+    return null;
+  }
+
+  return SecureStore.getItemAsync(AUTH_SESSION_KEY);
 }
 
-async function setStorageItem(key: string, value: string) {
-  if (await isSecureStoreAvailable()) {
-    await SecureStore.setItemAsync(key, value, getSecureStoreOptions());
+async function writeStoredSessionValue(session: AuthSession) {
+  if (!(await isSecureStoreAvailable())) {
+    return;
   }
+
+  await SecureStore.setItemAsync(
+    AUTH_SESSION_KEY,
+    JSON.stringify(session),
+    getSecureStoreOptions(),
+  );
 }
 
-async function deleteStorageItem(key: string) {
-  if (await isSecureStoreAvailable()) {
-    await SecureStore.deleteItemAsync(key);
+async function deleteStoredSessionValue() {
+  if (!(await isSecureStoreAvailable())) {
+    return;
   }
+
+  await SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
 }
 
 async function deleteStoredAuthSession() {
-  await enqueueStorageOperation(() => deleteStorageItem(AUTH_SESSION_KEY));
+  await enqueueStorageOperation(deleteStoredSessionValue);
 }
 
 async function deleteStoredAuthSessionSafely() {
@@ -89,94 +119,97 @@ async function deleteStoredAuthSessionSafely() {
   }
 }
 
+function normalizeStoredRoles(value: unknown) {
+  return Array.isArray(value) ? value.filter(isString) : [];
+}
+
 function normalizeStoredUser(value: unknown): User | null {
-  if (!value || typeof value !== 'object') {
+  if (!isRecord(value)) {
     return null;
   }
 
-  const candidate = value as Partial<User> & {
-    roles?: unknown;
-    canAccessAdmin?: unknown;
-  };
+  const {
+    canAccessAdmin,
+    email,
+    id,
+    isProfileCompleted,
+    name,
+    roles: rawRoles,
+  } = value;
 
   if (
-    typeof candidate.id !== 'string' ||
-    typeof candidate.name !== 'string' ||
-    typeof candidate.email !== 'string' ||
-    typeof candidate.isProfileCompleted !== 'boolean'
+    !isString(id) ||
+    !isString(name) ||
+    !isString(email) ||
+    typeof isProfileCompleted !== 'boolean'
   ) {
     return null;
   }
 
-  const roles = Array.isArray(candidate.roles)
-    ? candidate.roles.filter((role): role is string => typeof role === 'string')
-    : [];
+  const roles = normalizeStoredRoles(rawRoles);
 
   return {
-    id: candidate.id,
-    name: candidate.name,
-    email: candidate.email,
-    isProfileCompleted: candidate.isProfileCompleted,
+    id,
+    name,
+    email,
+    isProfileCompleted,
     roles,
     canAccessAdmin:
-      typeof candidate.canAccessAdmin === 'boolean'
-        ? candidate.canAccessAdmin
+      typeof canAccessAdmin === 'boolean'
+        ? canAccessAdmin
         : hasAdminPanelRoles(roles),
   };
 }
 
-function parseStoredAuthSession(value: unknown): AuthSession | null {
-  if (!value || typeof value !== 'object') {
+function normalizeAuthSession(value: unknown): AuthSession | null {
+  if (!isRecord(value)) {
     return null;
   }
 
-  const candidate = value as {
-    token?: unknown;
-    user?: unknown;
-  };
-  const token = normalizeToken(candidate.token);
-  const user = normalizeStoredUser(candidate.user);
+  const token = normalizeToken(value.token);
+  const user = normalizeStoredUser(value.user);
 
   return token && user ? { token, user } : null;
 }
 
 export function getAuthToken() {
-  const persistedToken = normalizeToken(authTokenHost.__kolsheAuthToken);
+  const globalToken = readGlobalAuthToken();
 
-  if (!authToken && persistedToken) {
-    authToken = persistedToken;
+  if (!currentAuthToken && globalToken) {
+    currentAuthToken = globalToken;
   }
 
-  return authToken ?? persistedToken;
+  return currentAuthToken ?? globalToken;
 }
 
 export function setAuthToken(token: string | null) {
   const normalizedToken = normalizeToken(token) ?? null;
-  authToken = normalizedToken;
-  authTokenHost.__kolsheAuthToken = normalizedToken;
+
+  currentAuthToken = normalizedToken;
+  writeGlobalAuthToken(normalizedToken);
 }
 
 export function subscribeToAuthSessionInvalidation(
   listener: AuthSessionInvalidationListener,
 ) {
-  authSessionInvalidationListeners.add(listener);
+  invalidationListeners.add(listener);
 
   return () => {
-    authSessionInvalidationListeners.delete(listener);
+    invalidationListeners.delete(listener);
   };
 }
 
 export async function loadStoredAuthSession(): Promise<AuthSession | null> {
-  await storageOperationQueue;
+  await storageQueue;
 
   try {
-    const storedValue = await getStorageItem(AUTH_SESSION_KEY);
+    const storedValue = await readStoredSessionValue();
 
     if (!storedValue) {
       return null;
     }
 
-    const session = parseStoredAuthSession(JSON.parse(storedValue));
+    const session = normalizeAuthSession(JSON.parse(storedValue));
 
     if (session) {
       return session;
@@ -196,7 +229,7 @@ export async function restoreAuthSession(): Promise<AuthSession | null> {
 }
 
 export async function saveStoredAuthSession(session: AuthSession) {
-  const normalizedSession = parseStoredAuthSession(session);
+  const normalizedSession = normalizeAuthSession(session);
 
   if (!normalizedSession) {
     await clearAuthSession();
@@ -207,7 +240,7 @@ export async function saveStoredAuthSession(session: AuthSession) {
 
   try {
     await enqueueStorageOperation(() =>
-      setStorageItem(AUTH_SESSION_KEY, JSON.stringify(normalizedSession)),
+      writeStoredSessionValue(normalizedSession),
     );
   } catch {
     // Keep the in-memory token active even if persistence fails on the device.
@@ -233,7 +266,7 @@ export async function clearAuthSession() {
 export async function invalidateAuthSession() {
   await clearAuthSession();
 
-  for (const listener of authSessionInvalidationListeners) {
+  for (const listener of invalidationListeners) {
     listener();
   }
 }
