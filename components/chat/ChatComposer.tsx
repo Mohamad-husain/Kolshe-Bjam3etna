@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from "react-native"
+import { useCallback, useEffect, useState } from "react"
+import { Alert, Linking, StyleSheet, TextInput, TouchableOpacity, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as DocumentPicker from "expo-document-picker"
 import * as ImagePicker from "expo-image-picker"
@@ -111,37 +111,43 @@ const getChatComposerErrorMessage = (
     fallbackMessage: string
 ) => error?.response?.data?.message || error?.message || fallbackMessage
 
-const requestChatComposerCameraPermission = async () => {
-    try {
-        const permission = await ImagePicker.requestCameraPermissionsAsync()
+const openChatComposerSettings = () => {
+    void Linking.openSettings().catch(() => undefined)
+}
 
-        if (!permission.granted) {
-            Alert.alert(
-                "صلاحية مطلوبة",
-                "يرجى السماح بالوصول إلى الكاميرا لالتقاط صورة وإرسالها."
-            )
-            return false
-        }
-
-        return true
-    } catch (error) {
-        Alert.alert(
-            "فشل طلب صلاحية الكاميرا",
-            error instanceof Error ? error.message : "تعذر طلب صلاحية الكاميرا"
-        )
-        return false
-    }
+const showPermissionSettingsAlert = (message: string) => {
+    Alert.alert("صلاحية مطلوبة", message, [
+        {
+            text: "إلغاء",
+            style: "cancel",
+        },
+        {
+            text: "الإعدادات",
+            onPress: openChatComposerSettings,
+        },
+    ])
 }
 
 const pickChatComposerImage = async (text: string) => {
     try {
+        const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync()
+
+        if (!currentPermission.granted && !currentPermission.canAskAgain) {
+            showPermissionSettingsAlert(
+                "يرجى السماح بالوصول إلى الصور لاختيار صورة وإرسالها."
+            )
+            return null
+        }
+
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
 
         if (!permission.granted) {
-            Alert.alert(
-                "صلاحية مطلوبة",
-                "يرجى السماح بالوصول إلى الصور لاختيار صورة وإرسالها."
-            )
+            if (!permission.canAskAgain) {
+                showPermissionSettingsAlert(
+                    "يرجى السماح بالوصول إلى الصور لاختيار صورة وإرسالها."
+                )
+            }
+
             return null
         }
 
@@ -166,12 +172,6 @@ const pickChatComposerImage = async (text: string) => {
 }
 
 const captureChatComposerImage = async (text: string) => {
-    const hasPermission = await requestChatComposerCameraPermission()
-
-    if (!hasPermission) {
-        return null
-    }
-
     try {
         const result = await ImagePicker.launchCameraAsync(CAMERA_OPTIONS)
 
@@ -237,44 +237,114 @@ type Props = {
 
 export default function ChatComposer({ conversationId }: Props) {
     const [text, setText] = useState("")
+    const [pendingCameraText, setPendingCameraText] = useState<string | null>(null)
     const sendChatMessageMutation = useSendChatMessage()
     const isSending = sendChatMessageMutation.isPending
     const trimmedText = text.trim()
     const hasText = trimmedText.length > 0
 
-    const submitMessage = ({
-        text: nextText,
-        image,
-        file,
-        errorTitle,
-        fallbackMessage,
-    }: ChatComposerSubmitPayload) => {
-        const numericConversationId = getChatComposerConversationId(conversationId)
+    const submitMessage = useCallback(
+        ({
+            text: nextText,
+            image,
+            file,
+            errorTitle,
+            fallbackMessage,
+        }: ChatComposerSubmitPayload) => {
+            const numericConversationId = getChatComposerConversationId(conversationId)
 
-        if (!numericConversationId) {
+            if (!numericConversationId) {
+                return
+            }
+
+            sendChatMessageMutation.mutate(
+                {
+                    conversationId: numericConversationId,
+                    text: nextText?.trim() || undefined,
+                    image,
+                    file,
+                },
+                {
+                    onSuccess: () => {
+                        setText("")
+                    },
+                    onError: (error: ChatComposerMutationError) => {
+                        Alert.alert(
+                            errorTitle,
+                            getChatComposerErrorMessage(error, fallbackMessage)
+                        )
+                    },
+                }
+            )
+        },
+        [conversationId, sendChatMessageMutation]
+    )
+
+    useEffect(() => {
+        if (pendingCameraText === null) {
             return
         }
 
-        sendChatMessageMutation.mutate(
-            {
-                conversationId: numericConversationId,
-                text: nextText?.trim() || undefined,
-                image,
-                file,
-            },
-            {
-                onSuccess: () => {
-                    setText("")
-                },
-                onError: (error: ChatComposerMutationError) => {
+        let isCancelled = false
+
+        const resolveCameraCapture = async () => {
+            try {
+                const currentPermission = await ImagePicker.getCameraPermissionsAsync()
+
+                if (isCancelled) {
+                    return
+                }
+
+                let permission = currentPermission
+
+                if (!currentPermission.granted && currentPermission.canAskAgain) {
+                    permission = await ImagePicker.requestCameraPermissionsAsync()
+                }
+
+                if (isCancelled) {
+                    return
+                }
+
+                if (!permission.granted) {
+                    if (!permission.canAskAgain) {
+                        showPermissionSettingsAlert(
+                            "يرجى السماح بالوصول إلى الكاميرا لالتقاط صورة وإرسالها."
+                        )
+                    }
+
+                    setPendingCameraText(null)
+                    return
+                }
+
+                const nextText = pendingCameraText
+                const nextPayload = await captureChatComposerImage(nextText)
+
+                if (isCancelled) {
+                    return
+                }
+
+                if (nextPayload) {
+                    submitMessage(nextPayload)
+                }
+
+                setPendingCameraText(null)
+            } catch (error) {
+                if (!isCancelled) {
+                    setPendingCameraText(null)
                     Alert.alert(
-                        errorTitle,
-                        getChatComposerErrorMessage(error, fallbackMessage)
+                        "فشل طلب صلاحية الكاميرا",
+                        error instanceof Error ? error.message : "تعذر طلب صلاحية الكاميرا"
                     )
-                },
+                }
             }
-        )
-    }
+        }
+
+        void resolveCameraCapture()
+
+        return () => {
+            isCancelled = true
+        }
+    }, [pendingCameraText, submitMessage])
 
     const handleSend = () => {
         if (!trimmedText) {
@@ -296,12 +366,8 @@ export default function ChatComposer({ conversationId }: Props) {
         }
     }
 
-    const handleCaptureImage = async () => {
-        const nextPayload = await captureChatComposerImage(trimmedText)
-
-        if (nextPayload) {
-            submitMessage(nextPayload)
-        }
+    const handleCaptureImage = () => {
+        setPendingCameraText(trimmedText)
     }
 
     const handlePickFile = async () => {
