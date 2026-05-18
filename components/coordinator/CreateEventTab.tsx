@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   useCreateEventMutation,
   useUpdateEventMutation,
@@ -29,13 +29,9 @@ import {
   Spacing,
 } from "@/styles/ui-theme";
 import type { CoordinatorEvent } from "@/services/coordinator-api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type AgendaItem = {
-  startTime: string;
-  endTime: string;
-  title: string;
-};
+type AgendaItem = { startTime: string; endTime: string; title: string };
 
 type FormValues = {
   title: string;
@@ -48,11 +44,7 @@ type FormValues = {
   content: string;
   speakers: string;
   agenda: AgendaItem[];
-  coverImage?: {
-    uri: string;
-    name: string;
-    type: string;
-  };
+  coverImage?: { uri: string; name: string; type: string };
 };
 
 type CreateEventTabProps = {
@@ -69,13 +61,14 @@ const EVENT_TYPES = [
 
 export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
   const isEditing = !!editingEvent;
+  const insets = useSafeAreaInsets();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
-  const [agendaStartTimePickers, setAgendaStartTimePickers] = useState<
+  const [agendaStartPickers, setAgendaStartPickers] = useState<
     Record<number, boolean>
   >({});
-  const [agendaEndTimePickers, setAgendaEndTimePickers] = useState<
+  const [agendaEndPickers, setAgendaEndPickers] = useState<
     Record<number, boolean>
   >({});
 
@@ -84,6 +77,21 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
   const { mutate: updateEvent, isPending: isUpdating } =
     useUpdateEventMutation();
   const isPending = isCreating || isUpdating;
+
+  useEffect(() => {
+    void (async () => {
+      if (Platform.OS !== "web") {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "إذن مطلوب",
+            "يحتاج التطبيق إذن للوصول لمكتبة الصور. فعّله من إعدادات الجهاز.",
+          );
+        }
+      }
+    })();
+  }, []);
 
   let defaultAgenda: AgendaItem[] = [];
   if (editingEvent?.agendaJson) {
@@ -115,24 +123,36 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "agenda",
-  });
+  const { fields, append, remove } = useFieldArray({ control, name: "agenda" });
 
   const pickImage = async (onChange: (value: any) => void) => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      alert("اعطي إذن للوصول للصور");
-      return;
+    if (Platform.OS !== "web") {
+      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        const { status: newStatus } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (newStatus !== "granted") {
+          Alert.alert("إذن مرفوض", "فعّل إذن الوصول للصور من إعدادات الجهاز.", [
+            { text: "حسناً" },
+          ]);
+          return;
+        }
+      }
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       quality: 0.8,
+      allowsEditing: true,
+      aspect: [16, 9],
     });
-    if (!result.canceled) {
+    if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      onChange({ uri: asset.uri, name: "cover.jpg", type: "image/jpeg" });
+      const ext = asset.uri.split(".").pop() ?? "jpg";
+      onChange({
+        uri: asset.uri,
+        name: `cover.${ext}`,
+        type: ext === "png" ? "image/png" : "image/jpeg",
+      });
     }
   };
 
@@ -146,18 +166,16 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
       Alert.alert("خطأ", "التاريخ أو الوقت غير صالح");
       return;
     }
-    const dateTimeUtc = dateTime.toISOString();
-    const agendaJson = JSON.stringify(values.agenda ?? []);
 
     const eventData = {
       title: values.title,
       type: values.type,
       location: values.location,
-      dateTimeUtc,
+      dateTimeUtc: dateTime.toISOString(),
       capacity: Number(values.capacity),
       description: values.description,
       content: values.content || values.description,
-      agendaJson,
+      agendaJson: JSON.stringify(values.agenda ?? []),
       coverImage: values.coverImage,
     };
 
@@ -169,12 +187,11 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
             Alert.alert("تم", "تم تعديل الفعالية بنجاح");
             onDone?.();
           },
-          onError: (error) => {
+          onError: (e) =>
             Alert.alert(
               "خطأ",
-              error instanceof Error ? error.message : "تعذر تعديل الفعالية",
-            );
-          },
+              e instanceof Error ? e.message : "تعذر تعديل الفعالية",
+            ),
         },
       );
     } else {
@@ -184,24 +201,30 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           reset();
           onDone?.();
         },
-        onError: (error) => {
+        onError: (e) =>
           Alert.alert(
             "خطأ",
-            error instanceof Error ? error.message : "تعذر إنشاء الفعالية",
-          );
-        },
+            e instanceof Error ? e.message : "تعذر إنشاء الفعالية",
+          ),
       });
     }
   });
 
+  const formatTime = (d: Date) =>
+    `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.keyboardView}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -219,7 +242,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 color={SemanticColors.green}
               />
               <Text style={styles.imagePickerText}>
-                {value ? "تم اختيار صورة ✓" : "أضف صورة أو بوستر للفعالية"}
+                {value ? "تم اختيار صورة " : "أضف صورة أو بوستر للفعالية"}
               </Text>
             </Pressable>
           )}
@@ -253,7 +276,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
             <View style={styles.dropdownWrapper}>
               <Pressable
                 style={[styles.input, styles.dropdownTrigger]}
-                onPress={() => setTypeDropdownOpen((prev) => !prev)}
+                onPress={() => setTypeDropdownOpen((p) => !p)}
               >
                 <Ionicons
                   name={typeDropdownOpen ? "chevron-up" : "chevron-down"}
@@ -265,16 +288,14 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                     "اختر نوع الفعالية"}
                 </Text>
               </Pressable>
-
               {typeDropdownOpen && (
                 <View style={styles.dropdownMenu}>
-                  {EVENT_TYPES.map((type, index) => (
+                  {EVENT_TYPES.map((type, i) => (
                     <Pressable
                       key={type.id}
                       style={[
                         styles.dropdownItem,
-                        index < EVENT_TYPES.length - 1 &&
-                          styles.dropdownItemBorder,
+                        i < EVENT_TYPES.length - 1 && styles.dropdownItemBorder,
                         value === type.id && styles.dropdownItemActive,
                       ]}
                       onPress={() => {
@@ -339,19 +360,9 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                       mode="time"
                       is24Hour
                       display="default"
-                      onChange={(_, selectedTime) => {
+                      onChange={(_, t) => {
                         setShowTimePicker(false);
-                        if (selectedTime) {
-                          const h = selectedTime
-                            .getHours()
-                            .toString()
-                            .padStart(2, "0");
-                          const m = selectedTime
-                            .getMinutes()
-                            .toString()
-                            .padStart(2, "0");
-                          onChange(`${h}:${m}`);
-                        }
+                        if (t) onChange(formatTime(t));
                       }}
                     />
                   )}
@@ -359,7 +370,6 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               )}
             />
           </View>
-
           <View style={styles.rowItem}>
             <Text style={styles.label}>التاريخ</Text>
             <Controller
@@ -392,11 +402,9 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                       value={value ? new Date(value) : new Date()}
                       mode="date"
                       display="default"
-                      onChange={(_, selectedDate) => {
+                      onChange={(_, d) => {
                         setShowDatePicker(false);
-                        if (selectedDate) {
-                          onChange(selectedDate.toISOString().split("T")[0]);
-                        }
+                        if (d) onChange(d.toISOString().split("T")[0]);
                       }}
                     />
                   )}
@@ -438,7 +446,6 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               )}
             />
           </View>
-
           <View style={styles.rowItem}>
             <Text style={styles.label}>المكان</Text>
             <Controller
@@ -508,7 +515,9 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           render={({ field: { onChange, value } }) => (
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder={`مثال:\nأ. محمد الأحمد — مهندس برمجيات في Google\nد. سارة نبيل — أستاذة في الجامعة الأردنية`}
+              placeholder={
+                "مثال:\nد. ينال سويسة —دكتور في جامعة النجاح الوطنية"
+              }
               placeholderTextColor={Colors.mutedForeground}
               value={value}
               onChangeText={onChange}
@@ -536,10 +545,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                     <Pressable
                       style={styles.agendaTimePicker}
                       onPress={() =>
-                        setAgendaEndTimePickers((prev) => ({
-                          ...prev,
-                          [index]: true,
-                        }))
+                        setAgendaEndPickers((p) => ({ ...p, [index]: true }))
                       }
                     >
                       <Ionicons
@@ -557,25 +563,18 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                         {value || "--:--"}
                       </Text>
                     </Pressable>
-                    {agendaEndTimePickers[index] && (
+                    {agendaEndPickers[index] && (
                       <DateTimePicker
                         value={new Date()}
                         mode="time"
                         is24Hour
                         display="default"
                         onChange={(_, t) => {
-                          setAgendaEndTimePickers((prev) => ({
-                            ...prev,
+                          setAgendaEndPickers((p) => ({
+                            ...p,
                             [index]: false,
                           }));
-                          if (t) {
-                            const h = t.getHours().toString().padStart(2, "0");
-                            const m = t
-                              .getMinutes()
-                              .toString()
-                              .padStart(2, "0");
-                            onChange(`${h}:${m}`);
-                          }
+                          if (t) onChange(formatTime(t));
                         }}
                       />
                     )}
@@ -597,10 +596,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                     <Pressable
                       style={styles.agendaTimePicker}
                       onPress={() =>
-                        setAgendaStartTimePickers((prev) => ({
-                          ...prev,
-                          [index]: true,
-                        }))
+                        setAgendaStartPickers((p) => ({ ...p, [index]: true }))
                       }
                     >
                       <Ionicons
@@ -618,25 +614,18 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                         {value || "--:--"}
                       </Text>
                     </Pressable>
-                    {agendaStartTimePickers[index] && (
+                    {agendaStartPickers[index] && (
                       <DateTimePicker
                         value={new Date()}
                         mode="time"
                         is24Hour
                         display="default"
                         onChange={(_, t) => {
-                          setAgendaStartTimePickers((prev) => ({
-                            ...prev,
+                          setAgendaStartPickers((p) => ({
+                            ...p,
                             [index]: false,
                           }));
-                          if (t) {
-                            const h = t.getHours().toString().padStart(2, "0");
-                            const m = t
-                              .getMinutes()
-                              .toString()
-                              .padStart(2, "0");
-                            onChange(`${h}:${m}`);
-                          }
+                          if (t) onChange(formatTime(t));
                         }}
                       />
                     )}
@@ -652,7 +641,6 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               </Pressable>
             </View>
 
-            {/* اسم الجلسة */}
             <Controller
               control={control}
               name={`agenda.${index}.title`}
@@ -708,9 +696,9 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
 }
 
 const styles = StyleSheet.create({
+  keyboardView: { flex: 1 },
   container: { flex: 1 },
   content: { padding: Spacing.md, paddingBottom: 100 },
-
   imagePicker: {
     backgroundColor: SemanticColors.green + "10",
     borderRadius: Dimensions.radiusCard,
@@ -728,7 +716,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.mutedForeground,
   },
-
   label: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
@@ -737,7 +724,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginBottom: Spacing.xs,
   },
-
   optionalHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -754,7 +740,6 @@ const styles = StyleSheet.create({
     borderRadius: Dimensions.radiusFull,
     overflow: "hidden",
   },
-
   input: {
     backgroundColor: "#FFFFFF",
     borderRadius: Dimensions.radiusButton,
@@ -777,7 +762,6 @@ const styles = StyleSheet.create({
     marginTop: -Spacing.sm,
     marginBottom: Spacing.sm,
   },
-
   inputWithIcon: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -796,7 +780,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.foreground,
   },
-
   pickerTrigger: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -816,7 +799,6 @@ const styles = StyleSheet.create({
     color: Colors.mutedForeground,
     textAlign: "right",
   },
-
   dropdownWrapper: { marginBottom: Spacing.md },
   dropdownTrigger: {
     flexDirection: "row-reverse",
@@ -866,10 +848,8 @@ const styles = StyleSheet.create({
     color: SemanticColors.green,
     fontWeight: FontWeight.semibold,
   },
-
   row: { flexDirection: "row-reverse", gap: Spacing.sm },
   rowItem: { flex: 1 },
-
   agendaItem: {
     backgroundColor: "#FFFFFF",
     borderRadius: Dimensions.radiusButton,
@@ -917,7 +897,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: FontWeight.bold,
   },
-
   addSessionBtn: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -936,7 +915,6 @@ const styles = StyleSheet.create({
     color: SemanticColors.green,
     fontWeight: FontWeight.semibold,
   },
-
   submitButton: {
     backgroundColor: SemanticColors.green,
     borderRadius: Dimensions.radiusButton,
