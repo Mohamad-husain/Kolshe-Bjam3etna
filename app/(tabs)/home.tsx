@@ -211,13 +211,13 @@ export default function HomeRoute() {
           </View>
         </ScrollView>
 
-        <Pressable
+        {/* <Pressable
           accessibilityLabel="المساعد الذكي"
           onPress={() => router.push('/ai-assistant')}
           style={({ pressed }) => [styles.fab, { bottom: fabBottom }, pressed && styles.pressed]}
         >
           <Ionicons name="sparkles-outline" size={23} color="#ffffff" />
-        </Pressable>
+        </Pressable> */}
       </View>
     </SafeAreaView>
   );
