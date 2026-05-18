@@ -1,6 +1,7 @@
 export type ExploreOwner = {
   name: string;
   initials: string;
+  imageUrl?: string | null;
 };
 
 export interface MarketplaceCardData {

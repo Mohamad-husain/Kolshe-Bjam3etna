@@ -17,10 +17,28 @@ type ApiSwapAd = {
   description: string;
   categoryId: number;
   categoryName: string;
+  coverImageUrl?: string | null;
+  imageUrl?: string | null;
+  photoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  images?: ApiSwapAdImage[] | null;
+  photos?: ApiSwapAdImage[] | null;
+  profileImageUrl?: string | null;
+  userProfileImageUrl?: string | null;
+  ownerProfileImageUrl?: string | null;
   user: {
     fullName: string;
     profileImageUrl: string | null;
+    imageUrl?: string | null;
+    avatarUrl?: string | null;
   };
+};
+
+type ApiSwapAdImage = {
+  imageUrl?: string | null;
+  url?: string | null;
+  path?: string | null;
+  fileUrl?: string | null;
 };
 
 type ApiSwapAdsResponse = {
@@ -61,6 +79,8 @@ const SWAP_AD_ERRORS = {
 } as const;
 
 function mapToExchangeCard(item: ApiSwapAd): ExchangeCardData {
+  const ownerName = item.user.fullName.trim();
+
   return {
     id: String(item.id),
     title: item.description,
@@ -69,11 +89,48 @@ function mapToExchangeCard(item: ApiSwapAd): ExchangeCardData {
     have: item.offerTitle,
     want: item.wantedTitle,
     owner: {
-      name: item.user.fullName,
-      initials: item.user.fullName.charAt(0),
+      name: ownerName,
+      initials: ownerName.charAt(0),
+      imageUrl: getSwapOwnerImageUrl(item),
     },
-    imageUrl: toAbsoluteImageUrl(item.user.profileImageUrl),
+    imageUrl: getSwapAdImageUrl(item),
   };
+}
+
+function getImageFromCollection(collection?: ApiSwapAdImage[] | null) {
+  return (
+    collection?.find((image) =>
+      Boolean(image.imageUrl ?? image.url ?? image.path ?? image.fileUrl),
+    )?.imageUrl ??
+    collection?.find((image) => Boolean(image.url))?.url ??
+    collection?.find((image) => Boolean(image.path))?.path ??
+    collection?.find((image) => Boolean(image.fileUrl))?.fileUrl ??
+    null
+  );
+}
+
+function getSwapAdImageUrl(item: ApiSwapAd) {
+  return toAbsoluteImageUrl(
+    item.coverImageUrl ??
+      item.imageUrl ??
+      item.photoUrl ??
+      item.thumbnailUrl ??
+      getImageFromCollection(item.images) ??
+      getImageFromCollection(item.photos) ??
+      null,
+  );
+}
+
+function getSwapOwnerImageUrl(item: ApiSwapAd) {
+  return toAbsoluteImageUrl(
+    item.user.profileImageUrl ??
+      item.user.imageUrl ??
+      item.user.avatarUrl ??
+      item.profileImageUrl ??
+      item.userProfileImageUrl ??
+      item.ownerProfileImageUrl ??
+      null,
+  );
 }
 
 function trimValue(value: string) {
