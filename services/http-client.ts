@@ -3,25 +3,27 @@ import axios, { isAxiosError } from 'axios';
 import { getAuthToken, invalidateAuthSession } from '@/lib/auth/auth-session';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/$/, '');
+const NETWORK_ERROR = 'تعذر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.';
+const PUBLIC_AUTH_PATHS = [
+  '/api/Account/login',
+  '/api/Account/register',
+  '/api/Account/forgot-password',
+  '/api/Account/verify-reset-code',
+  '/api/Account/reset-password',
+];
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = getAuthToken();
-
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-    if (typeof config.headers?.delete === 'function') {
-      config.headers.delete('Content-Type');
-    } else if (config.headers) {
-      delete (config.headers as Record<string, unknown>)['Content-Type'];
-    }
+    removeContentTypeHeader(config.headers);
   }
+
+  const token = getAuthToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -30,120 +32,100 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-function isPublicAuthPath(pathname: string) {
-  return (
-    pathname.includes('/api/Account/login') ||
-    pathname.includes('/api/Account/register') ||
-    pathname.includes('/api/Account/forgot-password') ||
-    pathname.includes('/api/Account/verify-reset-code') ||
-    pathname.includes('/api/Account/reset-password')
-  );
-}
-
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (isAxiosError(error) && error.response?.status === 401) {
-      const requestUrl = String(error.config?.url ?? '');
+    const url = isAxiosError(error) ? String(error.config?.url ?? '') : '';
+    const isUnauthorized = isAxiosError(error) && error.response?.status === 401;
 
-      if (!isPublicAuthPath(requestUrl)) {
-        await invalidateAuthSession();
-      }
+    if (isUnauthorized && !PUBLIC_AUTH_PATHS.some((path) => url.includes(path))) {
+      await invalidateAuthSession();
     }
 
     return Promise.reject(error);
   },
 );
 
-function parseResponsePayload(payload: unknown) {
-  if (!payload) {
-    return null;
+function removeContentTypeHeader(headers: unknown) {
+  const headerBag = headers as
+    | (Record<string, unknown> & { delete?: (name: string) => void })
+    | undefined;
+
+  if (typeof headerBag?.delete === 'function') {
+    headerBag.delete('Content-Type');
+    return;
   }
 
+  delete headerBag?.['Content-Type'];
+}
+
+function cleanString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function parsePayload(payload: unknown) {
   if (typeof payload !== 'string') {
     return payload;
   }
 
   try {
-    return JSON.parse(payload) as Record<string, unknown>;
+    return JSON.parse(payload) as unknown;
   } catch {
-    return { message: payload } as Record<string, unknown>;
+    return { message: payload };
   }
 }
 
-function extractValidationMessage(payload: unknown) {
-  if (!payload || typeof payload !== 'object') {
+function getFirstValidationError(errors: unknown) {
+  if (!errors || typeof errors !== 'object') {
     return null;
   }
 
-  if ('errors' in payload) {
-    const errors = (payload as { errors?: unknown }).errors;
+  for (const value of Object.values(errors as Record<string, unknown>)) {
+    const message = cleanString(value);
 
-    if (errors && typeof errors === 'object') {
-      for (const value of Object.values(errors as Record<string, unknown>)) {
-        if (typeof value === 'string' && value.trim().length > 0) {
-          return value.trim();
-        }
-
-        if (Array.isArray(value)) {
-          const firstMessage = value.find(
-            (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0,
-          );
-
-          if (firstMessage) {
-            return firstMessage.trim();
-          }
-        }
-      }
+    if (message) {
+      return message;
     }
-  }
 
-  if ('detail' in payload) {
-    const detail = (payload as { detail?: unknown }).detail;
+    if (Array.isArray(value)) {
+      const firstMessage = value
+        .map(cleanString)
+        .find((entry): entry is string => Boolean(entry));
 
-    if (typeof detail === 'string' && detail.trim().length > 0) {
-      return detail.trim();
+      if (firstMessage) {
+        return firstMessage;
+      }
     }
   }
 
   return null;
 }
 
-function extractMessage(payload: unknown, fallback: string) {
-  if (payload && typeof payload === 'object' && 'message' in payload) {
-    const message = (payload as { message?: unknown }).message;
+function getPayloadMessage(payload: unknown) {
+  const parsedPayload = parsePayload(payload);
 
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message;
-    }
+  if (!parsedPayload || typeof parsedPayload !== 'object') {
+    return null;
   }
 
-  const validationMessage = extractValidationMessage(payload);
+  const data = parsedPayload as Record<string, unknown>;
 
-  if (validationMessage) {
-    return validationMessage;
-  }
-
-  return fallback;
+  return (
+    cleanString(data.message) ??
+    getFirstValidationError(data.errors) ??
+    cleanString(data.detail)
+  );
 }
 
 export function getApiErrorMessage(error: unknown, fallback: string) {
-  if (isAxiosError(error)) {
-    if (error.response) {
-      const payload = parseResponsePayload(error.response.data);
-      const message = extractMessage(payload, '');
-
-      if (message) {
-        return message;
-      }
-
-      return `${fallback} (HTTP ${error.response.status})`;
-    }
-
-    const details = error.message ? ` (${error.message})` : '';
-    return `تعذر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.${details}`;
+  if (!isAxiosError(error)) {
+    return error instanceof Error ? `${fallback} (${error.message})` : fallback;
   }
 
-  const details = error instanceof Error ? ` (${error.message})` : '';
-  return `${fallback}${details}`;
+  if (!error.response) {
+    const details = error.message ? ` (${error.message})` : '';
+    return `${NETWORK_ERROR}${details}`;
+  }
+
+  return getPayloadMessage(error.response.data) ?? `${fallback} (HTTP ${error.response.status})`;
 }

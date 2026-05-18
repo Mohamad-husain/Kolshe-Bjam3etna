@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SettingsAccountSection } from '@/components/settings/SettingsAccountSection';
@@ -12,15 +12,14 @@ import { SettingsNotificationsSection } from '@/components/settings/SettingsNoti
 import { SettingsPrivacySection } from '@/components/settings/SettingsPrivacySection';
 import type { SettingsThemeValue } from '@/components/settings/SettingsThemeSelector';
 import { useAuth } from '@/contexts/auth-context';
-import { getSavedSettingsTheme, saveSettingsTheme } from '@/lib/storage/settings-preferences';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export default function SettingsRoute() {
   const insets = useSafeAreaInsets();
-  const systemColorScheme = useColorScheme();
   const { user, signOut } = useAuth();
+  const { selectedTheme, effectiveTheme, setSelectedTheme } = useThemePreference();
 
-  const [selectedTheme, setSelectedTheme] = useState<SettingsThemeValue>('system');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [messageNotifications, setMessageNotifications] = useState(true);
   const [offerNotifications, setOfferNotifications] = useState(true);
@@ -34,36 +33,9 @@ export default function SettingsRoute() {
     }
   }, [user]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadSavedTheme() {
-      const savedTheme = await getSavedSettingsTheme();
-
-      if (isMounted && savedTheme) {
-        setSelectedTheme(savedTheme);
-      }
-    }
-
-    void loadSavedTheme();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const handleChangeTheme = (theme: SettingsThemeValue) => {
     setSelectedTheme(theme);
-    void saveSettingsTheme(theme);
   };
-
-  const effectiveTheme = useMemo<'light' | 'dark'>(() => {
-    if (selectedTheme === 'system') {
-      return systemColorScheme === 'dark' ? 'dark' : 'light';
-    }
-
-    return selectedTheme;
-  }, [selectedTheme, systemColorScheme]);
 
   if (!user) {
     return null;

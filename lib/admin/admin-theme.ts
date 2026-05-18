@@ -1,4 +1,4 @@
-import { useColorScheme } from 'react-native';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 
 export type AdminTheme = {
   isDark: boolean;
@@ -112,7 +112,9 @@ const darkTheme: AdminTheme = {
 };
 
 export function useAdminTheme() {
-  return useColorScheme() === 'dark' ? darkTheme : lightTheme;
+  const { selectedTheme } = useThemePreference();
+
+  return selectedTheme === 'dark' ? darkTheme : lightTheme;
 }
 
 export function getAdminShadow(theme: AdminTheme) {
