@@ -25,7 +25,6 @@ type Tab = {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
-  trendingCount?: number;
 };
 
 const TABS: Tab[] = [
@@ -34,14 +33,12 @@ const TABS: Tab[] = [
     label: "خدمات",
     icon: "briefcase-outline",
     color: SemanticColors.blue,
-    trendingCount: 3,
   },
   {
     id: "marketplace",
     label: "متجر",
     icon: "bag-outline",
     color: SemanticColors.orange,
-    trendingCount: 1,
   },
   {
     id: "exchange",
@@ -122,29 +119,6 @@ export default function ExploreRoute() {
         />
 
         <View style={styles.header}>
-          <View style={styles.headerSide}>
-            {currentTab?.trendingCount ? (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.trendingBadge,
-                  { backgroundColor: `${currentTab.color}15` },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name="flame-outline"
-                  size={13}
-                  color={currentTab.color}
-                />
-                <Text
-                  style={[styles.trendingText, { color: currentTab.color }]}
-                >
-                  trending {currentTab.trendingCount}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-
           <Text style={styles.title}>استكشف</Text>
 
           <Pressable
