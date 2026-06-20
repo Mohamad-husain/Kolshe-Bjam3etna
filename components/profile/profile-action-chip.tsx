@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 type ProfileActionChipProps = {
@@ -14,10 +15,16 @@ export function ProfileActionChip({
   icon,
   onPress,
 }: ProfileActionChipProps) {
+  const { isRtl } = useAppSettings();
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.actionChip, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.actionChip,
+        { flexDirection: isRtl ? 'row-reverse' : 'row' },
+        pressed && styles.pressed,
+      ]}
     >
       <Ionicons name={icon} size={15} color="#ffffff" />
       <Text style={styles.actionChipText}>{label}</Text>
@@ -30,7 +37,6 @@ const styles = StyleSheet.create({
     minHeight: 42,
     borderRadius: 18,
     paddingHorizontal: 14,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
     backgroundColor: 'rgba(255,255,255,0.18)',

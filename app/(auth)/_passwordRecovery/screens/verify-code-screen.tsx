@@ -1,11 +1,12 @@
 import { Text, TextInput, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   RecoveryErrorText,
   RecoveryPrimaryButton,
   RecoverySecondaryButton,
 } from '@/components/password-recovery';
-import { Colors } from '@/styles/ui-theme';
 import { styles } from '@/components/password-recovery/styles';
 import type {
   CodeInputRef,
@@ -34,12 +35,13 @@ export function VerifyCodeScreen({
   onVerifyCode,
   onResendCode,
 }: VerifyCodeScreenProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.formArea}>
-      <Text style={styles.title}>رمز التحقق</Text>
-      <Text style={styles.subtitle}>
-        أدخل الرمز المكون من 6 أرقام الذي أرسلناه لبريدك
-      </Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>{t('recovery.verifyTitle')}</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{t('recovery.verifySubtitle')}</Text>
 
       <View style={styles.codeRow}>
         {codeDigits.map((digit, index) => (
@@ -57,9 +59,16 @@ export function VerifyCodeScreen({
             onKeyPress={(event) => {
               onCodeKeyPress(event, index);
             }}
-            style={styles.codeInput}
+            style={[
+              styles.codeInput,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                color: colors.foreground,
+              },
+            ]}
             placeholder="-"
-            placeholderTextColor={Colors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             textAlign="center"
           />
         ))}
@@ -68,12 +77,12 @@ export function VerifyCodeScreen({
       <RecoveryErrorText message={error} />
 
       <RecoveryPrimaryButton
-        title="تحقق من الرمز"
+        title={t('recovery.verifyCode')}
         loading={loading}
         onPress={onVerifyCode}
       />
       <RecoverySecondaryButton
-        title="إعادة إرسال الرمز"
+        title={t('recovery.resendCode')}
         loading={loading}
         onPress={onResendCode}
       />

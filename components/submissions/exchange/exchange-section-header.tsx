@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 import { EXCHANGE_ACCENT, EXCHANGE_ACCENT_DARK } from './exchange-options';
@@ -11,11 +12,13 @@ type Props = {
 };
 
 export function ExchangeSectionHeader({ step, title, subtitle }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.copy}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
       </View>
 
       <View style={styles.number}>

@@ -8,6 +8,7 @@ import {
 } from "@/hooks/chat/mutations/chat-mutation-utils"
 import { getValidChatAssetUri } from "@/components/chat/chat-ui"
 import type { ChatMessage } from "@/types/chat"
+import type { SettingsLanguageValue } from "@/lib/storage/settings-preferences"
 
 const ISO_UTC_WITHOUT_ZONE_PATTERN =
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/
@@ -91,7 +92,15 @@ export async function openChatAsset(uri?: string | null) {
     }
 }
 
-export function getFileLabel(fileName?: string | null, fileUrl?: string | null) {
+function getLocale(language: SettingsLanguageValue = "ar") {
+    return language === "ar" ? "ar" : "en"
+}
+
+export function getFileLabel(
+    fileName?: string | null,
+    fileUrl?: string | null,
+    fallback = "File"
+) {
     const directName = fileName?.trim()
 
     if (directName) {
@@ -102,7 +111,7 @@ export function getFileLabel(fileName?: string | null, fileUrl?: string | null) 
     const segments = filePath.split("/").filter(Boolean)
     const lastSegment = segments[segments.length - 1]
 
-    return lastSegment || "ملف"
+    return lastSegment || fallback
 }
 
 export function isImageChatAsset(uri?: string | null, suggestedName?: string | null) {
@@ -129,7 +138,7 @@ export function getChatDownloadFileName(
     )
 }
 
-export function formatChatDateLabel(value?: string | null) {
+export function formatChatDateLabel(value?: string | null, language: SettingsLanguageValue = "ar") {
     const date = parseChatDate(value)
 
     if (!date) {
@@ -139,23 +148,23 @@ export function formatChatDateLabel(value?: string | null) {
     const now = new Date()
 
     if (isSameCalendarDay(date, now)) {
-        return "اليوم"
+        return language === "ar" ? "اليوم" : "Today"
     }
 
     if (isYesterdayDate(date, now)) {
-        return "أمس"
+        return language === "ar" ? "أمس" : "Yesterday"
     }
 
     const isSameYear = date.getFullYear() === now.getFullYear()
 
-    return date.toLocaleDateString("ar", {
+    return date.toLocaleDateString(getLocale(language), {
         day: "numeric",
         month: "long",
         ...(isSameYear ? {} : { year: "numeric" as const }),
     })
 }
 
-export function formatConversationTimestamp(value?: string | null) {
+export function formatConversationTimestamp(value?: string | null, language: SettingsLanguageValue = "ar") {
     const date = parseChatDate(value)
 
     if (!date) {
@@ -165,43 +174,46 @@ export function formatConversationTimestamp(value?: string | null) {
     const now = new Date()
 
     if (isSameCalendarDay(date, now)) {
-        return date.toLocaleTimeString("ar", {
+        return date.toLocaleTimeString(getLocale(language), {
             hour: "numeric",
             minute: "2-digit",
         })
     }
 
     if (isYesterdayDate(date, now)) {
-        return "أمس"
+        return language === "ar" ? "أمس" : "Yesterday"
     }
 
     const diffMs = Math.abs(now.getTime() - date.getTime())
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
     if (diffDays < 7) {
-        return date.toLocaleDateString("ar", { weekday: "short" })
+        return date.toLocaleDateString(getLocale(language), { weekday: "short" })
     }
 
-    return date.toLocaleDateString("ar", {
+    return date.toLocaleDateString(getLocale(language), {
         month: "numeric",
         day: "numeric",
     })
 }
 
-export function formatMessageTime(value?: string | null) {
+export function formatMessageTime(value?: string | null, language: SettingsLanguageValue = "ar") {
     const date = parseChatDate(value)
 
     if (!date) {
         return ""
     }
 
-    return date.toLocaleTimeString("ar", {
+    return date.toLocaleTimeString(getLocale(language), {
         hour: "numeric",
         minute: "2-digit",
     })
 }
 
-export function getMessagePreviewText(value?: string | null) {
+export function getMessagePreviewText(
+    value?: string | null,
+    labels: { image: string; file: string } = { image: "Image", file: "File" }
+) {
     const text = value?.trim()
 
     if (!text) {
@@ -217,17 +229,21 @@ export function getMessagePreviewText(value?: string | null) {
     }
 
     if (/^\[(image|photo)\]$/i.test(text)) {
-        return "صورة"
+        return labels.image
     }
 
     if (/^\[(file|document|attachment)\]$/i.test(text)) {
-        return "ملف"
+        return labels.file
     }
 
     return text
 }
 
-export function getMessageBodyText(value?: string | null, hasAttachment?: boolean) {
+export function getMessageBodyText(
+    value?: string | null,
+    hasAttachment?: boolean,
+    labels: { image: string; file: string } = { image: "Image", file: "File" }
+) {
     const text = value?.trim()
 
     if (!text) {
@@ -239,11 +255,11 @@ export function getMessageBodyText(value?: string | null, hasAttachment?: boolea
     }
 
     if (/^\[(image|photo)\]$/i.test(text)) {
-        return hasAttachment ? "" : "صورة"
+        return hasAttachment ? "" : labels.image
     }
 
     if (/^\[(file|document|attachment)\]$/i.test(text)) {
-        return hasAttachment ? "" : "ملف"
+        return hasAttachment ? "" : labels.file
     }
 
     return text
@@ -271,14 +287,14 @@ export function resolveMessageOwnership({
     }
 }
 
-export function getChatDateLabel(messages: ChatMessage[]) {
+export function getChatDateLabel(messages: ChatMessage[], language: SettingsLanguageValue = "ar") {
     const candidateDates = [
         messages[0]?.createdAt,
         messages[messages.length - 1]?.createdAt,
     ]
 
     for (const value of candidateDates) {
-        const label = formatChatDateLabel(value)
+        const label = formatChatDateLabel(value, language)
 
         if (label) {
             return label
@@ -312,7 +328,14 @@ export function getMessageActionsState(message: ChatMessage) {
     }
 }
 
-export function getMessageActionSubtitle(message: ChatMessage) {
+export function getMessageActionSubtitle(
+    message: ChatMessage,
+    labels: { imageMessage: string; fallback: string; file: string } = {
+        imageMessage: "Message with an image",
+        fallback: "Choose the right action for this message",
+        file: "File",
+    }
+) {
     if (isDeletedMessageContent(message.content)) {
         return DELETED_MESSAGE_PREVIEW
     }
@@ -322,12 +345,12 @@ export function getMessageActionSubtitle(message: ChatMessage) {
     }
 
     if (hasImageAttachment(message)) {
-        return "رسالة تحتوي على صورة"
+        return labels.imageMessage
     }
 
     if (hasFileAttachment(message)) {
-        return getFileLabel(message.fileName, message.fileUrl)
+        return getFileLabel(message.fileName, message.fileUrl, labels.file)
     }
 
-    return "اختر الإجراء المناسب لهذه الرسالة"
+    return labels.fallback
 }

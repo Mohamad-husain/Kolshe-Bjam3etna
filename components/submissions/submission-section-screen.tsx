@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   FontFamily,
@@ -15,22 +16,28 @@ type SubmissionSectionScreenProps = {
 };
 
 export function SubmissionSectionScreen({ title }: SubmissionSectionScreenProps) {
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
+  const { colors, effectiveTheme } = useThemePreference();
 
-      <View style={styles.screen}>
-        <View style={styles.header}>
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
+
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="العودة إلى قائمة الإضافة"
             onPress={() => router.replace('/(tabs)/add-menu')}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.backButton,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              pressed && styles.pressed,
+            ]}
           >
-            <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+            <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
           </Pressable>
 
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
 
           <View style={styles.headerSpacer} />
         </View>

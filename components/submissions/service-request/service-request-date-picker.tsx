@@ -3,6 +3,7 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   FontFamily,
@@ -29,6 +30,8 @@ export function ServiceRequestDatePicker({
   onConfirm,
   onCancel,
 }: Props) {
+  const { colors, effectiveTheme } = useThemePreference();
+
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (event.type !== 'set' || !selectedDate) {
       if (Platform.OS === 'android') {
@@ -78,9 +81,9 @@ export function ServiceRequestDatePicker({
       <View style={styles.modalOverlay}>
         <Pressable style={styles.modalBackdrop} onPress={onCancel} />
 
-        <View style={styles.pickerSheet}>
-          <View style={styles.calendarHandle} />
-          <Text style={styles.pickerSheetTitle}>اختر الموعد النهائي</Text>
+        <View style={[styles.pickerSheet, { backgroundColor: colors.card }]}>
+          <View style={[styles.calendarHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.pickerSheetTitle, { color: colors.foreground }]}>اختر الموعد النهائي</Text>
 
           <DateTimePicker
             value={value}
@@ -89,8 +92,8 @@ export function ServiceRequestDatePicker({
             minimumDate={minimumDate}
             onChange={handleDateChange}
             locale="ar"
-            textColor="#111827"
-            themeVariant="light"
+            textColor={colors.foreground}
+            themeVariant={effectiveTheme}
             style={styles.iosDatePicker}
           />
 
@@ -100,10 +103,11 @@ export function ServiceRequestDatePicker({
               style={({ pressed }) => [
                 styles.pickerActionButton,
                 styles.pickerSecondaryAction,
+                { backgroundColor: colors.secondary },
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.pickerSecondaryActionText}>إلغاء</Text>
+              <Text style={[styles.pickerSecondaryActionText, { color: colors.foreground }]}>إلغاء</Text>
             </Pressable>
 
             <Pressable
@@ -111,6 +115,7 @@ export function ServiceRequestDatePicker({
               style={({ pressed }) => [
                 styles.pickerActionButton,
                 styles.pickerPrimaryAction,
+                { backgroundColor: colors.primary },
                 pressed && styles.pressed,
               ]}
             >

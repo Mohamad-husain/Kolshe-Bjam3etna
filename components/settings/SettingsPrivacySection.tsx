@@ -1,4 +1,5 @@
 import { SemanticColors } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { SettingsRow } from './SettingsRow';
 import { SettingsSection } from './SettingsSection';
 import { SettingsToggle } from './SettingsToggle';
@@ -7,21 +8,21 @@ type SettingsPrivacySectionProps = {
   showOnlineStatus: boolean;
   onToggleShowOnline: () => void;
   onChangePassword: () => void;
-  onOpenTwoFactor: () => void;
 };
 
 export function SettingsPrivacySection({
   showOnlineStatus,
   onToggleShowOnline,
   onChangePassword,
-  onOpenTwoFactor,
 }: SettingsPrivacySectionProps) {
+  const { t } = useAppSettings();
+
   return (
-    <SettingsSection title="الخصوصية والأمان">
+    <SettingsSection title={t('settings.privacy')}>
       <SettingsRow
         icon="eye-outline"
         iconBackgroundColor={SemanticColors.lightBlue}
-        title="إظهار حالة الاتصال"
+        title={t('settings.onlineStatus')}
         accessory={
           <SettingsToggle value={showOnlineStatus} onValueChange={onToggleShowOnline} />
         }
@@ -29,15 +30,8 @@ export function SettingsPrivacySection({
       <SettingsRow
         icon="lock-closed-outline"
         iconBackgroundColor={SemanticColors.orange}
-        title="تغيير كلمة المرور"
+        title={t('settings.changePassword')}
         onPress={onChangePassword}
-      />
-      <SettingsRow
-        icon="shield-checkmark-outline"
-        iconBackgroundColor={SemanticColors.green}
-        title="المصادقة الثنائية"
-        description="غير مفعّلة"
-        onPress={onOpenTwoFactor}
       />
     </SettingsSection>
   );

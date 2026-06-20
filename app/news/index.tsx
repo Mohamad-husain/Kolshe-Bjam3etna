@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { SearchBar } from "@/components/explore/SearchBar";
@@ -16,6 +17,7 @@ import {
   CategoryFilter,
 } from "@/components/explore/CategoryFilter";
 import { getNewsAccent } from "@/components/news/news_colors";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 
 import { NewsCard } from "@/components/news/NewsCard";
 import {
@@ -24,7 +26,6 @@ import {
 } from "@/lib/news/news-categories";
 import { getNews } from "@/services/news-api";
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
@@ -33,6 +34,7 @@ import {
   Spacing,
 } from "@/styles/ui-theme";
 export default function NewsScreen() {
+  const { colors, effectiveTheme } = useThemePreference();
   const [searchError, setSearchError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(ALL_NEWS_CATEGORY);
@@ -88,22 +90,23 @@ export default function NewsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={SemanticColors.blue} />
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>تعذر تحميل الأخبار</Text>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.mutedForeground }]}>تعذر تحميل الأخبار</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={effectiveTheme === "dark" ? "light" : "dark"} />
       <View style={styles.mobileShell}>
         <View style={styles.topRightBubble} />
         <View style={styles.topLeftBubble} />
@@ -120,20 +123,21 @@ export default function NewsScreen() {
                   onPress={handleBack}
                   style={({ pressed }) => [
                     styles.headerAction,
+                    { backgroundColor: colors.card, borderColor: colors.border },
                     pressed && styles.headerActionPressed,
                   ]}
                 >
                   <Ionicons
                     name="arrow-forward"
                     size={18}
-                    color={Colors.foreground}
+                    color={colors.foreground}
                   />
                 </Pressable>
-                <Text style={styles.title}>الأخبار</Text>
+                <Text style={[styles.title, { color: colors.foreground }]}>الأخبار</Text>
                 <Ionicons
                   name="newspaper-outline"
                   size={24}
-                  color={Colors.foreground}
+                  color={colors.foreground}
                 />
               </View>
               <View style={styles.statsRow}>
@@ -148,7 +152,7 @@ export default function NewsScreen() {
                   >
                     {items.length}
                   </Text>
-                  <Text style={styles.statLabel}>إجمالي الأخبار</Text>
+                  <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>إجمالي الأخبار</Text>
                 </View>
                 <View
                   style={[
@@ -161,7 +165,7 @@ export default function NewsScreen() {
                   >
                     {items.filter((i) => i.isImportant).length}
                   </Text>
-                  <Text style={styles.statLabel}>أخبار مهمة</Text>
+                  <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>أخبار مهمة</Text>
                 </View>
               </View>
               <View>
@@ -187,9 +191,9 @@ export default function NewsScreen() {
                 <Ionicons
                   name="funnel-outline"
                   size={14}
-                  color={Colors.mutedForeground}
+                  color={colors.mutedForeground}
                 />
-                <Text style={styles.resultsText}>{filtered.length} نتيجة</Text>
+                <Text style={[styles.resultsText, { color: colors.mutedForeground }]}>{filtered.length} نتيجة</Text>
               </View>
               {importantNews.length > 0 && (
                 <View>
@@ -216,9 +220,9 @@ export default function NewsScreen() {
                       <Ionicons
                         name="newspaper-outline"
                         size={16}
-                        color={Colors.foreground}
+                        color={colors.foreground}
                       />
-                      <Text style={styles.sectionTitle}>أخبار أخرى</Text>
+                      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>أخبار أخرى</Text>
                     </View>
                   )}
                 </View>
@@ -236,7 +240,6 @@ export default function NewsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   mobileShell: {
     flex: 1,
@@ -257,9 +260,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.card,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
   },
   headerActionPressed: {
     opacity: 0.8,
@@ -268,7 +269,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
   },
   statsRow: {
     flexDirection: "row-reverse",
@@ -290,7 +290,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: FontSize.xs,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
   },
   resultsRow: {
     flexDirection: "row-reverse",
@@ -302,7 +301,6 @@ const styles = StyleSheet.create({
   resultsText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
   },
   sectionHeader: {
     flexDirection: "row-reverse",
@@ -316,7 +314,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
   },
   list: {
     paddingTop: Spacing.sm,
@@ -326,12 +323,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.background,
   },
   errorText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
-    color: Colors.mutedForeground,
   },
   topRightBubble: {
     position: "absolute",

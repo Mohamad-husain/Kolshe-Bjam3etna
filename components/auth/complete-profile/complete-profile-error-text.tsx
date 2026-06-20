@@ -1,7 +1,8 @@
 import { StyleSheet, Text } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
 } from '@/styles/ui-theme';
@@ -11,20 +12,33 @@ type CompleteProfileErrorTextProps = {
 };
 
 export function CompleteProfileErrorText({ message }: CompleteProfileErrorTextProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   if (!message) {
     return null;
   }
 
-  return <Text style={styles.errorText}>{message}</Text>;
+  return (
+    <Text
+      style={[
+        styles.errorText,
+        {
+          color: colors.destructive,
+          textAlign: isRtl ? 'right' : 'left',
+          writingDirection: isRtl ? 'rtl' : 'ltr',
+        },
+      ]}
+    >
+      {message}
+    </Text>
+  );
 }
 
 const styles = StyleSheet.create({
   errorText: {
-    color: Colors.destructive,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
-    textAlign: 'right',
-    writingDirection: 'rtl',
     paddingHorizontal: 4,
   },
 });

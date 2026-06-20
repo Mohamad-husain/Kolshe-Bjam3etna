@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
 } from '@/styles/ui-theme';
 
@@ -20,12 +21,32 @@ export function AuthInput({
   style,
   ...props
 }: AuthInputProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.wrapper}>
-      <Ionicons name={icon} size={20} color="#a1a1aa" />
+    <View
+      style={[
+        styles.wrapper,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          flexDirection: isRtl ? 'row' : 'row-reverse',
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={20} color={colors.mutedForeground} />
       <TextInput
-        placeholderTextColor="#a1a1aa"
-        style={[styles.input, style]}
+        placeholderTextColor={colors.mutedForeground}
+        style={[
+          styles.input,
+          {
+            color: colors.foreground,
+            textAlign: isRtl ? 'right' : 'left',
+            writingDirection: isRtl ? 'rtl' : 'ltr',
+          },
+          style,
+        ]}
         {...props}
       />
       {trailingIcon ? (
@@ -35,7 +56,7 @@ export function AuthInput({
           hitSlop={8}
           style={styles.trailingButton}
         >
-          <Ionicons name={trailingIcon} size={20} color="#a1a1aa" />
+          <Ionicons name={trailingIcon} size={20} color={colors.mutedForeground} />
         </Pressable>
       ) : null}
     </View>
@@ -44,13 +65,10 @@ export function AuthInput({
 
 const styles = StyleSheet.create({
   wrapper: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderRadius: 16,
-    backgroundColor: '#f4f4f7',
     borderWidth: 1,
-    borderColor: '#e3e4ea',
     paddingHorizontal: 16,
     minHeight: 56,
     shadowColor: '#000000',
@@ -61,9 +79,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 14,
   },

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
@@ -21,18 +22,23 @@ type RegisteredEventItem = {
 
 type ProfileEventCardProps = {
   event: RegisteredEventItem;
-  onCancelRegistration: () => void;
+  onCancelRegistration?: () => void;
 };
 
 export function ProfileEventCard({
   event,
   onCancelRegistration,
 }: ProfileEventCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? 'row-reverse' : 'row';
+  const textAlign = isRtl ? 'right' : 'left';
+
   return (
-    <View style={[styles.card, { borderRightColor: event.color }]}>
-      <View style={styles.eventHeader}>
-        <View style={styles.eventOrganizerBadge}>
-          <Text style={styles.eventOrganizerText}>{event.organizer}</Text>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRightColor: event.color }]}>
+      <View style={[styles.eventHeader, { flexDirection: rowDirection }]}>
+        <View style={[styles.eventOrganizerBadge, { backgroundColor: colors.secondary }]}>
+          <Text style={[styles.eventOrganizerText, { color: colors.mutedForeground }]}>{event.organizer}</Text>
         </View>
 
         <View style={[styles.eventIconWrap, { backgroundColor: `${event.color}18` }]}>
@@ -40,36 +46,38 @@ export function ProfileEventCard({
         </View>
       </View>
 
-      <Text style={styles.eventTitle}>{event.title}</Text>
+      <Text style={[styles.eventTitle, { color: colors.foreground, textAlign }]}>{event.title}</Text>
 
-      <View style={styles.eventMetaWrap}>
-        <View style={styles.eventMetaPill}>
-          <Ionicons name="calendar-outline" size={12} color={Colors.mutedForeground} />
-          <Text style={styles.eventMetaText}>{event.date}</Text>
+      <View style={[styles.eventMetaWrap, { flexDirection: rowDirection }]}>
+        <View style={[styles.eventMetaPill, { backgroundColor: colors.secondary, flexDirection: rowDirection }]}>
+          <Ionicons name="calendar-outline" size={12} color={colors.mutedForeground} />
+          <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]}>{event.date}</Text>
         </View>
-        <View style={styles.eventMetaPill}>
-          <Ionicons name="time-outline" size={12} color={Colors.mutedForeground} />
-          <Text style={styles.eventMetaText}>{event.time}</Text>
+        <View style={[styles.eventMetaPill, { backgroundColor: colors.secondary, flexDirection: rowDirection }]}>
+          <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
+          <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]}>{event.time}</Text>
         </View>
-        <View style={styles.eventMetaPill}>
-          <Ionicons name="location-outline" size={12} color={Colors.mutedForeground} />
-          <Text style={styles.eventMetaText}>{event.location}</Text>
+        <View style={[styles.eventMetaPill, { backgroundColor: colors.secondary, flexDirection: rowDirection }]}>
+          <Ionicons name="location-outline" size={12} color={colors.mutedForeground} />
+          <Text style={[styles.eventMetaText, { color: colors.mutedForeground }]}>{event.location}</Text>
         </View>
       </View>
 
-      <View style={styles.separator} />
+      <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
-      <View style={styles.priceRow}>
-        <View style={styles.registeredState}>
+      <View style={[styles.priceRow, { flexDirection: rowDirection }]}>
+        <View style={[styles.registeredState, { flexDirection: rowDirection }]}>
           <Ionicons name="checkmark-circle" size={14} color={SemanticColors.green} />
-          <Text style={styles.registeredStateText}>مسجّل</Text>
+          <Text style={styles.registeredStateText}>{t('profile.registered')}</Text>
         </View>
-        <Pressable
-          onPress={onCancelRegistration}
-          style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.cancelButtonText}>إلغاء التسجيل</Text>
-        </Pressable>
+        {onCancelRegistration ? (
+          <Pressable
+            onPress={onCancelRegistration}
+            style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.cancelButtonText}>{t('profile.cancelRegistration')}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -79,10 +87,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
     borderRightWidth: 4,
-    borderColor: 'rgba(60,60,67,0.06)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -90,7 +96,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   eventHeader: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -100,10 +105,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(120,120,128,0.08)',
   },
   eventOrganizerText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
@@ -117,15 +120,12 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     marginTop: 14,
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   eventMetaWrap: {
     marginTop: 14,
-    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
   },
@@ -133,13 +133,10 @@ const styles = StyleSheet.create({
     minHeight: 34,
     borderRadius: 14,
     paddingHorizontal: 10,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(120,120,128,0.08)',
   },
   eventMetaText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.medium,
@@ -147,16 +144,13 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     marginTop: 14,
-    backgroundColor: 'rgba(60,60,67,0.08)',
   },
   priceRow: {
     marginTop: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   registeredState: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 4,
   },

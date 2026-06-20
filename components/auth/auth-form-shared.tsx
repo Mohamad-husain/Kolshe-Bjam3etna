@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
@@ -31,11 +32,27 @@ export function getAuthErrorMessage(error: unknown, fallbackMessage: string) {
 }
 
 export function AuthErrorText({ message }: AuthErrorTextProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   if (!message) {
     return null;
   }
 
-  return <Text style={authFormStyles.errorText}>{message}</Text>;
+  return (
+    <Text
+      style={[
+        authFormStyles.errorText,
+        {
+          color: colors.destructive,
+          textAlign: isRtl ? 'right' : 'left',
+          writingDirection: isRtl ? 'rtl' : 'ltr',
+        },
+      ]}
+    >
+      {message}
+    </Text>
+  );
 }
 
 export function AuthSubmitButton({
@@ -45,19 +62,28 @@ export function AuthSubmitButton({
   onPress,
   icon = 'arrow-back',
 }: AuthSubmitButtonProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <Pressable
       disabled={isPending}
       onPress={onPress}
       style={({ pressed }) => [
         authFormStyles.submitButton,
+        { backgroundColor: colors.primary, shadowColor: colors.primary },
         pressed && authFormStyles.submitButtonPressed,
         isPending && authFormStyles.submitButtonDisabled,
       ]}
     >
-      <View style={authFormStyles.submitContent}>
+      <View style={[authFormStyles.submitContent, { flexDirection: isRtl ? 'row' : 'row-reverse' }]}>
         <Ionicons name={icon} size={20} color="#ffffff" />
-        <Text style={authFormStyles.submitButtonText}>
+        <Text
+          style={[
+            authFormStyles.submitButtonText,
+            { writingDirection: isRtl ? 'rtl' : 'ltr' },
+          ]}
+        >
           {isPending ? pendingLabel : label}
         </Text>
       </View>
@@ -75,26 +101,20 @@ export const authFormStyles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   inlineButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },
   errorText: {
-    color: Colors.destructive,
-    textAlign: 'right',
-    writingDirection: 'rtl',
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
   },
   submitButton: {
     marginTop: 8,
     borderRadius: 16,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -109,13 +129,11 @@ export const authFormStyles = StyleSheet.create({
   submitButtonText: {
     color: '#ffffff',
     textAlign: 'center',
-    writingDirection: 'rtl',
     fontFamily: FontFamily.cairo,
     fontSize: 16,
     fontWeight: FontWeight.bold,
   },
   submitContent: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },

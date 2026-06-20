@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
@@ -27,6 +28,12 @@ type ProfileOutgoingOfferCardProps = {
 };
 
 export function ProfileOutgoingOfferCard({ offer }: ProfileOutgoingOfferCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? 'row-reverse' : 'row';
+  const textAlign = isRtl ? 'right' : 'left';
+  const alignItems = isRtl ? 'flex-end' : 'flex-start';
+
   const statusStyle =
     offer.status === 'accepted'
       ? styles.acceptedBadge
@@ -43,25 +50,25 @@ export function ProfileOutgoingOfferCard({ offer }: ProfileOutgoingOfferCardProp
 
   const statusLabel =
     offer.status === 'accepted'
-      ? 'مقبول'
+      ? t('profile.accepted')
       : offer.status === 'rejected'
-        ? 'مرفوض'
-        : 'قيد المراجعة';
+        ? t('profile.rejected')
+        : t('profile.pending');
 
   return (
-    <View style={styles.card}>
-      <View style={styles.referencePill}>
-        <Ionicons name="bag-handle-outline" size={15} color={Colors.primary} />
-        <Text style={styles.referenceText}>{offer.listingTitle}</Text>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.referencePill, { backgroundColor: colors.secondary, flexDirection: rowDirection }]}>
+        <Ionicons name="bag-handle-outline" size={15} color={colors.primary} />
+        <Text style={[styles.referenceText, { color: colors.foreground, textAlign }]}>{offer.listingTitle}</Text>
       </View>
 
-      <View style={styles.offerHeaderRow}>
+      <View style={[styles.offerHeaderRow, { flexDirection: rowDirection }]}>
         <View style={[styles.offerAvatar, { backgroundColor: offer.color }]}>
           <Text style={styles.offerAvatarText}>{offer.initials}</Text>
         </View>
 
-        <View style={styles.offerIdentity}>
-          <Text style={styles.offerName}>{offer.to}</Text>
+        <View style={[styles.offerIdentity, { alignItems }]}>
+          <Text style={[styles.offerName, { color: colors.foreground, textAlign }]}>{offer.to}</Text>
         </View>
 
         <View style={[styles.statusBadge, statusStyle]}>
@@ -69,12 +76,19 @@ export function ProfileOutgoingOfferCard({ offer }: ProfileOutgoingOfferCardProp
         </View>
       </View>
 
-      <Text style={styles.messageBubble}>{offer.message}</Text>
+      <Text
+        style={[
+          styles.messageBubble,
+          { backgroundColor: colors.secondary, color: colors.mutedForeground, textAlign },
+        ]}
+      >
+        {offer.message}
+      </Text>
 
       {offer.price ? (
-        <View style={styles.outgoingPriceRow}>
-          <Text style={styles.outgoingPrice}>{offer.price}</Text>
-          <Text style={styles.offerTime}>{offer.time}</Text>
+        <View style={[styles.outgoingPriceRow, { flexDirection: rowDirection }]}>
+          <Text style={[styles.outgoingPrice, { color: colors.primary }]}>{offer.price}</Text>
+          <Text style={[styles.offerTime, { color: colors.mutedForeground }]}>{offer.time}</Text>
         </View>
       ) : null}
     </View>
@@ -85,9 +99,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.06)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -98,21 +110,16 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: 16,
     paddingHorizontal: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(120,120,128,0.08)',
   },
   referenceText: {
     flex: 1,
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,
-    textAlign: 'right',
   },
   offerHeaderRow: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
     marginTop: 14,
@@ -132,17 +139,13 @@ const styles = StyleSheet.create({
   },
   offerIdentity: {
     flex: 1,
-    alignItems: 'flex-end',
   },
   offerName: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   offerTime: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
@@ -152,12 +155,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: 'rgba(120,120,128,0.08)',
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     lineHeight: 22,
-    textAlign: 'right',
   },
   statusBadge: {
     minHeight: 30,
@@ -191,12 +191,10 @@ const styles = StyleSheet.create({
   },
   outgoingPriceRow: {
     marginTop: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   outgoingPrice: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,

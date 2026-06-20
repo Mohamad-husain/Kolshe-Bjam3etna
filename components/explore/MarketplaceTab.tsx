@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   FlatList,
@@ -8,8 +9,9 @@ import {
 } from "react-native";
 
 import { useMarketplaceQuery } from "@/hooks/queries/use-explore-queries";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
-  Colors,
   FontFamily,
   FontSize,
   SemanticColors,
@@ -21,23 +23,28 @@ import { MarketplaceCard } from "./MarketplaceCard";
 import { SearchBar } from "./SearchBar";
 import { useSearchInput } from "@/hooks/explore/use-search-input";
 
-const CATEGORIES: Category[] = [
-  { id: "all", label: "الكل" },
-  { id: "كتاب", label: "كتب" },
-  { id: "الكترونيات", label: "إلكترونيات" },
-  { id: "تصميم", label: "تصميم" },
-  { id: "برمجة", label: "برمجة" },
-];
-
 type MarketplaceTabProps = {
   showFilter: boolean;
 };
 
 export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
   const { search, searchError, handleSearch } = useSearchInput();
+  const categories: Category[] = [
+    { id: "all", label: t("common.all") },
+    { id: "كتاب", label: t("explore.category.books") },
+    { id: "الكترونيات", label: t("explore.category.electronics") },
+    { id: "تصميم", label: t("explore.category.design") },
+    { id: "برمجة", label: t("explore.category.programming") },
+  ];
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useMarketplaceQuery();
-  //
+
+  const openAdDetails = (id: string) => {
+    router.push({ pathname: "/ad/[id]", params: { id } });
+  };
+
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
@@ -64,7 +71,9 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>تعذر تحميل البيانات</Text>
+        <Text style={[styles.errorText, { color: colors.mutedForeground }]}>
+          {t("common.loadError")}
+        </Text>
       </View>
     );
   }
@@ -73,24 +82,26 @@ export function MarketplaceTab({ showFilter }: MarketplaceTabProps) {
     <FlatList
       data={filtered}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <MarketplaceCard data={item} />}
+      renderItem={({ item }) => (
+        <MarketplaceCard data={item} onPress={() => openAdDetails(item.id)} />
+      )}
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في متجر..."
+            placeholder={t("explore.searchMarketplace")}
             value={search}
             onChangeText={handleSearch}
             error={searchError}
           />
           {showFilter ? (
             <CategoryFilter
-              categories={CATEGORIES}
+              categories={categories}
               selected={selectedCategory}
               onSelect={setSelectedCategory}
               accentColor={SemanticColors.orange}
               accentBg={`${SemanticColors.orange}12`}
               icon="bag-outline"
-              title="متجر"
+              title={t("explore.marketplace")}
               count={filtered.length}
             />
           ) : null}
@@ -116,6 +127,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
-    color: Colors.mutedForeground,
   },
 });

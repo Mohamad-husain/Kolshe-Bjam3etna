@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   Dimensions,
@@ -35,6 +36,8 @@ export function ServiceRequestReviewStep({
   isSubmitting,
   onSubmit,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.card}>
       <ServiceRequestSectionHeader
@@ -43,7 +46,7 @@ export function ServiceRequestReviewStep({
         subtitle="راجع طلبك ثم انشره"
       />
 
-      <View style={styles.previewCard}>
+      <View style={[styles.previewCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.previewTop}>
           <View
             style={[
@@ -60,23 +63,23 @@ export function ServiceRequestReviewStep({
               {selectedCategory?.label ?? '—'}
             </Text>
           </View>
-          <Text style={styles.previewLabel}>معاينة الطلب</Text>
+          <Text style={[styles.previewLabel, { color: colors.foreground }]}>معاينة الطلب</Text>
         </View>
 
-        <Text style={styles.previewTitle}>{title.trim() || 'عنوان الطلب سيظهر هنا'}</Text>
-        <Text style={styles.previewDesc} numberOfLines={2}>
+        <Text style={[styles.previewTitle, { color: colors.foreground }]}>{title.trim() || 'عنوان الطلب سيظهر هنا'}</Text>
+        <Text style={[styles.previewDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
           {description.trim() || 'وصف الطلب سيظهر هنا...'}
         </Text>
 
-        <View style={styles.previewFooter}>
-          <View style={styles.previewInfo}>
-            <Ionicons name="calendar-outline" size={13} color={Colors.mutedForeground} />
-            <Text style={styles.previewInfoText}>{deadline || '—'}</Text>
+        <View style={[styles.previewFooter, { borderTopColor: colors.border }]}>
+          <View style={[styles.previewInfo, { backgroundColor: colors.secondary }]}>
+            <Ionicons name="calendar-outline" size={13} color={colors.mutedForeground} />
+            <Text style={[styles.previewInfoText, { color: colors.mutedForeground }]}>{deadline || '—'}</Text>
           </View>
 
           <View style={[styles.previewInfo, styles.previewInfoPrimary]}>
-            <Ionicons name="cash-outline" size={13} color={Colors.primary} />
-            <Text style={styles.previewInfoPrimaryText}>{budgetLabel}</Text>
+            <Ionicons name="cash-outline" size={13} color={colors.primary} />
+            <Text style={[styles.previewInfoPrimaryText, { color: colors.primary }]}>{budgetLabel}</Text>
           </View>
         </View>
       </View>
@@ -88,7 +91,8 @@ export function ServiceRequestReviewStep({
           style={({ pressed }) => [
             styles.primaryButton,
             styles.flexButton,
-            !canSubmit && styles.primaryButtonDisabled,
+            { backgroundColor: colors.primary, shadowColor: colors.primary },
+            !canSubmit && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
             pressed && canSubmit && styles.pressed,
           ]}
         >
@@ -97,7 +101,7 @@ export function ServiceRequestReviewStep({
           ) : (
             <Ionicons name="cloud-upload-outline" size={18} color="#ffffff" />
           )}
-          <Text style={[styles.primaryText, !canSubmit && styles.primaryTextDisabled]}>
+          <Text style={[styles.primaryText, !canSubmit && { color: colors.mutedForeground }]}>
             {isSubmitting ? 'جارٍ النشر...' : 'نشر الطلب'}
           </Text>
         </Pressable>

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
@@ -19,14 +20,33 @@ type CompleteProfileVerifiedCardProps = {
 export function CompleteProfileUniversityBadge({
   universityName,
 }: CompleteProfileUniversityBadgeProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   if (!universityName) {
     return null;
   }
 
   return (
-    <View style={styles.universityBadge}>
-      <Ionicons name="school-outline" size={18} color={Colors.primary} />
-      <Text style={styles.universityBadgeText}>{universityName}</Text>
+    <View
+      style={[
+        styles.universityBadge,
+        {
+          backgroundColor: colors.secondary,
+          borderColor: colors.border,
+          flexDirection: isRtl ? 'row' : 'row-reverse',
+        },
+      ]}
+    >
+      <Ionicons name="school-outline" size={18} color={colors.primary} />
+      <Text
+        style={[
+          styles.universityBadgeText,
+          { color: colors.primary, writingDirection: isRtl ? 'rtl' : 'ltr' },
+        ]}
+      >
+        {universityName}
+      </Text>
     </View>
   );
 }
@@ -36,21 +56,16 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: 16,
     paddingHorizontal: 14,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(47, 99, 224, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(47, 99, 224, 0.12)',
   },
   universityBadgeText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
     textAlign: 'center',
-    writingDirection: 'rtl',
   },
   verifiedCard: {
     minHeight: 50,
@@ -72,10 +87,14 @@ const styles = StyleSheet.create({
 });
 
 export function CompleteProfileVerifiedCard({ email }: CompleteProfileVerifiedCardProps) {
+  const { isRtl, t } = useAppSettings();
+
   return (
     <View style={styles.verifiedCard}>
       <Ionicons name="checkmark-circle" size={22} color="#34c759" />
-      <Text style={styles.verifiedText}>تم التحقق من البريد: {email}</Text>
+      <Text style={[styles.verifiedText, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+        {t('completeProfile.verifiedEmail', { email })}
+      </Text>
     </View>
   );
 }

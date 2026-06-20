@@ -8,8 +8,9 @@ import { EventsTab } from "@/components/explore/EventsTab";
 import { ExchangeTab } from "@/components/explore/ExchangeTab";
 import { MarketplaceTab } from "@/components/explore/MarketplaceTab";
 import { ServicesTab } from "@/components/explore/ServicesTab";
+import { useAppSettings, type TranslationKey } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
@@ -22,7 +23,7 @@ type TabId = "services" | "marketplace" | "exchange" | "events";
 
 type Tab = {
   id: TabId;
-  label: string;
+  labelKey: TranslationKey;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
 };
@@ -30,25 +31,25 @@ type Tab = {
 const TABS: Tab[] = [
   {
     id: "services",
-    label: "خدمات",
+    labelKey: "explore.services",
     icon: "briefcase-outline",
     color: SemanticColors.blue,
   },
   {
     id: "marketplace",
-    label: "متجر",
+    labelKey: "explore.marketplace",
     icon: "bag-outline",
     color: SemanticColors.orange,
   },
   {
     id: "exchange",
-    label: "تبادل",
+    labelKey: "explore.exchange",
     icon: "swap-horizontal-outline",
     color: SemanticColors.lightBlue,
   },
   {
     id: "events",
-    label: "فعاليات",
+    labelKey: "explore.events",
     icon: "calendar-outline",
     color: SemanticColors.violet,
   },
@@ -71,6 +72,8 @@ function parseTabParam(value?: string | string[]): TabId | null {
 
 export default function ExploreRoute() {
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
+  const { t, isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
   const [activeTab, setActiveTab] = useState<TabId>(
     () => parseTabParam(params.tab) ?? "services",
   );
@@ -97,7 +100,7 @@ export default function ExploreRoute() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.mobileShell}>
         <View
           style={[
@@ -118,32 +121,38 @@ export default function ExploreRoute() {
           ]}
         />
 
-        <View style={styles.header}>
-          <Text style={styles.title}>استكشف</Text>
+        <View style={[styles.header, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
+          <Text style={[styles.title, { color: colors.foreground }]}>{t("explore.title")}</Text>
 
           <Pressable
             style={({ pressed }) => [
               styles.filterButton,
+              { backgroundColor: colors.card, borderColor: colors.border },
               showFilter && {
-                backgroundColor: Colors.primary,
-                borderColor: Colors.primary,
+                backgroundColor: colors.primary,
+                borderColor: colors.primary,
               },
               pressed && styles.pressed,
             ]}
             onPress={() => setShowFilter((prev) => !prev)}
           >
-            <Text style={[styles.filterText, showFilter && { color: "#fff" }]}>
-              فلتر
+            <Text style={[styles.filterText, { color: showFilter ? "#fff" : colors.foreground }]}>
+              {t("explore.filter")}
             </Text>
             <Ionicons
               name="options-outline"
               size={16}
-              color={showFilter ? "#fff" : Colors.foreground}
+              color={showFilter ? "#fff" : colors.foreground}
             />
           </Pressable>
         </View>
 
-        <View style={styles.tabBar}>
+        <View
+          style={[
+            styles.tabBar,
+            { borderBottomColor: colors.border, flexDirection: isRtl ? "row-reverse" : "row" },
+          ]}
+        >
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
 
@@ -159,16 +168,16 @@ export default function ExploreRoute() {
                 <Ionicons
                   name={tab.icon}
                   size={18}
-                  color={isActive ? tab.color : Colors.mutedForeground}
+                  color={isActive ? tab.color : colors.mutedForeground}
                 />
                 <Text
                   style={[
                     styles.tabLabel,
-                    { color: isActive ? tab.color : Colors.mutedForeground },
+                    { color: isActive ? tab.color : colors.mutedForeground },
                     isActive && { fontWeight: FontWeight.bold },
                   ]}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </Text>
                 {isActive ? (
                   <View
@@ -205,7 +214,6 @@ export default function ExploreRoute() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   mobileShell: {
     flex: 1,
@@ -214,7 +222,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   header: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
@@ -235,7 +242,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
   },
   trendingBadge: {
     flexDirection: "row-reverse",
@@ -254,24 +260,19 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.xs,
-    backgroundColor: Colors.card,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: Dimensions.radiusFull,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
   },
   filterText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
     fontWeight: FontWeight.medium,
-    color: Colors.foreground,
   },
   tabBar: {
-    flexDirection: "row-reverse",
     paddingHorizontal: Spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
   },
   tabItem: {
     flex: 1,

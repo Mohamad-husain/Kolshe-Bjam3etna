@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export function HomeSectionHeader({
   title,
@@ -15,14 +17,21 @@ export function HomeSectionHeader({
   bg: string;
   onPress: () => void;
 }) {
+  const { t, isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.hRow}>
+    <View style={[styles.hRow, { flexDirection: isRtl ? 'row' : 'row-reverse' }]}>
       <Pressable onPress={onPress} style={({ pressed }) => [styles.moreBtn, pressed && styles.pressed]}>
-        <Text style={styles.moreTxt}>عرض الكل</Text>
-        <Ionicons name="chevron-back" size={14} color={Colors.primary} />
+        <Text style={[styles.moreTxt, { color: colors.primary }]}>{t('common.showAll')}</Text>
+        <Ionicons
+          name={isRtl ? 'chevron-back' : 'chevron-forward'}
+          size={14}
+          color={colors.primary}
+        />
       </Pressable>
-      <View style={styles.titleRow}>
-        <Text style={styles.titleTxt}>{title}</Text>
+      <View style={[styles.titleRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+        <Text style={[styles.titleTxt, { color: colors.foreground }]}>{title}</Text>
         <View style={[styles.titleIcon, { backgroundColor: bg }]}>
           <Ionicons name={icon} size={14} color={color} />
         </View>
@@ -42,11 +51,14 @@ export function HomeStateBlock({
   error?: boolean;
   empty: string;
 }) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.state}>
+    <View style={[styles.state, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {loading ? <ActivityIndicator color={color} /> : null}
-      <Text style={styles.stateTxt}>
-        {loading ? 'جارٍ تحميل البيانات...' : error ? 'تعذر تحميل هذا القسم حالياً' : empty}
+      <Text style={[styles.stateTxt, { color: colors.mutedForeground }]}>
+        {loading ? t('home.loadingSection') : error ? t('home.sectionError') : empty}
       </Text>
     </View>
   );
@@ -54,7 +66,6 @@ export function HomeStateBlock({
 
 const styles = StyleSheet.create({
   hRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
@@ -65,18 +76,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   moreTxt: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,
   },
   titleRow: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
   },
   titleTxt: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x17,
     fontWeight: FontWeight.bold,
@@ -91,16 +99,13 @@ const styles = StyleSheet.create({
   state: {
     minHeight: 112,
     borderRadius: 24,
-    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     paddingHorizontal: 18,
   },
   stateTxt: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     textAlign: 'center',

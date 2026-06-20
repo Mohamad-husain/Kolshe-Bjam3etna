@@ -16,6 +16,13 @@ import type {
     UpdateChatMessageRequest,
 } from "@/types/chat"
 
+type DirectConversationResponse = {
+    conversationId?: number | string | null
+    data?: {
+        conversationId?: number | string | null
+    } | null
+}
+
 const CHAT_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? "")
     .trim()
     .replace(/\/$/, "")
@@ -34,6 +41,16 @@ const toApiCollection = <T>(value: unknown): T[] =>
 const getCurrentUserIdFromToken = () => {
     const payload = decodeJwtPayload(getAuthToken())
     return getJwtStringClaim(payload, jwtClaimKeys.nameIdentifier)
+}
+
+const mapDirectConversationId = (value: DirectConversationResponse) => {
+    const conversationId = toIdString(value.conversationId ?? value.data?.conversationId)
+
+    if (!conversationId) {
+        throw new Error("تعذر فتح المحادثة")
+    }
+
+    return conversationId
 }
 
 const getMessageImageUrl = (message: ChatMessageApi) => {
@@ -262,6 +279,34 @@ export const getConversations = async (): Promise<ChatConversation[]> => {
     return toApiCollection<ChatConversationApi>(response.data)
         .map(mapConversation)
         .filter((conversation): conversation is ChatConversation => conversation !== null)
+}
+
+export const createDirectConversation = async (otherUserId: string) => {
+    const trimmedUserId = getTrimmedString(otherUserId)
+
+    if (!trimmedUserId) {
+        throw new Error("لا يوجد مستخدم للتواصل معه")
+    }
+
+    const response = await apiClient.post<DirectConversationResponse>("/api/Chat/dm", {
+        otherUserId: trimmedUserId,
+    })
+
+    return mapDirectConversationId(response.data)
+}
+
+export const createDirectConversationByEmail = async (otherUserEmail: string) => {
+    const trimmedEmail = getTrimmedString(otherUserEmail)
+
+    if (!trimmedEmail) {
+        throw new Error("لا يوجد بريد مرتبط بالمحادثة")
+    }
+
+    const response = await apiClient.post<DirectConversationResponse>("/api/Chat/dm/by-email", {
+        otherUserEmail: trimmedEmail,
+    })
+
+    return mapDirectConversationId(response.data)
 }
 
 export const getMessages = async (conversationId: string): Promise<ChatMessage[]> => {

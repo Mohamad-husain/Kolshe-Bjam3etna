@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AUTH_COPY } from '@/lib/auth/auth-copy';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   FontFamily,
 } from '@/styles/ui-theme';
@@ -25,11 +26,13 @@ type AuthLayoutProps = PropsWithChildren<{
 
 export function AuthLayout({ activeTab, onTabChange, children }: AuthLayoutProps) {
   const insets = useSafeAreaInsets();
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <AuthBackground />
 
@@ -49,7 +52,17 @@ export function AuthLayout({ activeTab, onTabChange, children }: AuthLayoutProps
           <AuthBranding />
           <AuthTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
           <AuthSurface>{children}</AuthSurface>
-          <Text style={styles.terms}>{AUTH_COPY.termsAgreement}</Text>
+          <Text
+            style={[
+              styles.terms,
+              {
+                color: colors.mutedForeground,
+                writingDirection: isRtl ? 'rtl' : 'ltr',
+              },
+            ]}
+          >
+            {t('auth.termsAgreement')}
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -61,7 +74,6 @@ export type { AuthTab } from './auth-tab-switcher';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ececf1',
     overflow: 'hidden',
   },
   scrollContent: {
@@ -78,11 +90,9 @@ const styles = StyleSheet.create({
   terms: {
     marginTop: 30,
     textAlign: 'center',
-    color: '#b1b1b9',
     fontFamily: FontFamily.cairo,
     fontSize: 12,
     lineHeight: 18,
-    writingDirection: 'rtl',
     opacity: 0.9,
   },
 });

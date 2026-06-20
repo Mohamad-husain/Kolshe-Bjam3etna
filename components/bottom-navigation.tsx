@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
@@ -16,7 +17,7 @@ export type Screen = 'home' | 'explore' | 'add-menu' | 'messages' | 'profile';
 
 type NavItem = {
   icon: (typeof IconSet.nav)[number];
-  label: string;
+  labelKey: 'nav.home' | 'nav.explore' | 'nav.add' | 'nav.messages' | 'nav.profile';
   screen: Screen;
 };
 
@@ -26,11 +27,11 @@ type BottomNavigationProps = {
 };
 
 const navItems: NavItem[] = [
-  { icon: IconSet.nav[0], label: 'الرئيسية', screen: 'home' },
-  { icon: IconSet.nav[1], label: 'استكشف', screen: 'explore' },
-  { icon: IconSet.nav[2], label: '', screen: 'add-menu' },
-  { icon: IconSet.nav[3], label: 'الرسائل', screen: 'messages' },
-  { icon: IconSet.nav[4], label: 'حسابي', screen: 'profile' },
+  { icon: IconSet.nav[0], labelKey: 'nav.home', screen: 'home' },
+  { icon: IconSet.nav[1], labelKey: 'nav.explore', screen: 'explore' },
+  { icon: IconSet.nav[2], labelKey: 'nav.add', screen: 'add-menu' },
+  { icon: IconSet.nav[3], labelKey: 'nav.messages', screen: 'messages' },
+  { icon: IconSet.nav[4], labelKey: 'nav.profile', screen: 'profile' },
 ];
 
 function toIoniconName(icon: (typeof IconSet.nav)[number], active: boolean) {
@@ -55,16 +56,24 @@ function toIoniconName(icon: (typeof IconSet.nav)[number], active: boolean) {
 
 export function BottomNavigation({ currentScreen, onChangeScreen }: BottomNavigationProps) {
   const insets = useSafeAreaInsets();
+  const { t, isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
   const containerPaddingBottom = Math.max(insets.bottom, 10);
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      <View style={styles.nav}>
+      <View
+        style={[
+          styles.nav,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
         <View style={styles.topShimmer} />
 
         <View
           style={[
             styles.row,
+            { flexDirection: isRtl ? 'row-reverse' : 'row' },
             { paddingBottom: containerPaddingBottom, paddingTop: 8 },
           ]}
         >
@@ -77,7 +86,7 @@ export function BottomNavigation({ currentScreen, onChangeScreen }: BottomNaviga
                 <Pressable
                   key={item.screen}
                   accessibilityRole="button"
-                  accessibilityLabel="إضافة جديد"
+                  accessibilityLabel={t('nav.add')}
                   onPress={() => onChangeScreen('add-menu')}
                   style={({ pressed }) => [
                     styles.centerButton,
@@ -97,17 +106,19 @@ export function BottomNavigation({ currentScreen, onChangeScreen }: BottomNaviga
                 key={item.screen}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
-                accessibilityLabel={item.label}
+                accessibilityLabel={t(item.labelKey)}
                 onPress={() => onChangeScreen(item.screen)}
                 style={({ pressed }) => [styles.tabButton, pressed && styles.tabPressed]}
               >
-                {isActive && <View style={styles.activePill} />}
+                {isActive && (
+                  <View style={[styles.activePill, { backgroundColor: colors.secondary }]} />
+                )}
 
                 <View style={styles.iconWrap}>
                   <Ionicons
                     name={iconName}
                     size={22}
-                    color={isActive ? Colors.primary : Colors.mutedForeground}
+                    color={isActive ? colors.primary : colors.mutedForeground}
                   />
                 </View>
 
@@ -115,15 +126,17 @@ export function BottomNavigation({ currentScreen, onChangeScreen }: BottomNaviga
                   style={[
                     styles.label,
                     {
-                      color: isActive ? Colors.primary : Colors.mutedForeground,
+                      color: isActive ? colors.primary : colors.mutedForeground,
                       fontWeight: isActive ? FontWeight.bold : FontWeight.medium,
                     },
                   ]}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Text>
 
-                {isActive && <View style={styles.activeDot} />}
+                {isActive && (
+                  <View style={[styles.activeDot, { backgroundColor: colors.primary }]} />
+                )}
               </Pressable>
             );
           })}
@@ -152,9 +165,7 @@ const styles = StyleSheet.create({
     writingDirection: 'ltr',
   },
   nav: {
-    backgroundColor: Colors.background,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
   },
   topShimmer: {
     height: StyleSheet.hairlineWidth,
@@ -162,7 +173,6 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   row: {
-    flexDirection: 'row-reverse',
     justifyContent: 'space-around',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
@@ -205,7 +215,6 @@ const styles = StyleSheet.create({
     top: -4,
     bottom: -2,
     borderRadius: Dimensions.radiusButton,
-    backgroundColor: Colors.secondary,
   },
   iconWrap: {
     alignItems: 'center',
@@ -223,6 +232,5 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.primary,
   },
 });

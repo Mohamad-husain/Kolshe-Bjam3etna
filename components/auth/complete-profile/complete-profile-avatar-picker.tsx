@@ -3,8 +3,9 @@ import { Image } from 'expo-image';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
@@ -23,12 +24,16 @@ export function CompleteProfileAvatarPicker({
   errorMessage,
   onPress,
 }: CompleteProfileAvatarPickerProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.avatarSection}>
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [
           styles.avatarButton,
+          { backgroundColor: colors.card, borderColor: colors.border },
           pressed && styles.avatarButtonPressed,
           image ? styles.avatarButtonFilled : null,
         ]}
@@ -36,10 +41,12 @@ export function CompleteProfileAvatarPicker({
         {image ? (
           <Image contentFit="cover" source={{ uri: image.uri }} style={styles.avatarImage} />
         ) : (
-          <Ionicons name="camera-outline" size={34} color="#b8b8bf" />
+          <Ionicons name="camera-outline" size={34} color={colors.mutedForeground} />
         )}
       </Pressable>
-      <Text style={styles.uploadHint}>رفع صورة شخصية</Text>
+      <Text style={[styles.uploadHint, { color: colors.primary }]}>
+        {t('completeProfile.uploadAvatar')}
+      </Text>
       <CompleteProfileErrorText message={errorMessage} />
     </View>
   );
@@ -56,8 +63,6 @@ const styles = StyleSheet.create({
     borderRadius: Dimensions.radiusFull,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#d6d7dd',
-    backgroundColor: 'rgba(255, 255, 255, 0.52)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -75,7 +80,6 @@ const styles = StyleSheet.create({
   },
   uploadHint: {
     marginTop: 14,
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,

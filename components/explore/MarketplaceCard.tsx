@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import {
-  Colors,
   SemanticColors,
   Dimensions,
   FontFamily,
@@ -10,6 +9,8 @@ import {
   Spacing,
 } from "@/styles/ui-theme";
 import { getCategoryAccent } from "./explore-colors";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 
 import type { MarketplaceCardData } from "@/types/explore";
 
@@ -19,23 +20,37 @@ interface MarketplaceCardProps {
 }
 
 export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
   const accent = getCategoryAccent(data.category);
   const hasImage = Boolean(data.imageUrl);
+  const rowDirection = isRtl ? "row-reverse" : "row";
+  const textAlign = isRtl ? "right" : "left";
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        pressed && styles.cardPressed,
+      ]}
     >
       {data.imageUrl ? (
-        <View style={styles.mediaWrapper}>
+        <View style={[styles.mediaWrapper, { backgroundColor: colors.secondary }]}>
           <Image source={{ uri: data.imageUrl }} style={styles.image} />
         </View>
       ) : null}
 
-      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
+      <View
+        style={[
+          styles.accentBar,
+          isRtl ? styles.accentBarRtl : styles.accentBarLtr,
+          { backgroundColor: accent.color },
+        ]}
+      />
 
-      <View style={[styles.badges, hasImage && styles.badgesAfterImage]}>
+      <View style={[styles.badges, { flexDirection: rowDirection }, hasImage && styles.badgesAfterImage]}>
         <View style={[styles.badge, { backgroundColor: accent.strongBg }]}>
           <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
@@ -55,7 +70,7 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
               color={SemanticColors.orange}
             />
             <Text style={[styles.badgeText, { color: SemanticColors.orange }]}>
-              رائج
+              {t("explore.trending")}
             </Text>
           </View>
         )}
@@ -68,26 +83,34 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
             ]}
           >
             <Text style={[styles.badgeText, { color: SemanticColors.red }]}>
-              مباع
+              {t("explore.sold")}
             </Text>
           </View>
         )}
       </View>
 
-      <Text style={styles.title}>{data.title}</Text>
+      <Text style={[styles.title, { color: colors.foreground, textAlign }]}>
+        {data.title}
+      </Text>
 
-      <Text style={styles.description} numberOfLines={2}>
+      <Text
+        style={[
+          styles.description,
+          { color: colors.mutedForeground, textAlign },
+        ]}
+        numberOfLines={2}
+      >
         {data.description}
       </Text>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { flexDirection: rowDirection }]}>
         <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
           <Text style={[styles.priceText, { color: accent.color }]}>
-            {data.price} شيقل
+            {data.price} {t("explore.shekel")}
           </Text>
         </View>
 
-        <View style={styles.conditionBox}>
+        <View style={[styles.conditionBox, { flexDirection: rowDirection }]}>
           <Ionicons
             name="checkmark-circle-outline"
             size={13}
@@ -96,8 +119,10 @@ export function MarketplaceCard({ data, onPress }: MarketplaceCardProps) {
           <Text style={styles.conditionText}>{data.condition}</Text>
         </View>
 
-        <View style={styles.owner}>
-          <Text style={styles.ownerName}>{data.owner.name}</Text>
+        <View style={[styles.owner, { flexDirection: rowDirection }]}>
+          <Text style={[styles.ownerName, { color: colors.foreground }]}>
+            {data.owner.name}
+          </Text>
 
           <View style={[styles.avatar, { backgroundColor: accent.color }]}>
             <Text style={styles.avatarText}>{data.owner.initials}</Text>
@@ -118,7 +143,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -135,7 +159,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Dimensions.baseRadius,
     borderTopRightRadius: Dimensions.baseRadius,
     overflow: "hidden",
-    backgroundColor: Colors.secondary,
   },
   image: {
     width: "100%",
@@ -144,14 +167,18 @@ const styles = StyleSheet.create({
 
   accentBar: {
     position: "absolute",
-    right: 0,
     top: 0,
     bottom: 0,
     width: 3,
     borderRadius: 2,
   },
+  accentBarRtl: {
+    right: 0,
+  },
+  accentBarLtr: {
+    left: 0,
+  },
   badges: {
-    flexDirection: "row-reverse",
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
@@ -175,20 +202,15 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
-    textAlign: "right",
     marginBottom: Spacing.xs,
   },
   description: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
-    textAlign: "right",
     lineHeight: 20,
     marginBottom: Spacing.md,
   },
   footer: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.sm,
   },
@@ -203,7 +225,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
   },
   conditionBox: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 3,
     backgroundColor: SemanticColors.green + "15",
@@ -218,7 +239,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   owner: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.xs,
     flex: 1,
@@ -240,7 +260,6 @@ const styles = StyleSheet.create({
   ownerName: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
     fontWeight: FontWeight.medium,
   },
 });

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import { useMyEventsQuery } from "@/hooks/queries/use-coordinator-queries";
 import { FontFamily, FontWeight } from "@/styles/ui-theme";
 
@@ -39,6 +40,7 @@ function clampPercent(value: number) {
 export function CoordinatorStatsTab() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { colors } = useThemePreference();
   const { data: events = [] } = useMyEventsQuery();
   const shellWidth = Math.min(width, 456);
   const isCompact = shellWidth < 380;
@@ -139,6 +141,7 @@ export function CoordinatorStatsTab() {
               key={card.label}
               style={[
                 styles.statsOverviewCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
                 { height: statsCardHeight },
               ]}
             >
@@ -152,8 +155,8 @@ export function CoordinatorStatsTab() {
               </View>
 
               <View style={styles.statsCardCopy}>
-                <Text style={styles.statsCardValue}>{card.value}</Text>
-                <Text numberOfLines={1} style={styles.statsCardLabel}>
+                <Text style={[styles.statsCardValue, { color: colors.foreground }]}>{card.value}</Text>
+                <Text numberOfLines={1} style={[styles.statsCardLabel, { color: colors.mutedForeground }]}>
                   {card.label}
                 </Text>
               </View>
@@ -167,6 +170,7 @@ export function CoordinatorStatsTab() {
               key={card.label}
               style={[
                 styles.statsOverviewCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
                 { height: statsCardHeight },
               ]}
             >
@@ -180,8 +184,8 @@ export function CoordinatorStatsTab() {
               </View>
 
               <View style={styles.statsCardCopy}>
-                <Text style={styles.statsCardValue}>{card.value}</Text>
-                <Text numberOfLines={1} style={styles.statsCardLabel}>
+                <Text style={[styles.statsCardValue, { color: colors.foreground }]}>{card.value}</Text>
+                <Text numberOfLines={1} style={[styles.statsCardLabel, { color: colors.mutedForeground }]}>
                   {card.label}
                 </Text>
               </View>
@@ -190,15 +194,15 @@ export function CoordinatorStatsTab() {
         </View>
       </View>
 
-      <View style={styles.performanceCard}>
-        <Text style={styles.performanceTitle}>أداء الفعاليات</Text>
+      <View style={[styles.performanceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.performanceTitle, { color: colors.foreground }]}>أداء الفعاليات</Text>
         <View style={styles.performanceRows}>
           {performanceRows.map((row) => (
             <View key={row.label} style={styles.performanceRow}>
-              <Text numberOfLines={1} style={styles.performanceLabel}>
+              <Text numberOfLines={1} style={[styles.performanceLabel, { color: colors.foreground }]}>
                 {row.label}
               </Text>
-              <View style={styles.progressTrack}>
+              <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
                 <View
                   style={[
                     styles.progressFill,

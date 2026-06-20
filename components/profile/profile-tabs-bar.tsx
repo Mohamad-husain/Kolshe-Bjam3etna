@@ -1,16 +1,26 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 const profileTabs = [
-  'العروض',
-  'إعلانات',
-  'خدمات',
-  'تبادلات',
-  'فعالياتي',
+  'offers',
+  'ads',
+  'services',
+  'exchange',
+  'events',
 ] as const;
 
-type ProfileTab = (typeof profileTabs)[number];
+export type ProfileTab = (typeof profileTabs)[number];
+
+const tabLabels: Record<ProfileTab, 'profile.offers' | 'profile.ads' | 'profile.services' | 'profile.exchange' | 'profile.events'> = {
+  offers: 'profile.offers',
+  ads: 'profile.ads',
+  services: 'profile.services',
+  exchange: 'profile.exchange',
+  events: 'profile.events',
+};
 
 export function ProfileTabsBar({
   activeTab,
@@ -21,6 +31,9 @@ export function ProfileTabsBar({
   pendingOffers: number;
   onChangeTab: (tab: ProfileTab) => void;
 }) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.tabsSection}>
       <ScrollView
@@ -37,21 +50,41 @@ export function ProfileTabsBar({
               onPress={() => onChangeTab(tab)}
               style={({ pressed }) => [
                 styles.tabButton,
-                isActive && styles.tabButtonActive,
+                { backgroundColor: colors.secondary },
+                isActive && [
+                  styles.tabButtonActive,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ],
                 pressed && styles.pressed,
               ]}
             >
-              {tab === 'العروض' ? (
+              {tab === 'offers' ? (
                 <View style={styles.tabLabelRow}>
                   {pendingOffers ? (
                     <View style={styles.tabBadge}>
                       <Text style={styles.tabBadgeText}>{pendingOffers}</Text>
                     </View>
                   ) : null}
-                  <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab}</Text>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      { color: isActive ? colors.foreground : colors.mutedForeground },
+                      isActive && styles.tabTextActive,
+                    ]}
+                  >
+                    {t(tabLabels[tab])}
+                  </Text>
                 </View>
               ) : (
-                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab}</Text>
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: isActive ? colors.foreground : colors.mutedForeground },
+                    isActive && styles.tabTextActive,
+                  ]}
+                >
+                  {t(tabLabels[tab])}
+                </Text>
               )}
             </Pressable>
           );
@@ -76,12 +109,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(120,120,128,0.08)',
   },
   tabButtonActive: {
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.08)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
@@ -94,13 +124,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tabText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
   },
   tabTextActive: {
-    color: Colors.foreground,
   },
   tabBadge: {
     minWidth: 20,

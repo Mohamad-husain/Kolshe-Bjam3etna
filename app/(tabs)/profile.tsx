@@ -23,8 +23,10 @@ import { ProfileOutgoingOfferCard } from "@/components/profile/cards/profile-out
 import { ProfileServiceCard } from "@/components/profile/cards/profile-service-card";
 import { ProfileHero } from "@/components/profile/profile-hero";
 import { ProfileLoadingBanner } from "@/components/profile/profile-loading-banner";
-import { ProfileTabsBar } from "@/components/profile/profile-tabs-bar";
+import { ProfileTabsBar, type ProfileTab } from "@/components/profile/profile-tabs-bar";
+import { useAppSettings } from "@/contexts/app-settings-context";
 import { useAuth } from "@/contexts/auth-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
   useAcceptOfferMutation,
   useRejectOfferMutation,
@@ -41,11 +43,9 @@ import {
   hasCoordinatorDashboardRole,
   hasCoreAdminRole,
 } from '@/lib/auth/admin-access';
-import { formatStudyYearLabel } from '@/lib/edit-profile/edit-profile-config';
 import type { IncomingOffer } from '@/services/profile-api';
-import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
+import { FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
-type ProfileTab = "العروض" | "إعلانات" | "خدمات" | "تبادلات" | "فعالياتي";
 type OfferView = "incoming" | "outgoing";
 type ExploreTarget = "services" | "marketplace" | "exchange" | "events";
 
@@ -75,7 +75,7 @@ function getAvatarColor(seed?: string | null) {
 
 function getAvatarInitial(name?: string | null) {
   const value = (name ?? "").trim();
-  return value[0]?.toUpperCase() ?? "م";
+  return value[0]?.toUpperCase() ?? "U";
 }
 
 function getValidImageUri(value?: string | null) {
@@ -129,35 +129,7 @@ type RegisteredEventItem = {
   color: string;
 };
 
-const registeredEvents: RegisteredEventItem[] = [
-  {
-    id: 1,
-    title: "ورشة عمل البرمجة بالبايثون",
-    date: "28 فبراير 2026",
-    time: "10:00 صباحاً",
-    location: "قاعة الحاسوب",
-    organizer: "نادي البرمجة",
-    color: SemanticColors.blue,
-  },
-  {
-    id: 2,
-    title: "ندوة ريادة الأعمال",
-    date: "5 مارس 2026",
-    time: "1:00 مساءً",
-    location: "المدرج الرئيسي",
-    organizer: "نادي الأعمال",
-    color: SemanticColors.green,
-  },
-  {
-    id: 3,
-    title: "مسابقة الروبوتات السنوية",
-    date: "10 مارس 2026",
-    time: "9:00 صباحاً",
-    location: "مختبر الروبوتات",
-    organizer: "نادي الروبوتات",
-    color: SemanticColors.lightBlue,
-  },
-];
+const registeredEvents: RegisteredEventItem[] = [];
 
 function SectionBanner({
   message,
@@ -166,16 +138,20 @@ function SectionBanner({
   message: string;
   tone?: "info" | "error";
 }) {
+  const { colors } = useThemePreference();
+
   return (
     <View
       style={[
         styles.sectionBanner,
+        { backgroundColor: colors.secondary },
         tone === "error" && styles.sectionBannerError,
       ]}
     >
       <Text
         style={[
           styles.sectionBannerText,
+          { color: colors.primary },
           tone === "error" && styles.sectionBannerErrorText,
         ]}
       >
@@ -198,13 +174,15 @@ function SectionEmptyState({
   actionLabel?: string;
   onPress?: () => void;
 }) {
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.emptyCard}>
-      <View style={styles.emptyIconWrap}>
-        <Ionicons name={icon} size={22} color={Colors.mutedForeground} />
+    <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.emptyIconWrap, { backgroundColor: colors.secondary }]}>
+        <Ionicons name={icon} size={22} color={colors.mutedForeground} />
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyDescription}>{description}</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{title}</Text>
+      <Text style={[styles.emptyDescription, { color: colors.mutedForeground }]}>{description}</Text>
       {actionLabel && onPress ? (
         <Pressable
           onPress={onPress}
@@ -213,7 +191,7 @@ function SectionEmptyState({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.emptyActionText}>{actionLabel}</Text>
+          <Text style={[styles.emptyActionText, { color: colors.primary }]}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -223,39 +201,42 @@ function SectionEmptyState({
 export default function ProfileRoute() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<ProfileTab>("العروض");
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const [activeTab, setActiveTab] = useState<ProfileTab>("offers");
   const [offersView, setOffersView] = useState<OfferView>("incoming");
 
   const profileQuery = useProfileQuery(!!user);
   const incomingOffersQuery = useIncomingOffersQuery(!!user);
   const outgoingOffersQuery = useOutgoingOffersQuery(
-    !!user && activeTab === "العروض",
+    !!user && activeTab === "offers",
   );
   const servicesQuery = useMyServiceRequestsQuery(
-    !!user && activeTab === "خدمات",
+    !!user && activeTab === "services",
   );
-  const adsQuery = useMyProductAdsQuery(!!user && activeTab === "إعلانات");
-  const swapsQuery = useMySwapAdsQuery(!!user && activeTab === "تبادلات");
+  const adsQuery = useMyProductAdsQuery(!!user && activeTab === "ads");
+  const swapsQuery = useMySwapAdsQuery(!!user && activeTab === "exchange");
   const acceptOfferMutation = useAcceptOfferMutation();
   const rejectOfferMutation = useRejectOfferMutation();
 
   const profile = profileQuery.data;
-  const incomingOffers = incomingOffersQuery.data ?? [];
+  const incomingOffers = (incomingOffersQuery.data ?? []).filter(
+    (item) => item.status === 'pending',
+  );
   const outgoingOffers = outgoingOffersQuery.data ?? [];
   const services = servicesQuery.data ?? [];
   const ads = adsQuery.data ?? [];
   const swaps = swapsQuery.data ?? [];
 
-  const fullName = profile?.fullName?.trim() || user?.name || 'مستخدم جديد';
-  const major = profile?.major?.trim() || 'مصمم جرافيك | مطور ويب';
-  const universityName = profile?.universityName?.trim() || 'الجامعة الأردنية';
-  const studyYear =
-    formatStudyYearLabel(profile?.studyYear) || 'السنة الثانية';
+  const fullName = profile?.fullName?.trim() || user?.name || t('profile.defaultName');
+  const major = profile?.major?.trim() || t('profile.defaultMajor');
+  const universityName = profile?.universityName?.trim() || t('profile.defaultUniversity');
+  const studyYear = normalizeProfileText(profile?.studyYear);
   const detailText = profile?.universityNumber?.trim()
-    ? `الرقم الجامعي ${profile.universityNumber}`
-    : 'مقيم بالحرم';
+    ? t('profile.universityNumber', { number: profile.universityNumber })
+    : t('profile.defaultDetail');
   const profileImageUri = getValidImageUri(normalizeProfileText(profile?.profileImageUrl) || null);
-  const pendingOffers = incomingOffers.filter((item) => item.status === 'pending').length;
+  const pendingOffers = incomingOffers.length;
   const acceptingOfferId = acceptOfferMutation.isPending ? acceptOfferMutation.variables ?? null : null;
   const rejectingOfferId = rejectOfferMutation.isPending ? rejectOfferMutation.variables ?? null : null;
 
@@ -269,12 +250,8 @@ export default function ProfileRoute() {
   const openCoordinator = () => {
     router.push("/coordinator");
   };
-  const showSoonAlert = (title: string, message: string) => {
-    Alert.alert(title, message);
-  };
-
   const showIncomingOffers = () => {
-    setActiveTab("العروض");
+    setActiveTab("offers");
     setOffersView("incoming");
   };
 
@@ -285,15 +262,15 @@ export default function ProfileRoute() {
 
     acceptOfferMutation.mutate(offer.id, {
       onSuccess: () => {
-        Alert.alert("تم قبول العرض", `تم قبول عرض ${offer.from} بنجاح.`, [
-          { text: "فتح الرسائل", onPress: openMessages },
-          { text: "لاحقاً", style: "cancel" },
+        Alert.alert(t("profile.acceptOfferSuccess"), `${offer.from}`, [
+          { text: t("nav.messages"), onPress: openMessages },
+          { text: t("common.cancel"), style: "cancel" },
         ]);
       },
       onError: (error) => {
         const message =
-          error instanceof Error ? error.message : "تعذر قبول العرض";
-        Alert.alert("تعذر قبول العرض", message);
+          error instanceof Error ? error.message : t("profile.acceptOfferError");
+        Alert.alert(t("profile.acceptOfferError"), message);
       },
     });
   };
@@ -305,25 +282,25 @@ export default function ProfileRoute() {
 
     rejectOfferMutation.mutate(offer.id, {
       onSuccess: () => {
-        Alert.alert("تم رفض العرض", `تم رفض عرض ${offer.from} بنجاح.`);
+        Alert.alert(t("profile.rejected"), offer.from);
       },
       onError: (error) => {
         const message =
-          error instanceof Error ? error.message : "تعذر رفض العرض";
-        Alert.alert("تعذر رفض العرض", message);
+          error instanceof Error ? error.message : t("profile.rejected");
+        Alert.alert(t("profile.rejected"), message);
       },
     });
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.primary }]} edges={["top"]}>
       <StatusBar style="light" />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: insets.bottom + 110 },
+            { backgroundColor: colors.background, paddingBottom: insets.bottom + 110 },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -349,11 +326,7 @@ export default function ProfileRoute() {
             onEditProfile={() =>
               router.push({ pathname: '/edit-profile', params: { tab: 'personal' } })
             }
-            onOpenExploreTab={function (
-              tab: "services" | "marketplace" | "exchange" | "events",
-            ): void {
-              throw new Error("Function not implemented.");
-            }}
+            onOpenExploreTab={openExploreTab}
           />
 
           <ProfileTabsBar
@@ -364,14 +337,17 @@ export default function ProfileRoute() {
 
           {profileQuery.isLoading ? <ProfileLoadingBanner /> : null}
 
-          {activeTab === "العروض" ? (
+          {activeTab === "offers" ? (
             <View style={styles.sectionStack}>
-              <View style={styles.toggleWrap}>
+              <View style={[styles.toggleWrap, { backgroundColor: colors.secondary }]}>
                 <Pressable
                   onPress={() => setOffersView("incoming")}
                   style={({ pressed }) => [
                     styles.toggleButton,
-                    offersView === "incoming" && styles.toggleButtonActive,
+                    offersView === "incoming" && [
+                      styles.toggleButtonActive,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ],
                     pressed && styles.pressed,
                   ]}
                 >
@@ -380,17 +356,19 @@ export default function ProfileRoute() {
                     size={14}
                     color={
                       offersView === "incoming"
-                        ? Colors.foreground
-                        : Colors.mutedForeground
+                        ? colors.foreground
+                        : colors.mutedForeground
                     }
                   />
                   <Text
                     style={[
                       styles.toggleText,
+                      { color: colors.mutedForeground },
                       offersView === "incoming" && styles.toggleTextActive,
+                      offersView === "incoming" && { color: colors.foreground },
                     ]}
                   >
-                    واردة ({incomingOffers.length})
+                    {t("profile.incoming")} ({incomingOffers.length})
                   </Text>
                 </Pressable>
 
@@ -398,7 +376,10 @@ export default function ProfileRoute() {
                   onPress={() => setOffersView("outgoing")}
                   style={({ pressed }) => [
                     styles.toggleButton,
-                    offersView === "outgoing" && styles.toggleButtonActive,
+                    offersView === "outgoing" && [
+                      styles.toggleButtonActive,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ],
                     pressed && styles.pressed,
                   ]}
                 >
@@ -407,31 +388,33 @@ export default function ProfileRoute() {
                     size={14}
                     color={
                       offersView === "outgoing"
-                        ? Colors.foreground
-                        : Colors.mutedForeground
+                        ? colors.foreground
+                        : colors.mutedForeground
                     }
                   />
                   <Text
                     style={[
                       styles.toggleText,
+                      { color: colors.mutedForeground },
                       offersView === "outgoing" && styles.toggleTextActive,
+                      offersView === "outgoing" && { color: colors.foreground },
                     ]}
                   >
-                    صادرة ({outgoingOffers.length})
+                    {t("profile.outgoing")} ({outgoingOffers.length})
                   </Text>
                 </Pressable>
               </View>
 
               {offersView === "incoming" ? (
                 incomingOffersQuery.isLoading ? (
-                  <SectionBanner message="جاري تحميل العروض الواردة..." />
+                  <SectionBanner message={t("profile.incomingLoading")} />
                 ) : incomingOffersQuery.isError ? (
                   <SectionBanner
                     tone="error"
                     message={
                       incomingOffersQuery.error instanceof Error
                         ? incomingOffersQuery.error.message
-                        : "تعذر تحميل العروض الواردة"
+                        : t("profile.incomingLoading")
                     }
                   />
                 ) : incomingOffers.length ? (
@@ -449,19 +432,19 @@ export default function ProfileRoute() {
                 ) : (
                   <SectionEmptyState
                     icon="mail-open-outline"
-                    title="لا توجد عروض واردة"
-                    description="أي عرض جديد يصلك على خدماتك أو إعلاناتك سيظهر هنا."
+                    title={t("profile.noIncomingOffers")}
+                    description={t("profile.noIncomingOffersBody")}
                   />
                 )
               ) : outgoingOffersQuery.isLoading ? (
-                <SectionBanner message="جاري تحميل العروض الصادرة..." />
+                <SectionBanner message={t("profile.outgoingLoading")} />
               ) : outgoingOffersQuery.isError ? (
                 <SectionBanner
                   tone="error"
                   message={
                     outgoingOffersQuery.error instanceof Error
                       ? outgoingOffersQuery.error.message
-                      : "تعذر تحميل العروض الصادرة"
+                      : t("profile.outgoingLoading")
                   }
                 />
               ) : outgoingOffers.length ? (
@@ -471,17 +454,17 @@ export default function ProfileRoute() {
               ) : (
                 <SectionEmptyState
                   icon="paper-plane-outline"
-                  title="لا توجد عروض صادرة"
-                  description="العروض التي ترسلها للآخرين ستظهر هنا مع حالتها الحالية."
+                  title={t("profile.noOutgoingOffers")}
+                  description={t("profile.noOutgoingOffersBody")}
                 />
               )}
             </View>
           ) : null}
 
-          {activeTab === "إعلانات" ? (
+          {activeTab === "ads" ? (
             <View style={styles.sectionStack}>
               {adsQuery.isLoading ? (
-                <SectionBanner message="جاري تحميل إعلاناتك..." />
+                <SectionBanner message={t("common.loading")} />
               ) : null}
               {adsQuery.isError ? (
                 <SectionBanner
@@ -489,16 +472,16 @@ export default function ProfileRoute() {
                   message={
                     adsQuery.error instanceof Error
                       ? adsQuery.error.message
-                      : "تعذر تحميل إعلاناتك"
+                      : t("common.loading")
                   }
                 />
               ) : null}
               {!adsQuery.isLoading && !adsQuery.isError && !ads.length ? (
                 <SectionEmptyState
                   icon="bag-outline"
-                  title="لا توجد إعلانات بعد"
-                  description="أضف إعلاناً جديداً ليظهر هنا ضمن ملفك الشخصي."
-                  actionLabel="افتح المتجر"
+                  title={t("profile.noAds")}
+                  description={t("profile.noAdsBody")}
+                  actionLabel={t("explore.marketplace")}
                   onPress={() => openExploreTab("marketplace")}
                 />
               ) : null}
@@ -510,21 +493,22 @@ export default function ProfileRoute() {
                 />
               ))}
               <Pressable
-                onPress={() => openExploreTab("marketplace")}
+                onPress={() => router.push('/new-ad')}
                 style={({ pressed }) => [
                   styles.addButton,
+                  { backgroundColor: colors.card, borderColor: colors.primary },
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.addButtonText}>+ إضافة إعلان جديد</Text>
+                <Text style={[styles.addButtonText, { color: colors.primary }]}>{t("profile.addAd")}</Text>
               </Pressable>
             </View>
           ) : null}
 
-          {activeTab === "خدمات" ? (
+          {activeTab === "services" ? (
             <View style={styles.sectionStack}>
               {servicesQuery.isLoading ? (
-                <SectionBanner message="جاري تحميل خدماتك..." />
+                <SectionBanner message={t("common.loading")} />
               ) : null}
               {servicesQuery.isError ? (
                 <SectionBanner
@@ -532,7 +516,7 @@ export default function ProfileRoute() {
                   message={
                     servicesQuery.error instanceof Error
                       ? servicesQuery.error.message
-                      : "تعذر تحميل خدماتك"
+                      : t("common.loading")
                   }
                 />
               ) : null}
@@ -541,9 +525,9 @@ export default function ProfileRoute() {
               !services.length ? (
                 <SectionEmptyState
                   icon="briefcase-outline"
-                  title="لا توجد خدمات منشورة"
-                  description="أضف خدمة جديدة لتظهر هنا ويبدأ استقبال العروض عليها."
-                  actionLabel="استكشف الخدمات"
+                  title={t("profile.noServices")}
+                  description={t("profile.noServicesBody")}
+                  actionLabel={t("explore.services")}
                   onPress={() => openExploreTab("services")}
                 />
               ) : null}
@@ -555,21 +539,22 @@ export default function ProfileRoute() {
                 />
               ))}
               <Pressable
-                onPress={() => openExploreTab("services")}
+                onPress={() => router.push('/new-service')}
                 style={({ pressed }) => [
                   styles.addButton,
+                  { backgroundColor: colors.card, borderColor: colors.primary },
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.addButtonText}>+ إضافة خدمة جديدة</Text>
+                <Text style={[styles.addButtonText, { color: colors.primary }]}>{t("profile.addService")}</Text>
               </Pressable>
             </View>
           ) : null}
 
-          {activeTab === "تبادلات" ? (
+          {activeTab === "exchange" ? (
             <View style={styles.sectionStack}>
               {swapsQuery.isLoading ? (
-                <SectionBanner message="جاري تحميل تبادلاتك..." />
+                <SectionBanner message={t("common.loading")} />
               ) : null}
               {swapsQuery.isError ? (
                 <SectionBanner
@@ -577,16 +562,16 @@ export default function ProfileRoute() {
                   message={
                     swapsQuery.error instanceof Error
                       ? swapsQuery.error.message
-                      : "تعذر تحميل تبادلاتك"
+                      : t("common.loading")
                   }
                 />
               ) : null}
               {!swapsQuery.isLoading && !swapsQuery.isError && !swaps.length ? (
                 <SectionEmptyState
                   icon="swap-horizontal-outline"
-                  title="لا توجد تبادلات حالية"
-                  description="أضف تبادلاً جديداً ليظهر هنا وتتابع الردود عليه."
-                  actionLabel="افتح التبادلات"
+                  title={t("profile.noExchanges")}
+                  description={t("profile.noExchangesBody")}
+                  actionLabel={t("explore.exchange")}
                   onPress={() => openExploreTab("exchange")}
                 />
               ) : null}
@@ -598,38 +583,33 @@ export default function ProfileRoute() {
                 />
               ))}
               <Pressable
-                onPress={() => openExploreTab("exchange")}
+                onPress={() => router.push('/new-exchange')}
                 style={({ pressed }) => [
                   styles.addButton,
+                  { backgroundColor: colors.card, borderColor: colors.primary },
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.addButtonText}>+ إضافة تبادل جديد</Text>
+                <Text style={[styles.addButtonText, { color: colors.primary }]}>{t("profile.addExchange")}</Text>
               </Pressable>
             </View>
           ) : null}
 
-          {activeTab === "فعالياتي" ? (
+          {activeTab === "events" ? (
             <View style={styles.sectionStack}>
               {registeredEvents.length ? (
                 registeredEvents.map((event) => (
                   <ProfileEventCard
                     key={event.id}
                     event={event}
-                    onCancelRegistration={() =>
-                      showSoonAlert(
-                        "إلغاء التسجيل",
-                        "تم تجهيز الواجهة وسيتم ربط الإجراء مع API الفعاليات لاحقاً.",
-                      )
-                    }
                   />
                 ))
               ) : (
                 <SectionEmptyState
                   icon="calendar-outline"
-                  title="لا توجد فعاليات مسجلة"
-                  description="استكشف الفعاليات وسجّل في ما يناسبك لتظهر هنا."
-                  actionLabel="استكشف الفعاليات"
+                  title={t("profile.noEvents")}
+                  description={t("profile.noEventsBody")}
+                  actionLabel={t("explore.events")}
                   onPress={() => openExploreTab("events")}
                 />
               )}
@@ -644,14 +624,11 @@ export default function ProfileRoute() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
-    backgroundColor: Colors.background,
   },
   sectionStack: {
     gap: 12,
@@ -663,7 +640,6 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 22,
     padding: 4,
-    backgroundColor: "rgba(120,120,128,0.08)",
   },
   toggleButton: {
     flex: 1,
@@ -675,9 +651,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleButtonActive: {
-    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "rgba(60,60,67,0.08)",
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
@@ -685,25 +659,21 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   toggleText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
   },
   toggleTextActive: {
-    color: Colors.foreground,
   },
   sectionBanner: {
     borderRadius: 16,
     paddingVertical: 11,
     paddingHorizontal: 14,
-    backgroundColor: "rgba(37,99,235,0.08)",
   },
   sectionBannerError: {
     backgroundColor: "rgba(255,59,48,0.10)",
   },
   sectionBannerText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
@@ -716,9 +686,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 20,
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
     borderWidth: 1,
-    borderColor: "rgba(60,60,67,0.06)",
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -731,11 +699,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(120,120,128,0.08)",
   },
   emptyTitle: {
     marginTop: 12,
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
@@ -743,7 +709,6 @@ const styles = StyleSheet.create({
   },
   emptyDescription: {
     marginTop: 6,
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
@@ -760,7 +725,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(37,99,235,0.10)",
   },
   emptyActionText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
@@ -770,13 +734,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 2,
     borderStyle: "dashed",
-    borderColor: "rgba(37,99,235,0.18)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.65)",
   },
   addButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,

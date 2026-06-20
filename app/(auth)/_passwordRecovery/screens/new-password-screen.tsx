@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   IconInputField,
   RecoveryErrorText,
@@ -34,14 +36,17 @@ export function NewPasswordScreen({
   onToggleShowConfirmPassword,
   onSavePassword,
 }: NewPasswordScreenProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.formArea}>
-      <Text style={styles.title}>كلمة مرور جديدة</Text>
-      <Text style={styles.subtitle}>أنشئ كلمة مرور قوية لحماية حسابك</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>{t('recovery.newPasswordTitle')}</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{t('recovery.newPasswordSubtitle')}</Text>
 
       <IconInputField
         icon="lock-closed-outline"
-        placeholder="كلمة المرور الجديدة"
+        placeholder={t('recovery.newPasswordPlaceholder')}
         value={newPassword}
         secureTextEntry={!showNewPassword}
         onChangeText={onChangeNewPassword}
@@ -51,7 +56,7 @@ export function NewPasswordScreen({
 
       <IconInputField
         icon="lock-closed-outline"
-        placeholder="تأكيد كلمة المرور"
+        placeholder={t('recovery.confirmPasswordPlaceholder')}
         value={confirmPassword}
         secureTextEntry={!showConfirmPassword}
         onChangeText={onChangeConfirmPassword}
@@ -62,7 +67,7 @@ export function NewPasswordScreen({
       <RecoveryErrorText message={error} />
 
       <RecoveryPrimaryButton
-        title="حفظ كلمة المرور"
+        title={t('recovery.savePassword')}
         loading={loading}
         onPress={onSavePassword}
       />

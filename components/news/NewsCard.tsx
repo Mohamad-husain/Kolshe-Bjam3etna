@@ -1,7 +1,6 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { View, Text, StyleSheet, Image } from "react-native";
 import {
-  Colors,
   SemanticColors,
   Dimensions,
   FontFamily,
@@ -9,6 +8,7 @@ import {
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import { getNewsAccent } from "./news_colors";
 
 interface NewsCardData {
@@ -28,13 +28,14 @@ interface NewsCardProps {
 const IMPORTANT_LABEL = "هام";
 
 export function NewsCard({ data }: NewsCardProps) {
+  const { colors } = useThemePreference();
   const accent = getNewsAccent(data.category);
   const topbarColor = data.isImportant ? SemanticColors.red : accent.color;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {data.imageUrl ? (
-        <View style={styles.mediaWrapper}>
+        <View style={[styles.mediaWrapper, { backgroundColor: colors.secondary }]}>
           <Image source={{ uri: data.imageUrl }} style={styles.image} />
         </View>
       ) : null}
@@ -46,7 +47,7 @@ export function NewsCard({ data }: NewsCardProps) {
               style={[
                 styles.badge,
                 {
-                  backgroundColor: "rgba(255,255,255,0.62)",
+                  backgroundColor: colors.secondary,
                   borderColor: SemanticColors.red + "20",
                 },
               ]}
@@ -62,7 +63,7 @@ export function NewsCard({ data }: NewsCardProps) {
             style={[
               styles.badge,
               {
-                backgroundColor: "rgba(255,255,255,0.6)",
+                backgroundColor: colors.secondary,
                 borderColor: accent.softBg,
               },
             ]}
@@ -73,29 +74,39 @@ export function NewsCard({ data }: NewsCardProps) {
           </View>
         </View>
 
-        <Text style={styles.title} numberOfLines={3}>
+        <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={3}>
           {data.title}
         </Text>
 
-        <View style={styles.footer}>
-          <View style={styles.metaChip}>
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.metaChip,
+              { backgroundColor: colors.secondary, borderColor: colors.border },
+            ]}
+          >
             <Ionicons
               name="business-outline"
               size={13}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.metaText} numberOfLines={1}>
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]} numberOfLines={1}>
               {data.source}
             </Text>
           </View>
 
-          <View style={styles.metaChip}>
+          <View
+            style={[
+              styles.metaChip,
+              { backgroundColor: colors.secondary, borderColor: colors.border },
+            ]}
+          >
             <Ionicons
               name="time-outline"
               size={13}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.metaText}>{data.timeAgo}</Text>
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{data.timeAgo}</Text>
           </View>
         </View>
       </View>
@@ -105,14 +116,12 @@ export function NewsCard({ data }: NewsCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
     borderRadius: Dimensions.radiusCard,
     width: "100%",
     maxWidth: 500,
     alignSelf: "center",
     marginBottom: Spacing.md,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.07,
@@ -126,7 +135,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Dimensions.baseRadius,
     borderTopRightRadius: Dimensions.baseRadius,
     overflow: "hidden",
-    backgroundColor: Colors.secondary,
   },
   image: {
     width: "100%",
@@ -166,7 +174,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
     textAlign: "right",
     lineHeight: 28,
     marginBottom: Spacing.md,
@@ -176,7 +183,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: Spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
     paddingTop: Spacing.sm,
   },
   metaChip: {
@@ -187,14 +193,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 6,
     borderRadius: Dimensions.radiusFull,
-    backgroundColor: "rgba(255,255,255,0.55)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
   },
   metaText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
     textAlign: "right",
   },
 });

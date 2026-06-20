@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
@@ -27,9 +28,14 @@ export function ProfileExchangeCard({
   exchange,
   onOpenResponses,
 }: ProfileExchangeCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? 'row-reverse' : 'row';
+  const textAlign = isRtl ? 'right' : 'left';
+
   return (
-    <View style={styles.card}>
-      <View style={styles.exchangeHeader}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.exchangeHeader, { flexDirection: rowDirection }]}>
         <View
           style={[
             styles.statusBadge,
@@ -42,7 +48,7 @@ export function ProfileExchangeCard({
               exchange.status === 'active' ? styles.exchangeBadgeText : styles.acceptedBadgeText,
             ]}
           >
-            {exchange.status === 'active' ? 'نشط' : 'مكتمل'}
+            {exchange.status === 'active' ? t('profile.active') : t('profile.completed')}
           </Text>
         </View>
 
@@ -51,31 +57,33 @@ export function ProfileExchangeCard({
         </View>
       </View>
 
-      <Text style={styles.exchangeTitle}>{exchange.title}</Text>
+      <Text style={[styles.exchangeTitle, { color: colors.foreground, textAlign }]}>{exchange.title}</Text>
 
-      <View style={styles.exchangeDetails}>
-        <View style={styles.exchangeLine}>
-          <Text style={styles.exchangeValue}>{exchange.offering}</Text>
-          <Text style={styles.exchangeLabel}>أقدم:</Text>
+      <View style={[styles.exchangeDetails, { backgroundColor: colors.secondary }]}>
+        <View style={[styles.exchangeLine, { flexDirection: rowDirection }]}>
+          <Text style={[styles.exchangeValue, { color: colors.foreground, textAlign }]}>{exchange.offering}</Text>
+          <Text style={[styles.exchangeLabel, { color: colors.mutedForeground }]}>{t('profile.offering')}</Text>
         </View>
-        <View style={styles.exchangeLine}>
-          <Text style={styles.exchangeValue}>{exchange.seeking}</Text>
-          <Text style={styles.exchangeLabel}>أطلب:</Text>
+        <View style={[styles.exchangeLine, { flexDirection: rowDirection }]}>
+          <Text style={[styles.exchangeValue, { color: colors.foreground, textAlign }]}>{exchange.seeking}</Text>
+          <Text style={[styles.exchangeLabel, { color: colors.mutedForeground }]}>{t('profile.seeking')}</Text>
         </View>
       </View>
 
       {exchange.status === 'active' ? (
         <>
-          <View style={styles.separator} />
-          <View style={styles.priceRow}>
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <View style={[styles.priceRow, { flexDirection: rowDirection }]}>
             <View style={styles.serviceOffersBadge}>
-              <Text style={styles.serviceOffersBadgeText}>{exchange.responses} ردود</Text>
+              <Text style={[styles.serviceOffersBadgeText, { color: colors.primary }]}>
+                {t('profile.responsesCount', { count: exchange.responses })}
+              </Text>
             </View>
             <Pressable
               onPress={onOpenResponses}
               style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
             >
-              <Text style={styles.linkButtonText}>عرض الردود</Text>
+              <Text style={[styles.linkButtonText, { color: colors.primary }]}>{t('profile.showResponses')}</Text>
             </Pressable>
           </View>
         </>
@@ -88,9 +96,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.06)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -98,7 +104,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   exchangeHeader: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -136,45 +141,36 @@ const styles = StyleSheet.create({
   },
   exchangeTitle: {
     marginTop: 14,
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   exchangeDetails: {
     marginTop: 14,
     borderRadius: 18,
     padding: 14,
-    backgroundColor: 'rgba(120,120,128,0.08)',
     gap: 10,
   },
   exchangeLine: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   exchangeLabel: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
   },
   exchangeValue: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    textAlign: 'right',
   },
   separator: {
     height: 1,
     marginTop: 14,
-    backgroundColor: 'rgba(60,60,67,0.08)',
   },
   priceRow: {
     marginTop: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -187,7 +183,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,99,235,0.08)',
   },
   serviceOffersBadgeText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
@@ -201,7 +196,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,99,235,0.08)',
   },
   linkButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,

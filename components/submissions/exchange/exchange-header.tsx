@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   Dimensions,
@@ -30,8 +31,10 @@ export function ExchangeHeader({
   onBack,
   onStepPress,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
       <View style={styles.progressRow}>
         {[1, 2, 3].map((stepNumber) => (
           <Pressable
@@ -43,6 +46,7 @@ export function ExchangeHeader({
             }}
             style={[
               styles.dot,
+              { backgroundColor: colors.border },
               activeStep === stepNumber && styles.dotActive,
               activeStep > stepNumber && styles.dotDone,
             ]}
@@ -51,12 +55,19 @@ export function ExchangeHeader({
       </View>
 
       <View style={styles.center}>
-        <Text style={styles.title}>تبادل جديد</Text>
-        <Text style={styles.subtitle}>{getExchangeStepCopy(activeStep)}</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>تبادل جديد</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{getExchangeStepCopy(activeStep)}</Text>
       </View>
 
-      <Pressable onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-        <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+      <Pressable
+        onPress={onBack}
+        style={({ pressed }) => [
+          styles.backButton,
+          { backgroundColor: colors.card, borderColor: colors.border },
+          pressed && styles.pressed,
+        ]}
+      >
+        <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
       </Pressable>
     </View>
   );

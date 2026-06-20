@@ -17,6 +17,7 @@ import { CoordinatorStatsTab } from "@/components/coordinator/CoordinatorStatsTa
 import { CreateEventTab } from "@/components/coordinator/CreateEventTab";
 import { MyEventsTab } from "@/components/coordinator/MyEventsTab";
 import { useAuth } from "@/contexts/auth-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import { canAccessCoordinatorDashboard } from "@/lib/auth/admin-access";
 import type { CoordinatorEvent } from "@/services/coordinator-api";
 import {
@@ -46,6 +47,7 @@ export default function CoordinatorDashboard() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
+  const { colors } = useThemePreference();
   const [activeTab, setActiveTab] = useState<TabId>("create");
   const shellWidth = Math.min(width, 456);
   const isCompact = shellWidth < 380;
@@ -61,17 +63,30 @@ export default function CoordinatorDashboard() {
     setActiveTab("create");
   };
 
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/(tabs)/profile");
+  };
+
   if (!canAccessCoordinatorDashboard(user?.roles ?? [])) {
     return (
       <View
-        style={[styles.container, styles.center, { paddingTop: insets.top }]}
+        style={[
+          styles.container,
+          styles.center,
+          { backgroundColor: colors.background, paddingTop: insets.top },
+        ]}
       >
         <Ionicons
           name="lock-closed-outline"
           size={48}
-          color={Colors.mutedForeground}
+          color={colors.mutedForeground}
         />
-        <Text style={styles.comingSoon}>
+        <Text style={[styles.comingSoon, { color: colors.mutedForeground }]}>
           لا تملك صلاحية الوصول لهذه الصفحة
         </Text>
       </View>
@@ -79,9 +94,9 @@ export default function CoordinatorDashboard() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style="light" />
-      <View style={styles.screenShell}>
+      <View style={[styles.screenShell, { backgroundColor: colors.background }]}>
         <LinearGradient
           colors={["#1F5D41", "#2A704E", "#3B8761"]}
           start={{ x: 0, y: 0 }}
@@ -98,7 +113,7 @@ export default function CoordinatorDashboard() {
           >
             <Path
               d={`M0 22 C${heroCurveWidth * 0.26} 10 ${heroCurveWidth * 0.74} 10 ${heroCurveWidth} 22 L${heroCurveWidth} 28 L0 28 Z`}
-              fill="#F4F4F8"
+              fill={colors.background}
             />
           </Svg>
 
@@ -113,7 +128,7 @@ export default function CoordinatorDashboard() {
           >
             <View style={styles.headerRow}>
               <Pressable
-                onPress={() => router.back()}
+                onPress={goBack}
                 style={({ pressed }) => [
                   styles.backButton,
                   pressed && styles.pressedButton,
@@ -161,14 +176,14 @@ export default function CoordinatorDashboard() {
         </LinearGradient>
 
         <View style={styles.tabsSection}>
-          <View style={[styles.tabBar, { width: tabBarWidth }]}>
+          <View style={[styles.tabBar, { width: tabBarWidth, backgroundColor: colors.secondary }]}>
             {TABS.map((tab) => (
               <Pressable
                 key={tab.id}
                 onPress={() => setActiveTab(tab.id)}
                 style={({ pressed }) => [
                   styles.tabItem,
-                  activeTab === tab.id && styles.tabItemActive,
+                  activeTab === tab.id && [styles.tabItemActive, { backgroundColor: colors.card }],
                   pressed && styles.tabItemPressed,
                 ]}
               >
@@ -177,7 +192,8 @@ export default function CoordinatorDashboard() {
                   adjustsFontSizeToFit
                   style={[
                     styles.tabLabel,
-                    activeTab === tab.id && styles.tabLabelActive,
+                    { color: colors.mutedForeground },
+                    activeTab === tab.id && [styles.tabLabelActive, { color: colors.foreground }],
                   ]}
                 >
                   {tab.label}
@@ -187,7 +203,7 @@ export default function CoordinatorDashboard() {
           </View>
         </View>
 
-        <View style={styles.content}>
+        <View style={[styles.content, { backgroundColor: colors.background }]}>
           {activeTab === "my-events" ? (
             <MyEventsTab onEdit={handleEdit} />
           ) : null}

@@ -2,23 +2,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 import { EXCHANGE_ACCENT, EXCHANGE_ACCENT_DARK } from './exchange-options';
 
 export function ExchangeSuccess() {
+  const { colors } = useThemePreference();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.wrap}>
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.icon}>
             <Ionicons name="swap-horizontal-outline" size={42} color={EXCHANGE_ACCENT_DARK} />
           </View>
 
-          <Text style={styles.title}>تم نشر طلب التبادل!</Text>
-          <Text style={styles.text}>سيتواصل معك المهتمون بالتبادل قريباً</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>تم نشر طلب التبادل!</Text>
+          <Text style={[styles.text, { color: colors.mutedForeground }]}>سيتواصل معك المهتمون بالتبادل قريباً</Text>
 
-          <View style={styles.progressTrack}>
+          <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
             <View style={styles.progressFill} />
           </View>
         </View>

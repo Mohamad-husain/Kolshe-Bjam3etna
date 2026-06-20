@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 type ProfileAdCardData = {
   id: number;
@@ -17,35 +19,42 @@ type ProfileAdCardProps = {
 };
 
 export function ProfileAdCard({ item, onOpenStore }: ProfileAdCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? 'row-reverse' : 'row';
+  const alignItems = isRtl ? 'flex-end' : 'flex-start';
+  const textAlign = isRtl ? 'right' : 'left';
+
   return (
-    <View style={styles.card}>
-      <View style={styles.listingHeader}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.listingHeader, { flexDirection: rowDirection }]}>
         <View style={[styles.statusBadge, item.status === 'active' ? styles.acceptedBadge : styles.soldBadge]}>
           <Text
             style={[
               styles.statusBadgeText,
               item.status === 'active' ? styles.acceptedBadgeText : styles.soldBadgeText,
+              item.status !== 'active' && { color: colors.mutedForeground },
             ]}
           >
-            {item.status === 'active' ? 'نشط' : 'تم البيع'}
+            {item.status === 'active' ? t('profile.active') : t('profile.sold')}
           </Text>
         </View>
 
-        <View style={styles.listingTextWrap}>
-          <Text style={styles.offerName}>{item.title}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>{item.condition}</Text>
+        <View style={[styles.listingTextWrap, { alignItems }]}>
+          <Text style={[styles.offerName, { color: colors.foreground, textAlign }]}>{item.title}</Text>
+          <View style={[styles.metaRow, { flexDirection: rowDirection }]}>
+            <Text style={[styles.metaText, { color: colors.mutedForeground, textAlign }]}>{item.condition}</Text>
             <Text style={styles.metaDot}>•</Text>
-            <Text style={styles.metaText}>{item.category}</Text>
+            <Text style={[styles.metaText, { color: colors.mutedForeground, textAlign }]}>{item.category}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.separator} />
+      <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
-      <View style={styles.priceRow}>
+      <View style={[styles.priceRow, { flexDirection: rowDirection }]}>
         <Pressable onPress={onOpenStore} style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}>
-          <Text style={styles.linkButtonText}>فتح المتجر</Text>
+          <Text style={[styles.linkButtonText, { color: colors.primary }]}>{t('profile.openStore')}</Text>
         </Pressable>
         <Text style={styles.adPrice}>{item.price}</Text>
       </View>
@@ -57,9 +66,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.06)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -67,34 +74,27 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   listingHeader: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
   listingTextWrap: {
     flex: 1,
-    alignItems: 'flex-end',
   },
   offerName: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   metaRow: {
     marginTop: 4,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
   },
   metaText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.medium,
-    textAlign: 'right',
   },
   metaDot: {
     color: 'rgba(142,142,147,0.42)',
@@ -122,16 +122,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(142,142,147,0.12)',
   },
   soldBadgeText: {
-    color: Colors.mutedForeground,
   },
   separator: {
     height: 1,
     marginTop: 14,
-    backgroundColor: 'rgba(60,60,67,0.08)',
   },
   priceRow: {
     marginTop: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -144,7 +141,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,99,235,0.08)',
   },
   linkButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,

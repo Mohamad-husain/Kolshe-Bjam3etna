@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   FontFamily,
@@ -14,13 +15,15 @@ type Props = {
 };
 
 export function ServiceRequestSectionHeader({ step, title, subtitle }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.sectionHeader}>
       <View style={styles.sectionCopy}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
       </View>
-      <View style={styles.sectionNumber}>
+      <View style={[styles.sectionNumber, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
         <Text style={styles.sectionNumberText}>{step}</Text>
       </View>
     </View>

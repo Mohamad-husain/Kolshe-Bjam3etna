@@ -18,6 +18,7 @@ import { ServiceRequestDetailsStep } from '@/components/submissions/service-requ
 import { ServiceRequestHeader } from '@/components/submissions/service-request/service-request-header';
 import { ServiceRequestReviewStep } from '@/components/submissions/service-request/service-request-review-step';
 import { ServiceRequestSuccess } from '@/components/submissions/service-request/service-request-success';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   createDateFromInput,
   DESCRIPTION_MIN_LENGTH,
@@ -51,6 +52,7 @@ const formUpdateOptions = {
 
 export function NewServiceScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, effectiveTheme } = useThemePreference();
   const mutation = useCreateServiceRequestMutation();
   const [activeStep, setActiveStep] = useState<ServiceRequestStep>(1);
   const [submitted, setSubmitted] = useState(false);
@@ -198,9 +200,9 @@ export function NewServiceScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
-      <View style={styles.screen}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={styles.topBubble} pointerEvents="none" />
         <View style={styles.bottomBubble} pointerEvents="none" />
 

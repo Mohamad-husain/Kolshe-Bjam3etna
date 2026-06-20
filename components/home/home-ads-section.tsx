@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { MarketplaceCardData } from '@/types/explore';
-import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
+import { FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';
 import { adEmoji, price } from './home-utils';
 
@@ -20,37 +22,51 @@ export function HomeAdsSection({
   onPressMore,
   onPressCard,
 }: HomeAdsSectionProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.sec}>
-      <HomeSectionHeader title="إعلانات جديدة" icon="sparkles-outline" color={SemanticColors.orange} bg="rgba(255,149,0,0.1)" onPress={onPressMore} />
+      <HomeSectionHeader title={t('home.ads')} icon="sparkles-outline" color={SemanticColors.orange} bg="rgba(255,149,0,0.1)" onPress={onPressMore} />
       {isLoading ? (
-        <HomeStateBlock color={SemanticColors.orange} loading empty="لا توجد إعلانات حالياً" />
+        <HomeStateBlock color={SemanticColors.orange} loading empty={t('home.noAds')} />
       ) : isError ? (
-        <HomeStateBlock color={SemanticColors.orange} error empty="لا توجد إعلانات حالياً" />
+        <HomeStateBlock color={SemanticColors.orange} error empty={t('home.noAds')} />
       ) : ads.length === 0 ? (
-        <HomeStateBlock color={SemanticColors.orange} empty="لا توجد إعلانات حالياً" />
+        <HomeStateBlock color={SemanticColors.orange} empty={t('home.noAds')} />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rtlScroll} contentContainerStyle={styles.hList}>
           {ads.map((item) => (
-            <Pressable key={item.id} onPress={() => onPressCard(item)} style={({ pressed }) => [styles.card, styles.adCard, styles.mirrorX, styles.hCard, pressed && styles.mirrorPressed]}>
-              <View style={styles.media}>
+            <Pressable
+              key={item.id}
+              onPress={() => onPressCard(item)}
+              style={({ pressed }) => [
+                styles.card,
+                styles.adCard,
+                styles.mirrorX,
+                styles.hCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+                pressed && styles.mirrorPressed,
+              ]}
+            >
+              <View style={[styles.media, { backgroundColor: colors.secondary }]}>
                 {item.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} style={styles.adImage} contentFit="cover" contentPosition="center" />
                 ) : (
                   <Text style={styles.mediaEmoji}>{adEmoji(item)}</Text>
                 )}
-                <View style={styles.adPrice}>
+                <View style={[styles.adPrice, { backgroundColor: colors.card }]}>
                   <Text style={styles.adPriceTxt}>{price(item.price)}</Text>
                 </View>
               </View>
               <View style={styles.adBody}>
-                <Text numberOfLines={1} style={styles.cardTitle}>
+                <Text numberOfLines={1} style={[styles.cardTitle, { color: colors.foreground }]}>
                   {item.title}
                 </Text>
                 <View style={styles.adMeta}>
-                  <Text style={styles.smallMuted}>{item.condition}</Text>
+                  <Text style={[styles.smallMuted, { color: colors.mutedForeground }]}>{item.condition}</Text>
                   <Text style={styles.sep}>/</Text>
-                  <Text style={styles.smallStrong}>{item.category}</Text>
+                  <Text style={[styles.smallStrong, { color: colors.mutedForeground }]}>{item.category}</Text>
                 </View>
               </View>
             </Pressable>
@@ -89,13 +105,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 6
   },
   card: {
-    borderRadius: 24, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, ...cardShadow
+    borderRadius: 24, borderWidth: 1, ...cardShadow
   },
   adCard: {
     width: 170, overflow: 'hidden'
   },
   media: {
-    height: 128, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(120,120,128,0.06)', overflow: 'hidden', padding: 10
+    height: 128, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 10
   },
   adImage: {
     ...StyleSheet.absoluteFillObject
@@ -104,7 +120,7 @@ const styles = StyleSheet.create({
     fontSize: 40
   },
   adPrice: {
-    position: 'absolute', top: 12, left: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.86)', paddingHorizontal: 10, paddingVertical: 4
+    position: 'absolute', top: 12, left: 12, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4
   },
   adPriceTxt: {
     color: SemanticColors.orange, fontFamily: FontFamily.cairo, fontSize: FontSize.xs, fontWeight: FontWeight.bold
@@ -113,7 +129,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 14
   },
   cardTitle: {
-    color: Colors.foreground, fontFamily: FontFamily.cairo, fontSize: FontSize.md, fontWeight: FontWeight.bold, textAlign: 'right', lineHeight: 22
+    fontFamily: FontFamily.cairo, fontSize: FontSize.md, fontWeight: FontWeight.bold, textAlign: 'right', lineHeight: 22
   },
   adMeta: {
     flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 6
@@ -121,9 +137,9 @@ const styles = StyleSheet.create({
   sep: {
     color: 'rgba(142,142,147,0.36)'
   },
-  smallMuted: { color: 'rgba(142,142,147,0.7)', fontFamily: FontFamily.cairo, fontSize: FontSize.xxs },
+  smallMuted: { fontFamily: FontFamily.cairo, fontSize: FontSize.xxs },
   smallStrong: {
-    color: Colors.mutedForeground, fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.medium
+    fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.medium
   },
   pressed: {
     transform: [{ scale: 0.97 }]

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { sendAiChatMessage } from '@/services/ai-api';
 import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
@@ -50,6 +51,7 @@ const suggestedQuestions: SuggestedQuestion[] = [
 
 export default function AiAssistantScreen() {
   const { bottom } = useSafeAreaInsets();
+  const { colors, effectiveTheme } = useThemePreference();
   const scrollRef = useRef<ScrollView>(null);
   const messageIdRef = useRef(0);
   const [input, setInput] = useState('');
@@ -96,22 +98,26 @@ export default function AiAssistantScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
       >
-        <View style={styles.root}>
+        <View style={[styles.root, { backgroundColor: colors.background }]}>
           <View style={styles.header}>
             <Pressable
               accessibilityLabel="رجوع"
               onPress={() => (router.canGoBack() ? router.back() : router.replace(HOME_ROUTE))}
-              style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.backButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+                pressed && styles.pressed,
+              ]}
             >
-              <Ionicons name="arrow-back" size={20} color={Colors.foreground} />
+              <Ionicons name="arrow-back" size={20} color={colors.foreground} />
             </Pressable>
 
             <View style={styles.headerCenter}>
@@ -119,11 +125,11 @@ export default function AiAssistantScreen() {
                 <View style={styles.headerIcon}>
                   <Ionicons name="sparkles" size={25} color="#ffffff" />
                 </View>
-                <View style={styles.onlineDot} />
+                <View style={[styles.onlineDot, { borderColor: colors.background }]} />
               </View>
 
-              <Text style={styles.headerTitle}>المساعد الذكي</Text>
-              <Text style={styles.headerSubtitle}>متصل الآن</Text>
+              <Text style={[styles.headerTitle, { color: colors.foreground }]}>المساعد الذكي</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>متصل الآن</Text>
             </View>
 
             <View style={styles.headerSpacer} />
@@ -140,18 +146,18 @@ export default function AiAssistantScreen() {
           >
             {!hasMessages ? (
               <View style={styles.emptyState}>
-                <View style={styles.welcomeCard}>
+                <View style={[styles.welcomeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.welcomeIconWrap}>
                     <Ionicons name="sparkles-outline" size={31} color="#007aff" />
                   </View>
 
-                  <Text style={styles.welcomeTitle}>مرحباً بك!</Text>
-                  <Text style={styles.welcomeText}>
+                  <Text style={[styles.welcomeTitle, { color: colors.foreground }]}>مرحباً بك!</Text>
+                  <Text style={[styles.welcomeText, { color: colors.mutedForeground }]}>
                     أنا مساعدك الذكي في التطبيق. يمكنني مساعدتك في أي استفسار أو إرشادك لاستخدام المنصة بشكل أفضل.
                   </Text>
                 </View>
 
-                <Text style={styles.suggestionTitle}>جرّب أحد هذه الأسئلة</Text>
+                <Text style={[styles.suggestionTitle, { color: colors.mutedForeground }]}>جرّب أحد هذه الأسئلة</Text>
 
                 <View style={styles.suggestionsGrid}>
                   {suggestedQuestions.map((question) => (
@@ -160,7 +166,11 @@ export default function AiAssistantScreen() {
                       onPress={() => {
                         void handleSend(question.text);
                       }}
-                      style={({ pressed }) => [styles.suggestionCard, pressed && styles.pressed]}
+                      style={({ pressed }) => [
+                        styles.suggestionCard,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        pressed && styles.pressed,
+                      ]}
                     >
                       <View
                         style={[
@@ -170,7 +180,7 @@ export default function AiAssistantScreen() {
                       >
                         <Ionicons name={question.icon} size={20} color={question.color} />
                       </View>
-                      <Text style={styles.suggestionText}>{question.text}</Text>
+                      <Text style={[styles.suggestionText, { color: colors.foreground }]}>{question.text}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -183,7 +193,13 @@ export default function AiAssistantScreen() {
 
                   return (
                     <View key={id} style={[styles.messageRow, isUser && styles.messageRowUser]}>
-                      <View style={[styles.avatar, isUser ? styles.userAvatar : styles.assistantAvatar]}>
+                      <View
+                        style={[
+                          styles.avatar,
+                          isUser ? styles.userAvatar : styles.assistantAvatar,
+                          !isUser && { backgroundColor: colors.card, borderColor: colors.border },
+                        ]}
+                      >
                         <Ionicons
                           name={isUser ? 'person-outline' : 'sparkles-outline'}
                           size={16}
@@ -195,12 +211,14 @@ export default function AiAssistantScreen() {
                         style={[
                           styles.messageBubble,
                           isUser ? styles.userBubble : styles.assistantBubble,
+                          !isUser && { backgroundColor: colors.card, borderColor: colors.border },
                           isError && styles.errorBubble,
                         ]}
                       >
                         <Text
                           style={[
                             styles.messageText,
+                            { color: colors.foreground },
                             isUser && styles.userMessageText,
                             isError && styles.errorMessageText,
                           ]}
@@ -214,11 +232,18 @@ export default function AiAssistantScreen() {
 
                 {isLoading ? (
                   <View style={styles.messageRow}>
-                    <View style={[styles.avatar, styles.assistantAvatar]}>
+                    <View style={[styles.avatar, styles.assistantAvatar, { backgroundColor: colors.card, borderColor: colors.border }]}>
                       <Ionicons name="sparkles-outline" size={16} color="#007aff" />
                     </View>
 
-                    <View style={[styles.messageBubble, styles.assistantBubble, styles.typingBubble]}>
+                    <View
+                      style={[
+                        styles.messageBubble,
+                        styles.assistantBubble,
+                        styles.typingBubble,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                      ]}
+                    >
                       <View style={styles.typingDots}>
                         {LOADING_DOTS.map((dot) => (
                           <View key={dot} style={styles.typingDot} />
@@ -231,15 +256,15 @@ export default function AiAssistantScreen() {
             )}
           </ScrollView>
 
-          <View style={[styles.inputArea, { paddingBottom: Math.max(bottom, 12) }]}>
-            <View style={styles.inputBar}>
+          <View style={[styles.inputArea, { backgroundColor: colors.background, paddingBottom: Math.max(bottom, 12) }]}>
+            <View style={[styles.inputBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Pressable
                 accessibilityLabel="إرسال"
                 disabled={!canSend}
                 onPress={submitInput}
                 style={({ pressed }) => [
                   styles.sendButton,
-                  !canSend && styles.sendButtonDisabled,
+                  !canSend && [styles.sendButtonDisabled, { backgroundColor: colors.secondary }],
                   pressed && canSend && styles.pressed,
                 ]}
               >
@@ -253,7 +278,7 @@ export default function AiAssistantScreen() {
                   <Ionicons
                     name="send"
                     size={18}
-                    color={trimmedInput ? '#ffffff' : Colors.mutedForeground}
+                    color={trimmedInput ? '#ffffff' : colors.mutedForeground}
                   />
                 )}
               </Pressable>
@@ -264,9 +289,9 @@ export default function AiAssistantScreen() {
                 onChangeText={setInput}
                 onSubmitEditing={submitInput}
                 placeholder="اكتب رسالتك..."
-                placeholderTextColor="rgba(142,142,147,0.7)"
+                placeholderTextColor={colors.mutedForeground}
                 returnKeyType="send"
-                style={styles.input}
+                style={[styles.input, { color: colors.foreground }]}
                 textAlign="right"
                 value={input}
               />

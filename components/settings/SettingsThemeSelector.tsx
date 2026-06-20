@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export type SettingsThemeValue = 'system' | 'light' | 'dark';
 
@@ -12,25 +14,25 @@ type SettingsThemeSelectorProps = {
 
 const options: {
   value: SettingsThemeValue;
-  label: string;
+  labelKey: 'settings.themeAuto' | 'settings.themeLight' | 'settings.themeDark';
   icon: keyof typeof Ionicons.glyphMap;
   iconColor: string;
 }[] = [
   {
     value: 'system',
-    label: 'تلقائي',
+    labelKey: 'settings.themeAuto',
     icon: 'phone-portrait-outline',
     iconColor: '#ffffff',
   },
   {
     value: 'light',
-    label: 'فاتح',
+    labelKey: 'settings.themeLight',
     icon: 'sunny-outline',
     iconColor: '#ff9500',
   },
   {
     value: 'dark',
-    label: 'داكن',
+    labelKey: 'settings.themeDark',
     icon: 'moon-outline',
     iconColor: '#0a84ff',
   },
@@ -40,9 +42,12 @@ export function SettingsThemeSelector({
   value,
   onChange,
 }: SettingsThemeSelectorProps) {
+  const { t, isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.wrapper}>
-      <View style={styles.row}>
+      <View style={[styles.row, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
         {options.map((option) => {
           const selected = option.value === value;
 
@@ -52,7 +57,9 @@ export function SettingsThemeSelector({
               onPress={() => onChange(option.value)}
               style={({ pressed }) => [
                 styles.option,
-                selected ? styles.optionSelected : styles.optionIdle,
+                selected
+                  ? [styles.optionSelected, { backgroundColor: colors.primary, shadowColor: colors.primary }]
+                  : [styles.optionIdle, { backgroundColor: colors.secondary }],
                 pressed && styles.pressed,
               ]}
             >
@@ -66,8 +73,14 @@ export function SettingsThemeSelector({
                 size={22}
                 color={selected ? '#ffffff' : option.iconColor}
               />
-              <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>
-                {option.label}
+              <Text
+                style={[
+                  styles.optionLabel,
+                  { color: selected ? '#ffffff' : colors.foreground },
+                  selected && styles.optionLabelSelected,
+                ]}
+              >
+                {t(option.labelKey)}
               </Text>
             </Pressable>
           );
@@ -82,7 +95,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   row: {
-    flexDirection: 'row-reverse',
     gap: 10,
   },
   option: {
@@ -94,11 +106,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionIdle: {
-    backgroundColor: '#f1f2f6',
   },
   optionSelected: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 16,
@@ -116,7 +125,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.22)',
   },
   optionLabel: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,

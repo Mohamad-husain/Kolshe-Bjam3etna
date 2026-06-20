@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { SwapAdPhotoInput } from '@/services/swap-api';
 import {
   Colors,
@@ -46,6 +47,7 @@ export function ExchangeReviewStep({
   onPrevious,
   onSubmit,
 }: Props) {
+  const { colors } = useThemePreference();
   const checklist = [
     { label: 'ما لديك', done: offerTitle.trim().length >= EXCHANGE_TITLE_MIN_LENGTH },
     { label: 'ما تريده', done: wantedTitle.trim().length >= EXCHANGE_TITLE_MIN_LENGTH },
@@ -58,13 +60,13 @@ export function ExchangeReviewStep({
     <View style={styles.wrap}>
       <ExchangeSectionHeader step={3} title="مراجعة ونشر" subtitle="تحقق من بيانات التبادل" />
 
-      <View style={styles.previewCard}>
+      <View style={[styles.previewCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.accentLine} />
 
         <View style={styles.exchangeRow}>
-          <View style={styles.exchangeBox}>
+          <View style={[styles.exchangeBox, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <Text style={styles.exchangeLabel}>لدي</Text>
-            <Text style={styles.exchangeValue} numberOfLines={2}>
+            <Text style={[styles.exchangeValue, { color: colors.foreground }]} numberOfLines={2}>
               {offerTitle || '-'}
             </Text>
           </View>
@@ -73,9 +75,9 @@ export function ExchangeReviewStep({
             <Ionicons name="swap-horizontal" size={18} color={EXCHANGE_ACCENT_DARK} />
           </View>
 
-          <View style={styles.exchangeBox}>
+          <View style={[styles.exchangeBox, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <Text style={styles.exchangeLabel}>أريد</Text>
-            <Text style={styles.exchangeValue} numberOfLines={2}>
+            <Text style={[styles.exchangeValue, { color: colors.foreground }]} numberOfLines={2}>
               {wantedTitle || '-'}
             </Text>
           </View>
@@ -89,31 +91,31 @@ export function ExchangeReviewStep({
           ) : null}
 
           {selectedCategory ? (
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>{selectedCategory.label}</Text>
+            <View style={[styles.tag, { backgroundColor: colors.secondary }]}>
+              <Text style={[styles.tagText, { color: colors.foreground }]}>{selectedCategory.label}</Text>
             </View>
           ) : null}
         </View>
 
-        <Text style={styles.description} numberOfLines={4}>
+        <Text style={[styles.description, { color: colors.mutedForeground }]} numberOfLines={4}>
           {description || 'لا يوجد وصف'}
         </Text>
 
         {photos.length > 0 ? (
           <View style={styles.photoInfo}>
-            <Text style={styles.photoInfoText}>{photos.length} صورة</Text>
-            <Ionicons name="image-outline" size={15} color={Colors.mutedForeground} />
+            <Text style={[styles.photoInfoText, { color: colors.mutedForeground }]}>{photos.length} صورة</Text>
+            <Ionicons name="image-outline" size={15} color={colors.mutedForeground} />
           </View>
         ) : null}
       </View>
 
-      <View style={styles.checkCard}>
-        <Text style={styles.checkTitle}>التحقق من البيانات</Text>
+      <View style={[styles.checkCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.checkTitle, { color: colors.foreground }]}>التحقق من البيانات</Text>
 
         {checklist.map((item) => (
           <View key={item.label} style={styles.checkRow}>
-            <Text style={styles.checkText}>{item.label}</Text>
-            <View style={[styles.checkIcon, item.done && styles.checkIconDone]}>
+            <Text style={[styles.checkText, { color: colors.mutedForeground }]}>{item.label}</Text>
+            <View style={[styles.checkIcon, { backgroundColor: colors.secondary }, item.done && styles.checkIconDone]}>
               {item.done ? <Ionicons name="checkmark" size={12} color={SemanticColors.green} /> : null}
             </View>
           </View>
@@ -127,18 +129,25 @@ export function ExchangeReviewStep({
           style={({ pressed }) => [
             styles.primaryButton,
             styles.flexButton,
-            (!canSubmit || isSubmitting) && styles.primaryButtonDisabled,
+            (!canSubmit || isSubmitting) && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
             pressed && canSubmit && !isSubmitting && styles.pressed,
           ]}
         >
           {isSubmitting ? <ActivityIndicator color="#ffffff" size="small" /> : null}
-          <Text style={[styles.primaryText, (!canSubmit || isSubmitting) && styles.primaryTextDisabled]}>
+          <Text style={[styles.primaryText, (!canSubmit || isSubmitting) && { color: colors.mutedForeground }]}>
             {isSubmitting ? 'جاري النشر...' : 'نشر التبادل الآن'}
           </Text>
         </Pressable>
 
-        <Pressable onPress={onPrevious} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-          <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+        <Pressable
+          onPress={onPrevious}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
         </Pressable>
       </View>
     </View>

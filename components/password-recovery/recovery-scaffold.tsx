@@ -4,7 +4,8 @@ import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogoBadge } from '@/components/app-logo-badge';
-import { Colors } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 
 import { styles } from './styles';
 
@@ -21,12 +22,30 @@ export function RecoveryScaffold({
   children,
 }: RecoveryScaffoldProps) {
   const insets = useSafeAreaInsets();
+  const { isRtl, t } = useAppSettings();
+  const { colors, effectiveTheme } = useThemePreference();
+  const isDark = effectiveTheme === 'dark';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topRightBubble} />
-      <View style={styles.topLeftBubble} />
-      <View style={styles.softOverlay} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.topRightBubble,
+          { backgroundColor: isDark ? 'rgba(96,165,250,0.16)' : 'rgba(104, 140, 245, 0.21)' },
+        ]}
+      />
+      <View
+        style={[
+          styles.topLeftBubble,
+          { backgroundColor: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(124, 156, 251, 0.1)' },
+        ]}
+      />
+      <View
+        style={[
+          styles.softOverlay,
+          { backgroundColor: isDark ? 'rgba(11,17,32,0.76)' : 'rgba(244, 245, 250, 0.84)' },
+        ]}
+      />
 
       <View
         style={[
@@ -41,10 +60,16 @@ export function RecoveryScaffold({
           <Pressable
             onPress={onBackPress}
             disabled={backDisabled}
-            style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
+            style={({ pressed }) => [
+              styles.backButton,
+              { flexDirection: isRtl ? 'row-reverse' : 'row', alignSelf: isRtl ? 'flex-end' : 'flex-start' },
+              pressed && styles.buttonPressed,
+            ]}
           >
-            <Ionicons name="chevron-forward" size={17} color={Colors.primary} />
-            <Text style={styles.backButtonText}>رجوع</Text>
+            <Ionicons name={isRtl ? 'chevron-forward' : 'chevron-back'} size={17} color={colors.primary} />
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>
+              {t('recovery.back')}
+            </Text>
           </Pressable>
         ) : null}
 

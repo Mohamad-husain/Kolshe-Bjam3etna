@@ -379,14 +379,26 @@ function mapMySwap(record: ApiRecord): ExchangeItem {
 
 function mapIncomingOffer(record: ApiRecord): IncomingOffer {
   const fromName =
-    getNameFromRecord(record, ['from', 'fromUserName', 'senderName', 'userName', 'fullName'], ['fromUser', 'sender', 'user']) ??
+    getNameFromRecord(
+      record,
+      ['from', 'fromUserName', 'senderName', 'otherUserName', 'userName', 'fullName'],
+      ['fromUser', 'sender', 'otherUser', 'user'],
+    ) ??
     'مستخدم';
 
   return {
     id: getNumberField(record, ['id', 'offerId']) ?? Date.now(),
     type: normalizeOfferType(record),
     listingTitle:
-      getStringField(record, ['listingTitle', 'title', 'serviceTitle', 'productTitle', 'swapTitle', 'requestTitle']) ??
+      getStringField(record, [
+        'targetTitle',
+        'listingTitle',
+        'title',
+        'serviceTitle',
+        'productTitle',
+        'swapTitle',
+        'requestTitle',
+      ]) ??
       'عرض جديد',
     from: fromName,
     initials: getAvatarInitial(fromName),
@@ -403,14 +415,26 @@ function mapIncomingOffer(record: ApiRecord): IncomingOffer {
 
 function mapOutgoingOffer(record: ApiRecord): OutgoingOffer {
   const toName =
-    getNameFromRecord(record, ['to', 'toUserName', 'recipientName', 'ownerName', 'fullName'], ['toUser', 'recipient', 'owner', 'user']) ??
+    getNameFromRecord(
+      record,
+      ['to', 'toUserName', 'recipientName', 'ownerName', 'otherUserName', 'fullName'],
+      ['toUser', 'recipient', 'owner', 'otherUser', 'user'],
+    ) ??
     'مستخدم';
 
   return {
     id: getNumberField(record, ['id', 'offerId']) ?? Date.now(),
     type: normalizeOfferType(record),
     listingTitle:
-      getStringField(record, ['listingTitle', 'title', 'serviceTitle', 'productTitle', 'swapTitle', 'requestTitle']) ??
+      getStringField(record, [
+        'targetTitle',
+        'listingTitle',
+        'title',
+        'serviceTitle',
+        'productTitle',
+        'swapTitle',
+        'requestTitle',
+      ]) ??
       'عرض صادر',
     to: toName,
     initials: getAvatarInitial(toName),

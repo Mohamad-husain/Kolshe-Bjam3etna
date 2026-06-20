@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons"
 import * as DocumentPicker from "expo-document-picker"
 import * as ImagePicker from "expo-image-picker"
 
+import { useAppSettings, type TranslationKey } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 import { useSendChatMessage } from "@/hooks/chat/mutations/use-send-chat-message"
 import type { ChatUploadInput } from "@/types/chat"
 
@@ -23,6 +25,7 @@ type ChatComposerSubmitPayload = {
     errorTitle: string
     fallbackMessage: string
 }
+type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string
 
 const IMAGE_LIBRARY_OPTIONS = {
     mediaTypes: ["images"],
@@ -87,19 +90,20 @@ const createFileUploadInput = (
 const createImageSubmitPayload = (
     asset: ImagePicker.ImagePickerAsset,
     text: string,
-    fallbackMessage: string
+    fallbackMessage: string,
+    errorTitle: string
 ): ChatComposerSubmitPayload => ({
     text,
     image: createImageUploadInput(asset),
-    errorTitle: "فشل إرسال الصورة",
+    errorTitle,
     fallbackMessage,
 })
 
-const getChatComposerConversationId = (conversationId: string) => {
+const getChatComposerConversationId = (conversationId: string, t: Translate) => {
     const numericConversationId = Number(conversationId)
 
     if (!numericConversationId || Number.isNaN(numericConversationId)) {
-        Alert.alert("خطأ", "معرّف المحادثة غير صالح")
+        Alert.alert(t("common.loadError"), t("chat.invalidConversation"))
         return null
     }
 
@@ -115,26 +119,27 @@ const openChatComposerSettings = () => {
     void Linking.openSettings().catch(() => undefined)
 }
 
-const showPermissionSettingsAlert = (message: string) => {
-    Alert.alert("صلاحية مطلوبة", message, [
+const showPermissionSettingsAlert = (message: string, t: Translate) => {
+    Alert.alert(t("chat.permissionRequired"), message, [
         {
-            text: "إلغاء",
+            text: t("common.cancel"),
             style: "cancel",
         },
         {
-            text: "الإعدادات",
+            text: t("settings.title"),
             onPress: openChatComposerSettings,
         },
     ])
 }
 
-const pickChatComposerImage = async (text: string) => {
+const pickChatComposerImage = async (text: string, t: Translate) => {
     try {
         const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync()
 
         if (!currentPermission.granted && !currentPermission.canAskAgain) {
             showPermissionSettingsAlert(
-                "يرجى السماح بالوصول إلى الصور لاختيار صورة وإرسالها."
+                t("chat.mediaPermissionMessage"),
+                t
             )
             return null
         }
@@ -144,7 +149,8 @@ const pickChatComposerImage = async (text: string) => {
         if (!permission.granted) {
             if (!permission.canAskAgain) {
                 showPermissionSettingsAlert(
-                    "يرجى السماح بالوصول إلى الصور لاختيار صورة وإرسالها."
+                    t("chat.mediaPermissionMessage"),
+                    t
                 )
             }
 
@@ -160,18 +166,19 @@ const pickChatComposerImage = async (text: string) => {
         return createImageSubmitPayload(
             result.assets[0],
             text,
-            "تعذر إرسال الصورة"
+            t("chat.sendImageFailed"),
+            t("chat.sendImageTitle")
         )
     } catch (error) {
         Alert.alert(
-            "فشل اختيار الصورة",
-            error instanceof Error ? error.message : "تعذر فتح معرض الصور"
+            t("chat.galleryFailed"),
+            error instanceof Error ? error.message : t("chat.openGalleryFailed")
         )
         return null
     }
 }
 
-const captureChatComposerImage = async (text: string) => {
+const captureChatComposerImage = async (text: string, t: Translate) => {
     try {
         const result = await ImagePicker.launchCameraAsync(CAMERA_OPTIONS)
 
@@ -182,18 +189,19 @@ const captureChatComposerImage = async (text: string) => {
         return createImageSubmitPayload(
             result.assets[0],
             text,
-            "تعذر إرسال الصورة الملتقطة"
+            t("chat.sendCapturedImageFailed"),
+            t("chat.sendImageTitle")
         )
     } catch (error) {
         Alert.alert(
-            "فشل تشغيل الكاميرا",
-            error instanceof Error ? error.message : "تعذر فتح الكاميرا"
+            t("chat.cameraFailed"),
+            error instanceof Error ? error.message : t("chat.openCameraFailed")
         )
         return null
     }
 }
 
-const pickChatComposerFile = async (text: string) => {
+const pickChatComposerFile = async (text: string, t: Translate) => {
     const result = await DocumentPicker.getDocumentAsync(FILE_PICKER_OPTIONS)
 
     if (result.canceled || !result.assets?.length) {
@@ -203,29 +211,31 @@ const pickChatComposerFile = async (text: string) => {
     return {
         text,
         file: createFileUploadInput(result.assets[0]),
-        errorTitle: "فشل إرسال الملف",
-        fallbackMessage: "تعذر إرسال الملف",
+        errorTitle: t("chat.sendFileTitle"),
+        fallbackMessage: t("chat.sendFileFailed"),
     } satisfies ChatComposerSubmitPayload
 }
 
 const openChatComposerAttachmentMenu = ({
     onPickImage,
     onPickFile,
+    t,
 }: {
     onPickImage: () => void
     onPickFile: () => void
+    t: Translate
 }) => {
-    Alert.alert("إرسال مرفق", "اختر نوع المرفق", [
+    Alert.alert(t("chat.attachmentMenuTitle"), t("chat.attachmentMenuMessage"), [
         {
-            text: "صورة",
+            text: t("chat.attachmentImage"),
             onPress: onPickImage,
         },
         {
-            text: "ملف",
+            text: t("chat.attachmentFile"),
             onPress: onPickFile,
         },
         {
-            text: "إلغاء",
+            text: t("common.cancel"),
             style: "cancel",
         },
     ])
@@ -236,6 +246,8 @@ type Props = {
 }
 
 export default function ChatComposer({ conversationId }: Props) {
+    const { t } = useAppSettings()
+    const { colors } = useThemePreference()
     const [text, setText] = useState("")
     const [pendingCameraText, setPendingCameraText] = useState<string | null>(null)
     const sendChatMessageMutation = useSendChatMessage()
@@ -251,7 +263,7 @@ export default function ChatComposer({ conversationId }: Props) {
             errorTitle,
             fallbackMessage,
         }: ChatComposerSubmitPayload) => {
-            const numericConversationId = getChatComposerConversationId(conversationId)
+            const numericConversationId = getChatComposerConversationId(conversationId, t)
 
             if (!numericConversationId) {
                 return
@@ -277,7 +289,7 @@ export default function ChatComposer({ conversationId }: Props) {
                 }
             )
         },
-        [conversationId, sendChatMessageMutation]
+        [conversationId, sendChatMessageMutation, t]
     )
 
     useEffect(() => {
@@ -308,7 +320,8 @@ export default function ChatComposer({ conversationId }: Props) {
                 if (!permission.granted) {
                     if (!permission.canAskAgain) {
                         showPermissionSettingsAlert(
-                            "يرجى السماح بالوصول إلى الكاميرا لالتقاط صورة وإرسالها."
+                            t("chat.cameraPermissionMessage"),
+                            t
                         )
                     }
 
@@ -317,7 +330,7 @@ export default function ChatComposer({ conversationId }: Props) {
                 }
 
                 const nextText = pendingCameraText
-                const nextPayload = await captureChatComposerImage(nextText)
+                const nextPayload = await captureChatComposerImage(nextText, t)
 
                 if (isCancelled) {
                     return
@@ -332,8 +345,8 @@ export default function ChatComposer({ conversationId }: Props) {
                 if (!isCancelled) {
                     setPendingCameraText(null)
                     Alert.alert(
-                        "فشل طلب صلاحية الكاميرا",
-                        error instanceof Error ? error.message : "تعذر طلب صلاحية الكاميرا"
+                        t("chat.cameraPermissionRequestFailed"),
+                        error instanceof Error ? error.message : t("chat.cameraPermissionRequestFailed")
                     )
                 }
             }
@@ -344,7 +357,7 @@ export default function ChatComposer({ conversationId }: Props) {
         return () => {
             isCancelled = true
         }
-    }, [pendingCameraText, submitMessage])
+    }, [pendingCameraText, submitMessage, t])
 
     const handleSend = () => {
         if (!trimmedText) {
@@ -353,13 +366,13 @@ export default function ChatComposer({ conversationId }: Props) {
 
         submitMessage({
             text: trimmedText,
-            errorTitle: "فشل الإرسال",
-            fallbackMessage: "تعذر إرسال الرسالة",
+            errorTitle: t("chat.sendFailed"),
+            fallbackMessage: t("chat.sendMessageFailed"),
         })
     }
 
     const handlePickImage = async () => {
-        const nextPayload = await pickChatComposerImage(trimmedText)
+        const nextPayload = await pickChatComposerImage(trimmedText, t)
 
         if (nextPayload) {
             submitMessage(nextPayload)
@@ -371,7 +384,7 @@ export default function ChatComposer({ conversationId }: Props) {
     }
 
     const handlePickFile = async () => {
-        const nextPayload = await pickChatComposerFile(trimmedText)
+        const nextPayload = await pickChatComposerFile(trimmedText, t)
 
         if (nextPayload) {
             submitMessage(nextPayload)
@@ -386,17 +399,27 @@ export default function ChatComposer({ conversationId }: Props) {
             onPickFile: () => {
                 void handlePickFile()
             },
+            t,
         })
     }
 
     return (
-        <View style={styles.wrapper}>
+        <View
+            style={[
+                styles.wrapper,
+                { backgroundColor: colors.card, borderTopColor: colors.border },
+            ]}
+        >
             <View style={styles.actionSlot}>
                 {hasText ? (
                     <TouchableOpacity
                         onPress={handleSend}
                         style={[
                             styles.sendButton,
+                            {
+                                backgroundColor: isSending ? `${colors.primary}80` : colors.primary,
+                                shadowColor: colors.primary,
+                            },
                             isSending && styles.sendButtonDisabled,
                         ]}
                         disabled={isSending}
@@ -413,37 +436,53 @@ export default function ChatComposer({ conversationId }: Props) {
                         <TouchableOpacity
                             activeOpacity={0.85}
                             style={[
-                                styles.utilityButton,
-                                isSending && styles.utilityButtonDisabled,
-                            ]}
-                            disabled={isSending}
+                            styles.utilityButton,
+                            {
+                                backgroundColor: colors.card,
+                                borderColor: colors.border,
+                            },
+                            isSending && styles.utilityButtonDisabled,
+                        ]}
+                        disabled={isSending}
                             onPress={() => {
                                 void handleCaptureImage()
                             }}
                         >
-                            <Ionicons name="camera-outline" size={19} color="#475569" />
+                            <Ionicons name="camera-outline" size={19} color={colors.mutedForeground} />
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             activeOpacity={0.85}
                             style={[
-                                styles.utilityButton,
-                                isSending && styles.utilityButtonDisabled,
-                            ]}
-                            disabled={isSending}
+                            styles.utilityButton,
+                            {
+                                backgroundColor: colors.card,
+                                borderColor: colors.border,
+                            },
+                            isSending && styles.utilityButtonDisabled,
+                        ]}
+                        disabled={isSending}
                             onPress={handleOpenAttachmentMenu}
                         >
-                            <Ionicons name="attach-outline" size={19} color="#475569" />
+                            <Ionicons name="attach-outline" size={19} color={colors.mutedForeground} />
                         </TouchableOpacity>
                     </View>
                 )}
             </View>
 
-            <View style={styles.composerCard}>
+            <View
+                style={[
+                    styles.composerCard,
+                    {
+                        backgroundColor: colors.secondary,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
                 <TextInput
-                    placeholder="اكتب رسالة..."
-                    placeholderTextColor="#94A3B8"
-                    style={styles.input}
+                    placeholder={t("chat.placeholder")}
+                    placeholderTextColor={colors.mutedForeground}
+                    style={[styles.input, { color: colors.foreground }]}
                     value={text}
                     onChangeText={setText}
                     textAlign="right"
@@ -463,9 +502,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingTop: 10,
         paddingBottom: 12,
-        backgroundColor: "#FFFFFF",
         borderTopWidth: 1,
-        borderTopColor: "#E2E8F0",
     },
     actionSlot: {
         width: 84,
@@ -478,10 +515,8 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         minHeight: 54,
         maxHeight: 132,
-        backgroundColor: "#F8FAFC",
         borderRadius: 27,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
         paddingVertical: 8,
         paddingHorizontal: 14,
     },
@@ -495,12 +530,10 @@ const styles = StyleSheet.create({
         width: 34,
         height: 34,
         borderRadius: 17,
-        backgroundColor: "#FFFFFF",
         justifyContent: "center",
         alignItems: "center",
         marginHorizontal: 4,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
     },
     utilityButtonDisabled: {
         opacity: 0.55,
@@ -509,22 +542,18 @@ const styles = StyleSheet.create({
         width: 46,
         height: 46,
         borderRadius: 23,
-        backgroundColor: "#2563EB",
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#2563EB",
         shadowOpacity: 0.18,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 5 },
         elevation: 3,
     },
     sendButtonDisabled: {
-        backgroundColor: "#93C5FD",
     },
     input: {
         flex: 1,
         fontSize: 15,
-        color: "#111827",
         lineHeight: 22,
         minHeight: 38,
         maxHeight: 92,

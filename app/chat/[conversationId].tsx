@@ -11,6 +11,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router, useLocalSearchParams } from "expo-router"
+import { StatusBar } from "expo-status-bar"
 import * as FileSystem from "expo-file-system/legacy"
 import * as MediaLibrary from "expo-media-library"
 import * as Sharing from "expo-sharing"
@@ -38,7 +39,9 @@ import {
     resolveMessageOwnership,
 } from "@/components/chat/chat-message-helpers"
 import { getAvatarColor } from "@/components/chat/chat-ui"
+import { useAppSettings } from "@/contexts/app-settings-context"
 import { useAuth } from "@/contexts/auth-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 import { useDeleteMessage } from "@/hooks/chat/mutations/use-delete-message"
 import { useMarkRead } from "@/hooks/chat/mutations/use-mark-read"
 import { useUpdateMessage } from "@/hooks/chat/mutations/use-update-message"
@@ -89,7 +92,8 @@ async function saveFileToAndroidDownloads(
 async function downloadChatAsset(
     uri?: string | null,
     suggestedName?: string | null,
-    mimeType?: string | null
+    mimeType?: string | null,
+    saveDialogTitle = "Save file"
 ) {
     const downloadUri = getValidChatAssetUri(uri)
 
@@ -152,7 +156,7 @@ async function downloadChatAsset(
 
     if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(result.uri, {
-            dialogTitle: "حفظ الملف",
+            dialogTitle: saveDialogTitle,
         })
         return true
     }
@@ -162,6 +166,8 @@ async function downloadChatAsset(
 }
 
 export default function ChatScreen() {
+    const { language, t } = useAppSettings()
+    const { colors, effectiveTheme } = useThemePreference()
     const params = useLocalSearchParams<{
         conversationId: string
         otherUserName?: string
@@ -217,7 +223,7 @@ export default function ChatScreen() {
         ]
     )
 
-    const chatDateLabel = getChatDateLabel(resolvedMessages)
+    const chatDateLabel = getChatDateLabel(resolvedMessages, language)
 
     useEffect(() => {
         if (conversationId && (currentConversation?.unreadCount ?? 1) > 0) {
@@ -247,7 +253,7 @@ export default function ChatScreen() {
 
     const handlePreviewImage = (imageUri: string) => {
         if (!imageUri) {
-            Alert.alert("تعذر فتح الصورة", "لم نتمكن من عرض الصورة حالياً.")
+            Alert.alert(t("chat.openImageError"), t("chat.couldNotOpenImage"))
             return
         }
 
@@ -257,11 +263,13 @@ export default function ChatScreen() {
     const handleDownloadImage = async (message: ChatMessage) => {
         const downloaded = await downloadChatAsset(
             message.imageUrl,
-            `chat-image-${message.id}`
+            `chat-image-${message.id}`,
+            undefined,
+            t("chat.saveFileDialog")
         )
 
         if (!downloaded) {
-            Alert.alert("تعذر التنزيل", "لم نتمكن من فتح الصورة أو تنزيلها.")
+            Alert.alert(t("chat.downloadError"), t("chat.couldNotDownloadImage"))
         }
 
         closeActionsModal()
@@ -270,12 +278,13 @@ export default function ChatScreen() {
     const handleDownloadFile = async (message: ChatMessage) => {
         const downloaded = await downloadChatAsset(
             message.fileUrl,
-            getFileLabel(message.fileName, message.fileUrl),
-            message.fileMimeType
+            getFileLabel(message.fileName, message.fileUrl, t("chat.attachmentFile")),
+            message.fileMimeType,
+            t("chat.saveFileDialog")
         )
 
         if (!downloaded) {
-            Alert.alert("تعذر التنزيل", "لم نتمكن من فتح الملف أو تنزيله.")
+            Alert.alert(t("chat.downloadError"), t("chat.couldNotDownloadFile"))
         }
 
         closeActionsModal()
@@ -285,7 +294,7 @@ export default function ChatScreen() {
         const opened = await openChatAsset(message.fileUrl)
 
         if (!opened) {
-            Alert.alert("تعذر فتح الملف", "لم نتمكن من فتح الملف حالياً.")
+            Alert.alert(t("chat.openFileError"), t("chat.couldNotOpenFile"))
         }
     }
 
@@ -317,24 +326,24 @@ export default function ChatScreen() {
             {
                 onSuccess: closeEditModal,
                 onError: () => {
-                    Alert.alert("فشل التعديل", "تعذر تعديل الرسالة حالياً.")
+                    Alert.alert(t("chat.editFailed"), t("chat.editFailedBody"))
                 },
             }
         )
     }
 
     const handleDeleteMessage = (message: ChatMessage) => {
-        Alert.alert("حذف الرسالة", "هل تريد حذف هذه الرسالة نهائياً؟", [
-            { text: "إلغاء", style: "cancel" },
+        Alert.alert(t("chat.deleteTitle"), t("chat.deleteConfirm"), [
+            { text: t("common.cancel"), style: "cancel" },
             {
-                text: "حذف",
+                text: t("chat.delete"),
                 style: "destructive",
                 onPress: () => {
                     deleteMessageMutation.mutate(
                         { conversationId, messageId: message.id },
                         {
                             onError: () => {
-                                Alert.alert("فشل الحذف", "تعذر حذف الرسالة حالياً.")
+                                Alert.alert(t("chat.deleteFailed"), t("chat.deleteFailedBody"))
                             },
                         }
                     )
@@ -345,6 +354,15 @@ export default function ChatScreen() {
         closeActionsModal()
     }
 
+    const handleBack = () => {
+        if (router.canGoBack()) {
+            router.back()
+            return
+        }
+
+        router.replace("/(tabs)/messages")
+    }
+
     const selectedMessageActions: ChatMessageActionItem[] = selectedMessage
         ? (() => {
             const actionState = getMessageActionsState(selectedMessage)
@@ -353,10 +371,10 @@ export default function ChatScreen() {
             if (actionState.canEdit) {
                 actions.push({
                     key: "edit",
-                    label: "تعديل الرسالة",
+                    label: t("chat.editTitle"),
                     icon: "create-outline",
-                    color: "#2563EB",
-                    textStyle: styles.actionText,
+                    color: colors.primary,
+                    textStyle: [styles.actionText, { color: colors.foreground }],
                     onPress: () => handleStartEdit(selectedMessage),
                 })
             }
@@ -364,10 +382,10 @@ export default function ChatScreen() {
             if (actionState.canDownloadImage) {
                 actions.push({
                     key: "download-image",
-                    label: "تنزيل الصورة",
+                    label: t("chat.downloadImage"),
                     icon: "download-outline",
-                    color: "#0F172A",
-                    textStyle: styles.actionText,
+                    color: colors.foreground,
+                    textStyle: [styles.actionText, { color: colors.foreground }],
                     onPress: () => {
                         void handleDownloadImage(selectedMessage)
                     },
@@ -377,10 +395,10 @@ export default function ChatScreen() {
             if (actionState.canDownloadFile) {
                 actions.push({
                     key: "download-file",
-                    label: "تنزيل الملف",
+                    label: t("chat.downloadFile"),
                     icon: "download-outline",
-                    color: "#0F172A",
-                    textStyle: styles.actionText,
+                    color: colors.foreground,
+                    textStyle: [styles.actionText, { color: colors.foreground }],
                     onPress: () => {
                         void handleDownloadFile(selectedMessage)
                     },
@@ -390,7 +408,7 @@ export default function ChatScreen() {
             if (actionState.canDelete) {
                 actions.push({
                     key: "delete",
-                    label: "حذف الرسالة",
+                    label: t("chat.deleteTitle"),
                     icon: "trash-bin-outline",
                     color: "#DC2626",
                     textStyle: styles.deleteText,
@@ -404,25 +422,26 @@ export default function ChatScreen() {
 
     if (isMessagesLoading || isConversationsLoading) {
         return (
-            <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color="#2563eb" />
+            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         )
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+            <StatusBar style={effectiveTheme === "dark" ? "light" : "dark"} />
             <KeyboardAvoidingView
                 style={styles.keyboardContainer}
                 behavior={Platform.OS === "ios" ? "padding" : undefined}
                 keyboardVerticalOffset={Platform.OS === "ios" ? 6 : 0}
             >
-                <View style={styles.container}>
+                <View style={[styles.container, { backgroundColor: colors.background }]}>
                     <ChatHeader
                         title={headerTitle}
                         avatarUrl={otherUserAvatarUrl}
                         avatarColor={avatarColor}
-                        onBack={() => router.back()}
+                        onBack={handleBack}
                     />
 
                     <FlatList
@@ -445,8 +464,8 @@ export default function ChatScreen() {
                         ListEmptyComponent={
                             <ChatEmptyState
                                 iconName="chatbubble-ellipses-outline"
-                                title="ابدأ المحادثة الآن"
-                                description="أرسل أول رسالة للتواصل ومناقشة التفاصيل بسهولة."
+                                title={t("chat.emptyTitle")}
+                                description={t("chat.emptyBody")}
                             />
                         }
                     />
@@ -462,11 +481,15 @@ export default function ChatScreen() {
 
             <ChatMessageActionsModal
                 visible={!!selectedMessage}
-                title="إجراءات الرسالة"
+                title={t("chat.actionsTitle")}
                 subtitle={
                     selectedMessage
-                        ? getMessageActionSubtitle(selectedMessage)
-                        : "اختر الإجراء المناسب لهذه الرسالة"
+                        ? getMessageActionSubtitle(selectedMessage, {
+                            imageMessage: t("chat.imageMessage"),
+                            fallback: t("chat.actionsSubtitle"),
+                            file: t("chat.attachmentFile"),
+                        })
+                        : t("chat.actionsSubtitle")
                 }
                 actions={selectedMessageActions}
                 onClose={closeActionsModal}
@@ -487,20 +510,17 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
     },
     keyboardContainer: {
         flex: 1,
     },
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
     },
     loaderContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
     },
     messages: {
         padding: 16,

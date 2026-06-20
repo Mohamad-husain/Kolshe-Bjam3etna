@@ -10,8 +10,9 @@ import {
   AuthSubmitButton,
   getAuthErrorMessage,
 } from '@/components/auth/auth-form-shared';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { useRegisterMutation } from '@/hooks/mutations/use-auth-mutations';
-import { AUTH_COPY, AUTH_VALIDATION } from '@/lib/auth/auth-copy';
+import { AUTH_PATTERNS } from '@/lib/auth/auth-copy';
 import type { User } from '@/services/auth-api';
 
 type RegisterFormProps = {
@@ -25,6 +26,7 @@ type RegisterFormValues = {
 };
 
 export default function RegisterForm({ onSuccess }: RegisterFormProps) {
+  const { t } = useAppSettings();
   const [showPassword, setShowPassword] = useState(false);
   const registerMutation = useRegisterMutation();
   const {
@@ -42,8 +44,33 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
   const isSubmitting = registerMutation.isPending;
   const registerError = registerMutation.isError
-    ? getAuthErrorMessage(registerMutation.error, AUTH_COPY.registerFailed)
+    ? getAuthErrorMessage(registerMutation.error, t('auth.registerFailed'))
     : '';
+  const nameRules = {
+    required: t('auth.fullNameRequired'),
+    minLength: {
+      value: 3,
+      message: t('auth.fullNameTooShort'),
+    },
+  };
+  const emailRules = {
+    required: t('auth.emailRequired'),
+    pattern: {
+      value: AUTH_PATTERNS.email,
+      message: t('auth.invalidEmail'),
+    },
+  };
+  const passwordRules = {
+    required: t('auth.passwordRequired'),
+    minLength: {
+      value: 8,
+      message: t('auth.registerPasswordMinLength'),
+    },
+    pattern: {
+      value: AUTH_PATTERNS.strongPassword,
+      message: t('auth.passwordStrength'),
+    },
+  };
 
   const clearRegisterError = () => {
     if (registerMutation.isError) {
@@ -60,7 +87,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       <Controller
         control={control}
         name="name"
-        rules={AUTH_VALIDATION.name}
+        rules={nameRules}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
             autoCapitalize="words"
@@ -71,7 +98,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               clearRegisterError();
               onChange(nextValue);
             }}
-            placeholder={AUTH_COPY.fullNamePlaceholder}
+            placeholder={t('auth.fullNamePlaceholder')}
             textContentType="name"
             value={value}
           />
@@ -82,7 +109,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       <Controller
         control={control}
         name="email"
-        rules={AUTH_VALIDATION.email}
+        rules={emailRules}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
             autoCapitalize="none"
@@ -95,7 +122,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               clearRegisterError();
               onChange(nextValue);
             }}
-            placeholder={AUTH_COPY.universityEmailPlaceholder}
+            placeholder={t('auth.universityEmailPlaceholder')}
             textContentType="username"
             value={value}
           />
@@ -106,7 +133,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       <Controller
         control={control}
         name="password"
-        rules={AUTH_VALIDATION.registerPassword}
+        rules={passwordRules}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
             autoCapitalize="none"
@@ -118,7 +145,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               clearRegisterError();
               onChange(nextValue);
             }}
-            placeholder={AUTH_COPY.passwordPlaceholder}
+            placeholder={t('auth.passwordPlaceholder')}
             secureTextEntry={!showPassword}
             textContentType="newPassword"
             trailingIcon={showPassword ? 'eye-outline' : 'eye-off-outline'}
@@ -129,17 +156,17 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       />
       <AuthErrorText message={errors.password?.message} />
 
-      <AuthHintCard message={AUTH_COPY.registerHint} />
+      <AuthHintCard message={t('auth.registerHint')} />
 
       <AuthErrorText message={registerError} />
 
       <AuthSubmitButton
         isPending={isSubmitting}
-        label={AUTH_COPY.registerButton}
+        label={t('auth.registerButton')}
         onPress={() => {
           void submitRegister();
         }}
-        pendingLabel={AUTH_COPY.registerButtonPending}
+        pendingLabel={t('auth.registerButtonPending')}
       />
     </View>
   );

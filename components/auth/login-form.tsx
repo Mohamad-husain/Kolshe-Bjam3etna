@@ -9,8 +9,10 @@ import {
   AuthSubmitButton,
   getAuthErrorMessage,
 } from '@/components/auth/auth-form-shared';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { useLoginMutation } from '@/hooks/mutations/use-auth-mutations';
-import { AUTH_COPY, AUTH_VALIDATION } from '@/lib/auth/auth-copy';
+import { AUTH_PATTERNS } from '@/lib/auth/auth-copy';
 import type { User } from '@/services/auth-api';
 
 type LoginFormProps = {
@@ -24,6 +26,8 @@ type LoginFormValues = {
 };
 
 export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
   const [showPassword, setShowPassword] = useState(false);
   const loginMutation = useLoginMutation();
   const {
@@ -40,8 +44,22 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
 
   const isSubmitting = loginMutation.isPending;
   const loginError = loginMutation.isError
-    ? getAuthErrorMessage(loginMutation.error, AUTH_COPY.loginFailed)
+    ? getAuthErrorMessage(loginMutation.error, t('auth.loginFailed'))
     : '';
+  const emailRules = {
+    required: t('auth.emailRequired'),
+    pattern: {
+      value: AUTH_PATTERNS.email,
+      message: t('auth.invalidEmail'),
+    },
+  };
+  const passwordRules = {
+    required: t('auth.passwordRequired'),
+    minLength: {
+      value: 6,
+      message: t('auth.loginPasswordMinLength'),
+    },
+  };
 
   const clearLoginError = () => {
     if (loginMutation.isError) {
@@ -58,7 +76,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
       <Controller
         control={control}
         name="email"
-        rules={AUTH_VALIDATION.email}
+        rules={emailRules}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
             autoCapitalize="none"
@@ -71,7 +89,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
               clearLoginError();
               onChange(nextValue);
             }}
-            placeholder={AUTH_COPY.universityEmailPlaceholder}
+            placeholder={t('auth.universityEmailPlaceholder')}
             textContentType="username"
             value={value}
           />
@@ -82,7 +100,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
       <Controller
         control={control}
         name="password"
-        rules={AUTH_VALIDATION.loginPassword}
+        rules={passwordRules}
         render={({ field: { onChange, onBlur, value } }) => (
           <AuthInput
             autoCapitalize="none"
@@ -94,7 +112,7 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
               clearLoginError();
               onChange(nextValue);
             }}
-            placeholder={AUTH_COPY.passwordPlaceholder}
+            placeholder={t('auth.passwordPlaceholder')}
             secureTextEntry={!showPassword}
             textContentType="password"
             trailingIcon={showPassword ? 'eye-outline' : 'eye-off-outline'}
@@ -111,18 +129,20 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
         onPress={onForgotPassword}
         style={authFormStyles.inlineButton}
       >
-        <Text style={authFormStyles.inlineButtonText}>{AUTH_COPY.forgotPassword}</Text>
+        <Text style={[authFormStyles.inlineButtonText, { color: colors.primary }]}>
+          {t('auth.forgotPassword')}
+        </Text>
       </Pressable>
 
       <AuthErrorText message={loginError} />
 
       <AuthSubmitButton
         isPending={isSubmitting}
-        label={AUTH_COPY.loginButton}
+        label={t('auth.loginButton')}
         onPress={() => {
           void submitLogin();
         }}
-        pendingLabel={AUTH_COPY.loginButtonPending}
+        pendingLabel={t('auth.loginButtonPending')}
       />
     </View>
   );

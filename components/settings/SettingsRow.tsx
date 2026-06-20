@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 type SettingsRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -26,19 +28,50 @@ function RowBody({
   showChevron = true,
   interactive = false,
 }: SettingsRowProps & { interactive?: boolean }) {
+  const { colors } = useThemePreference();
+  const { isRtl } = useAppSettings();
+
   return (
     <>
       <View style={styles.accessorySlot}>
         {accessory ? (
           accessory
         ) : interactive && showChevron ? (
-          <Ionicons name="chevron-back" size={18} color="rgba(142, 142, 147, 0.7)" />
+          <Ionicons
+            name={isRtl ? 'chevron-back' : 'chevron-forward'}
+            size={18}
+            color={colors.mutedForeground}
+          />
         ) : null}
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.title, danger && styles.titleDanger]}>{title}</Text>
-        {description ? <Text style={styles.description}>{description}</Text> : null}
+        <Text
+          style={[
+            styles.title,
+            {
+              color: danger ? colors.destructive : colors.foreground,
+              textAlign: isRtl ? 'right' : 'left',
+              writingDirection: isRtl ? 'rtl' : 'ltr',
+            },
+          ]}
+        >
+          {title}
+        </Text>
+        {description ? (
+          <Text
+            style={[
+              styles.description,
+              {
+                color: colors.mutedForeground,
+                textAlign: isRtl ? 'right' : 'left',
+                writingDirection: isRtl ? 'rtl' : 'ltr',
+              },
+            ]}
+          >
+            {description}
+          </Text>
+        ) : null}
       </View>
 
       <View style={[styles.iconBox, { backgroundColor: iconBackgroundColor }]}>
@@ -49,16 +82,25 @@ function RowBody({
 }
 
 export function SettingsRow(props: SettingsRowProps) {
+  const { isRtl } = useAppSettings();
+
   if (!props.onPress) {
     return (
-      <View style={styles.row}>
+      <View style={[styles.row, { flexDirection: isRtl ? 'row' : 'row-reverse' }]}>
         <RowBody {...props} />
       </View>
     );
   }
 
   return (
-    <Pressable onPress={props.onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <Pressable
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.row,
+        { flexDirection: isRtl ? 'row' : 'row-reverse' },
+        pressed && styles.pressed,
+      ]}
+    >
       <RowBody {...props} interactive />
     </Pressable>
   );
@@ -69,7 +111,6 @@ const styles = StyleSheet.create({
     minHeight: 74,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    flexDirection: 'row',
     alignItems: 'center',
   },
   accessorySlot: {
@@ -84,24 +125,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x17,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  titleDanger: {
-    color: Colors.destructive,
   },
   description: {
     marginTop: 2,
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   iconBox: {
     width: 40,

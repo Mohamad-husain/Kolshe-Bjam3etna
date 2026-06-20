@@ -10,11 +10,20 @@ export const queryKeys = {
     deletedMessages: (conversationId: string) =>
       ['chat', 'deleted-messages', conversationId] as const,
   },
+  notifications: {
+    summary: ['notifications', 'summary'] as const,
+    unreadCount: ['notifications', 'unread-count'] as const,
+  },
   explore: {
     services: ['explore', 'services'] as const,
+    serviceDetails: (id: string | number) => ['explore', 'services', String(id)] as const,
     products: ['explore', 'products'] as const,
+    productDetails: (id: string | number) => ['explore', 'products', String(id)] as const,
+    partnerOffers: ['explore', 'partner-offers'] as const,
+    partnerOfferDetails: (id: string | number) => ['explore', 'partner-offers', String(id)] as const,
     swaps: ['explore', 'swaps'] as const,
     events: ['explore', 'events'] as const,
+    eventDetails: (id: string | number) => ['explore', 'events', String(id)] as const,
   },
   profile: {
     myServices: ['profile', 'my-services'] as const,

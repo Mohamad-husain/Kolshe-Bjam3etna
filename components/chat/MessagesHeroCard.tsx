@@ -1,5 +1,7 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
+import { useAppSettings } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 
 type Filter = "all" | "unread"
 
@@ -20,38 +22,64 @@ export default function MessagesHeroCard({
     onChangeSearch,
     onChangeFilter,
 }: Props) {
+    const { t, isRtl } = useAppSettings()
+    const { colors } = useThemePreference()
+
     return (
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.header}>
                 <View style={styles.headerContent}>
-                    <Text style={styles.title}>الرسائل</Text>
-                    <Text style={styles.unreadText}>{unreadSummary}</Text>
+                    <Text style={[styles.title, { color: colors.foreground }]}>{t("messages.title")}</Text>
+                    <Text style={[styles.unreadText, { color: colors.primary }]}>{unreadSummary}</Text>
                 </View>
             </View>
 
-            <View style={styles.searchBox}>
+            <View
+                style={[
+                    styles.searchBox,
+                    {
+                        backgroundColor: colors.secondary,
+                        borderColor: colors.border,
+                        flexDirection: isRtl ? "row-reverse" : "row",
+                    },
+                ]}
+            >
                 <Ionicons name="search" size={18} color="#94A3B8" />
 
                 <TextInput
-                    placeholder="ابحث في المحادثات..."
+                    placeholder={t("messages.searchPlaceholder")}
                     placeholderTextColor="#94A3B8"
-                    style={styles.searchInput}
+                    style={[
+                        styles.searchInput,
+                        {
+                            color: colors.foreground,
+                            textAlign: isRtl ? "right" : "left",
+                            marginRight: isRtl ? 8 : 0,
+                            marginLeft: isRtl ? 0 : 8,
+                        },
+                    ]}
                     value={search}
                     onChangeText={onChangeSearch}
-                    textAlign="right"
                 />
             </View>
 
-            <View style={styles.filters}>
+            <View style={[styles.filters, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
                 <TouchableOpacity
                     activeOpacity={0.85}
-                    style={[styles.filterButton, filter === "all" && styles.filterButtonActive]}
+                    style={[
+                        styles.filterButton,
+                        { backgroundColor: colors.secondary },
+                        filter === "all" && [styles.filterButtonActive, { backgroundColor: colors.primary }],
+                    ]}
                     onPress={() => onChangeFilter("all")}
                 >
                     <Text
-                        style={filter === "all" ? styles.filterTextActive : styles.filterText}
+                        style={[
+                            filter === "all" ? styles.filterTextActive : styles.filterText,
+                            { color: filter === "all" ? "#FFFFFF" : colors.mutedForeground },
+                        ]}
                     >
-                        الكل
+                        {t("messages.all")}
                     </Text>
                 </TouchableOpacity>
 
@@ -59,14 +87,18 @@ export default function MessagesHeroCard({
                     activeOpacity={0.85}
                     style={[
                         styles.filterButton,
-                        filter === "unread" && styles.filterButtonActive,
+                        { backgroundColor: colors.secondary },
+                        filter === "unread" && [styles.filterButtonActive, { backgroundColor: colors.primary }],
                     ]}
                     onPress={() => onChangeFilter("unread")}
                 >
                     <Text
-                        style={filter === "unread" ? styles.filterTextActive : styles.filterText}
+                        style={[
+                            filter === "unread" ? styles.filterTextActive : styles.filterText,
+                            { color: filter === "unread" ? "#FFFFFF" : colors.mutedForeground },
+                        ]}
                     >
-                        غير مقروء {unreadCount > 0 ? `(${unreadCount})` : ""}
+                        {t("messages.unread")} {unreadCount > 0 ? `(${unreadCount})` : ""}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -80,10 +112,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18,
         paddingTop: 14,
         paddingBottom: 18,
-        backgroundColor: "#FFFFFF",
         borderRadius: 30,
         borderWidth: 1,
-        borderColor: "#E5E7EB",
         shadowColor: "#0F172A",
         shadowOpacity: 0.06,
         shadowRadius: 20,
@@ -103,50 +133,39 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 31,
         fontWeight: "800",
-        color: "#0F172A",
     },
     unreadText: {
-        color: "#2563EB",
         fontSize: 13,
         marginTop: 5,
         fontWeight: "600",
     },
     searchBox: {
-        flexDirection: "row-reverse",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
         borderRadius: 18,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
         paddingHorizontal: 14,
         height: 50,
         marginTop: 20,
     },
     searchInput: {
         flex: 1,
-        textAlign: "right",
-        color: "#0F172A",
         fontSize: 15,
         paddingVertical: 0,
         marginRight: 8,
     },
     filters: {
-        flexDirection: "row-reverse",
         marginTop: 16,
     },
     filterButton: {
-        backgroundColor: "#F1F5F9",
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 16,
         marginLeft: 8,
     },
     filterButtonActive: {
-        backgroundColor: "#2563EB",
     },
     filterText: {
         fontSize: 12,
-        color: "#64748B",
         fontWeight: "600",
     },
     filterTextActive: {

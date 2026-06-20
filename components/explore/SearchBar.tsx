@@ -7,13 +7,14 @@ import {
   Text,
 } from "react-native";
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
   SemanticColors,
   Spacing,
 } from "@/styles/ui-theme";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 
 interface SearchBarProps {
   placeholder: string;
@@ -28,26 +29,40 @@ export function SearchBar({
   onChangeText,
   error,
 }: SearchBarProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <KeyboardAvoidingView>
       <View
         style={[
           styles.container,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            flexDirection: isRtl ? "row-reverse" : "row",
+          },
           error ? { borderColor: SemanticColors.red } : null,
         ]}
       >
         <Ionicons
           name="search-outline"
           size={18}
-          color={error ? SemanticColors.red : Colors.mutedForeground}
+          color={error ? SemanticColors.red : colors.mutedForeground}
         />
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              color: colors.foreground,
+              textAlign: isRtl ? "right" : "left",
+              writingDirection: isRtl ? "rtl" : "ltr",
+            },
+          ]}
           placeholder={placeholder}
-          placeholderTextColor={Colors.mutedForeground}
+          placeholderTextColor={colors.mutedForeground}
           value={value}
           onChangeText={onChangeText}
-          textAlign="right"
         />
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -57,9 +72,7 @@ export function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: Colors.card,
     borderRadius: Dimensions.radiusButton,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -67,7 +80,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     gap: Spacing.xs,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
     alignSelf: "center",
     maxWidth: 500,
     width: "100%",
@@ -76,7 +88,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.md,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
   },
   errorText: {
     fontFamily: FontFamily.cairo,

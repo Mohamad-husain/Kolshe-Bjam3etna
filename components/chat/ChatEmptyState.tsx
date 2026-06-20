@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 
 type Props = {
     iconName: ComponentProps<typeof Ionicons>["name"]
@@ -15,14 +16,16 @@ export default function ChatEmptyState({
     description,
     compact = false,
 }: Props) {
+    const { colors } = useThemePreference()
+
     return (
         <View style={[styles.container, compact && styles.containerCompact]}>
-            <View style={styles.icon}>
-                <Ionicons name={iconName} size={26} color="#2563EB" />
+            <View style={[styles.icon, { backgroundColor: colors.secondary }]}>
+                <Ionicons name={iconName} size={26} color={colors.primary} />
             </View>
 
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.description}>{description}</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+            <Text style={[styles.description, { color: colors.mutedForeground }]}>{description}</Text>
         </View>
     )
 }
@@ -43,7 +46,6 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: "#DBEAFE",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 14,
@@ -51,12 +53,10 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: "800",
-        color: "#0F172A",
         marginBottom: 8,
         textAlign: "center",
     },
     description: {
-        color: "#64748B",
         fontSize: 14,
         lineHeight: 22,
         textAlign: "center",

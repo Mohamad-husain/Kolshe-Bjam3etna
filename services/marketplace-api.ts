@@ -20,9 +20,35 @@ type ApiProductAd = {
   };
 };
 
+type ApiProductAdDetails = {
+  id: number;
+  title: string;
+  price: number;
+  condition: string;
+  categoryId: number;
+  categoryName: string;
+  description: string;
+  userId: string;
+  user: {
+    id: string;
+    fullName: string;
+    profileImageUrl: string | null;
+    major?: string | null;
+    studyYear?: number | null;
+    universityId?: number | null;
+  };
+  createdAtUtc: string;
+  images: string[];
+};
+
 type ApiProductAdsResponse = {
   success?: boolean;
   data?: ApiProductAd[];
+};
+
+type ApiProductAdDetailsResponse = {
+  success?: boolean;
+  data?: ApiProductAdDetails;
 };
 
 type ApiCreateProductAdResponse = {
@@ -43,6 +69,25 @@ export type CreateProductAdInput = {
   condition: ProductAdCondition;
   description: string;
   photos: ProductAdPhotoInput[];
+};
+
+export type ProductAdDetails = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  categoryId: number;
+  price: number;
+  condition: string;
+  imageUrls: string[];
+  createdAtUtc: string;
+  owner: {
+    id: string;
+    name: string;
+    initials: string;
+    imageUrl: string | null;
+    major?: string | null;
+  };
 };
 
 const PRODUCT_AD_ERRORS = {
@@ -78,6 +123,32 @@ function mapToMarketplaceCard(item: ApiProductAd): MarketplaceCardData {
     owner: {
       name: item.user.fullName,
       initials: item.user.fullName.charAt(0),
+    },
+  };
+}
+
+function getInitials(name: string) {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.charAt(0) : "ط";
+}
+
+function mapToProductAdDetails(item: ApiProductAdDetails): ProductAdDetails {
+  return {
+    id: String(item.id),
+    title: item.title,
+    description: item.description ?? "",
+    category: item.categoryName,
+    categoryId: item.categoryId,
+    price: item.price,
+    condition: mapCondition(item.condition),
+    imageUrls: item.images.map(toAbsoluteImageUrl).filter(Boolean) as string[],
+    createdAtUtc: item.createdAtUtc,
+    owner: {
+      id: item.user.id,
+      name: item.user.fullName || "طالب",
+      initials: getInitials(item.user.fullName),
+      imageUrl: toAbsoluteImageUrl(item.user.profileImageUrl),
+      major: item.user.major,
     },
   };
 }
@@ -133,6 +204,28 @@ export async function getProductAds(): Promise<MarketplaceCardData[]> {
     return data.data.map(mapToMarketplaceCard);
   } catch (error) {
     throw new Error(getApiErrorMessage(error, PRODUCT_AD_ERRORS.listFailed));
+  }
+}
+
+export async function getProductAdDetails(id: string | number): Promise<ProductAdDetails> {
+  const productId = Number(id);
+
+  if (!Number.isFinite(productId) || productId <= 0) {
+    throw new Error("الإعلان غير صحيح");
+  }
+
+  try {
+    const { data } = await apiClient.get<ApiProductAdDetailsResponse>(
+      `/api/ProductAds/${productId}`,
+    );
+
+    if (!data.data) {
+      throw new Error("تعذر تحميل تفاصيل الإعلان");
+    }
+
+    return mapToProductAdDetails(data.data);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "تعذر تحميل تفاصيل الإعلان"));
   }
 }
 

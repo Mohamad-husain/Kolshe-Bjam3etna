@@ -11,6 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 
+import { useAppSettings } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
+
 type Props = {
     visible: boolean
     value: string
@@ -28,6 +31,9 @@ export default function ChatEditMessageModal({
     onSave,
     onClose,
 }: Props) {
+    const { t } = useAppSettings()
+    const { colors } = useThemePreference()
+
     return (
         <Modal
             visible={visible}
@@ -43,53 +49,75 @@ export default function ChatEditMessageModal({
                 <TouchableOpacity style={styles.backdrop} onPress={onClose} />
 
                 <SafeAreaView edges={[]} style={styles.safeArea}>
-                    <View style={styles.sheet}>
-                        <View style={styles.handle} />
+                    <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+                        <View style={[styles.handle, { backgroundColor: `${colors.mutedForeground}55` }]} />
 
                         <View style={styles.topBar}>
                             <TouchableOpacity
-                                style={styles.closeButton}
+                                style={[
+                                    styles.closeButton,
+                                    {
+                                        backgroundColor: colors.secondary,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
                                 onPress={onClose}
                                 activeOpacity={0.85}
                             >
-                                <Ionicons name="close-outline" size={18} color="#2563EB" />
+                                <Ionicons name="close-outline" size={18} color={colors.primary} />
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.header}>
-                            <View style={styles.headerIcon}>
-                                <Ionicons name="create-outline" size={22} color="#2563EB" />
+                        <View
+                            style={[
+                                styles.header,
+                                { backgroundColor: colors.secondary, borderColor: colors.border },
+                            ]}
+                        >
+                            <View style={[styles.headerIcon, { backgroundColor: `${colors.primary}20` }]}>
+                                <Ionicons name="create-outline" size={22} color={colors.primary} />
                             </View>
 
                             <View style={styles.headerCopy}>
-                                <Text style={styles.title}>تعديل الرسالة</Text>
-                                <Text style={styles.subtitle}>
-                                    عدّل نص الرسالة ثم احفظ التغييرات.
+                                <Text style={[styles.title, { color: colors.foreground }]}>{t("chat.editTitle")}</Text>
+                                <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+                                    {t("chat.editSubtitle")}
                                 </Text>
                             </View>
                         </View>
 
-                        <View style={styles.fieldWrap}>
+                        <View
+                            style={[
+                                styles.fieldWrap,
+                                { backgroundColor: colors.secondary, borderColor: colors.border },
+                            ]}
+                        >
                             <TextInput
                                 value={value}
                                 onChangeText={onChangeText}
                                 multiline
                                 autoFocus
                                 textAlign="right"
-                                placeholder="اكتب النص الجديد..."
-                                placeholderTextColor="#94A3B8"
-                                style={styles.input}
+                                placeholder={t("chat.editPlaceholder")}
+                                placeholderTextColor={colors.mutedForeground}
+                                style={[styles.input, { color: colors.foreground }]}
                             />
                         </View>
 
                         <View style={styles.actions}>
                             <TouchableOpacity
-                                style={styles.saveButton}
+                                style={[
+                                    styles.saveButton,
+                                    {
+                                        backgroundColor: colors.primary,
+                                        borderColor: colors.primary,
+                                    },
+                                ]}
                                 onPress={onSave}
                                 disabled={isSaving}
                             >
                                 <Text style={styles.saveText}>
-                                    {isSaving ? "جارٍ الحفظ..." : "حفظ"}
+                                    {isSaving ? t("chat.saving") : t("chat.save")}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -114,7 +142,6 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
     sheet: {
-        backgroundColor: "#FFFFFF",
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingHorizontal: 18,
@@ -125,7 +152,6 @@ const styles = StyleSheet.create({
         width: 44,
         height: 5,
         borderRadius: 999,
-        backgroundColor: "#CBD5E1",
         alignSelf: "center",
         marginTop: 6,
         marginBottom: 16,
@@ -140,17 +166,13 @@ const styles = StyleSheet.create({
         borderRadius: 19,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#EFF6FF",
         borderWidth: 1,
-        borderColor: "#BFDBFE",
     },
     header: {
         flexDirection: "row-reverse",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
         paddingHorizontal: 14,
         paddingVertical: 14,
         marginBottom: 14,
@@ -159,7 +181,6 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: "#DBEAFE",
         alignItems: "center",
         justifyContent: "center",
         marginLeft: 12,
@@ -171,21 +192,17 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 17,
         fontWeight: "800",
-        color: "#0F172A",
         textAlign: "right",
     },
     subtitle: {
         marginTop: 4,
         fontSize: 12,
         lineHeight: 19,
-        color: "#64748B",
         textAlign: "right",
     },
     fieldWrap: {
         borderWidth: 1,
-        borderColor: "#E2E8F0",
         borderRadius: 18,
-        backgroundColor: "#F8FAFC",
         paddingHorizontal: 14,
         paddingVertical: 12,
         marginBottom: 12,
@@ -193,7 +210,6 @@ const styles = StyleSheet.create({
     input: {
         minHeight: 96,
         maxHeight: 220,
-        color: "#0F172A",
         fontSize: 15,
         lineHeight: 24,
         textAlignVertical: "top",
@@ -204,9 +220,7 @@ const styles = StyleSheet.create({
     saveButton: {
         minHeight: 52,
         borderRadius: 18,
-        backgroundColor: "#2563EB",
         borderWidth: 1,
-        borderColor: "#2563EB",
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 16,

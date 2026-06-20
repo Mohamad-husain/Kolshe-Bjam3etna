@@ -1,6 +1,7 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { Controller, type Control, type FieldErrors } from 'react-hook-form';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { CompleteProfileAvatarPicker } from './complete-profile-avatar-picker';
 import type { CompleteProfileFormValues } from '@/hooks/use-complete-profile-flow';
 
@@ -19,11 +20,13 @@ export function CompleteProfileAvatarField({
   errors,
   onPickImage,
 }: CompleteProfileAvatarFieldProps) {
+  const { t } = useAppSettings();
+
   return (
     <Controller
       control={control}
       name="profileImage"
-      rules={{ required: 'يرجى اختيار صورة شخصية' }}
+      rules={{ required: t('completeProfile.avatarRequired') }}
       render={({ field: { onChange, value } }) => (
         <CompleteProfileAvatarPicker
           errorMessage={errors.profileImage?.message}
