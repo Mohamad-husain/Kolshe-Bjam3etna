@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import {
-  Colors,
   SemanticColors,
   Dimensions,
   FontFamily,
@@ -10,6 +9,8 @@ import {
   Spacing,
 } from "@/styles/ui-theme";
 import { getCategoryAccent } from "./explore-colors";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import type { ServiceCardData } from "@/types/explore";
 
 interface ServiceCardProps {
@@ -18,16 +19,31 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ data, onPress }: ServiceCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
   const accent = getCategoryAccent(data.category);
+  const ownerImageUrl = data.owner.imageUrl?.trim();
+  const rowDirection = isRtl ? "row-reverse" : "row";
+  const textAlign = isRtl ? "right" : "left";
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        pressed && styles.cardPressed,
+      ]}
     >
-      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
+      <View
+        style={[
+          styles.accentBar,
+          isRtl ? styles.accentBarRtl : styles.accentBarLtr,
+          { backgroundColor: accent.color },
+        ]}
+      />
 
-      <View style={styles.badges}>
+      <View style={[styles.badges, { flexDirection: rowDirection }]}>
         <View style={[styles.badge, { backgroundColor: accent.strongBg }]}>
           <Text style={[styles.badgeText, { color: accent.color }]}>
             {data.category}
@@ -47,7 +63,7 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
               color={SemanticColors.orange}
             />
             <Text style={[styles.badgeText, { color: SemanticColors.orange }]}>
-              رائج
+              {t("explore.trending")}
             </Text>
           </View>
         )}
@@ -61,27 +77,35 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
           >
             <Ionicons name="flash" size={11} color={SemanticColors.red} />
             <Text style={[styles.badgeText, { color: SemanticColors.red }]}>
-              عاجل
+              {t("explore.urgent")}
             </Text>
           </View>
         )}
       </View>
 
-      <Text style={styles.title}>{data.title}</Text>
+      <Text style={[styles.title, { color: colors.foreground, textAlign }]}>
+        {data.title}
+      </Text>
 
-      <Text style={styles.description} numberOfLines={2}>
+      <Text
+        style={[
+          styles.description,
+          { color: colors.mutedForeground, textAlign },
+        ]}
+        numberOfLines={2}
+      >
         {data.description}
       </Text>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { flexDirection: rowDirection }]}>
         {/* Price */}
         <View style={[styles.priceBadge, { backgroundColor: accent.softBg }]}>
           <Text style={[styles.priceText, { color: accent.color }]}>
-            {data.pricePerHour} شيقل/ساعة
+            {data.pricePerHour} {t("explore.shekelPerHour")}
           </Text>
         </View>
 
-        <View style={styles.deadlineBox}>
+        <View style={[styles.deadlineBox, { flexDirection: rowDirection }]}>
           <Ionicons
             name="time-outline"
             size={13}
@@ -91,11 +115,17 @@ export function ServiceCard({ data, onPress }: ServiceCardProps) {
         </View>
 
         {/* Owner */}
-        <View style={styles.owner}>
-          <Text style={styles.ownerName}>{data.owner.name}</Text>
+        <View style={[styles.owner, { flexDirection: rowDirection }]}>
+          <Text style={[styles.ownerName, { color: colors.foreground }]}>
+            {data.owner.name}
+          </Text>
 
           <View style={[styles.avatar, { backgroundColor: accent.color }]}>
-            <Text style={styles.avatarText}>{data.owner.initials}</Text>
+            {ownerImageUrl ? (
+              <Image source={{ uri: ownerImageUrl }} style={styles.avatarImage} resizeMode="cover" />
+            ) : (
+              <Text style={styles.avatarText}>{data.owner.initials}</Text>
+            )}
           </View>
         </View>
       </View>
@@ -113,7 +143,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -126,14 +155,18 @@ const styles = StyleSheet.create({
   },
   accentBar: {
     position: "absolute",
-    right: 0,
     top: 0,
     bottom: 0,
     width: 3,
     borderRadius: 2,
   },
+  accentBarRtl: {
+    right: 0,
+  },
+  accentBarLtr: {
+    left: 0,
+  },
   badges: {
-    flexDirection: "row-reverse",
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
@@ -154,20 +187,15 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
-    textAlign: "right",
     marginBottom: Spacing.xs,
   },
   description: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
-    textAlign: "right",
     lineHeight: 20,
     marginBottom: Spacing.md,
   },
   footer: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.sm,
   },
@@ -182,7 +210,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo,
   },
   deadlineBox: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 3,
     backgroundColor: SemanticColors.green + "15",
@@ -197,7 +224,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   owner: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.xs,
     flex: 1,
@@ -209,6 +235,11 @@ const styles = StyleSheet.create({
     borderRadius: Dimensions.radiusFull,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   avatarText: {
     fontSize: FontSize.sm,
@@ -219,7 +250,6 @@ const styles = StyleSheet.create({
   ownerName: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
     fontWeight: FontWeight.medium,
   },
 });

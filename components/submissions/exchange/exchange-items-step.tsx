@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { SwapAdPhotoInput } from '@/services/swap-api';
 import {
   Colors,
@@ -58,11 +59,13 @@ export function ExchangeItemsStep({
   onRemovePhoto,
   onNext,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.wrap}>
       <ExchangeSectionHeader step={1} title="عناصر التبادل" subtitle="ما لديك وما تريده" />
 
-      <View style={styles.exchangeCard}>
+      <View style={[styles.exchangeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.accentLine} />
 
         <View style={styles.fieldBlock}>
@@ -70,16 +73,16 @@ export function ExchangeItemsStep({
             <View style={styles.badge}>
               <Text style={styles.badgeText}>عرض</Text>
             </View>
-            <Text style={styles.fieldLabel}>ما لديك</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>ما لديك</Text>
           </View>
 
-          <View style={styles.inputRow}>
+          <View style={[styles.inputRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <TextInput
               value={offerTitle}
               onChangeText={onOfferTitleChange}
               placeholder="مثال: آلة حاسبة علمية"
-              placeholderTextColor="rgba(142,142,147,0.65)"
-              style={styles.input}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.foreground }]}
               textAlign="right"
             />
           </View>
@@ -96,16 +99,16 @@ export function ExchangeItemsStep({
             <View style={styles.badge}>
               <Text style={styles.badgeText}>طلب</Text>
             </View>
-            <Text style={styles.fieldLabel}>تبحث عن</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>تبحث عن</Text>
           </View>
 
-          <View style={styles.inputRow}>
+          <View style={[styles.inputRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <TextInput
               value={wantedTitle}
               onChangeText={onWantedTitleChange}
               placeholder="مثال: معطف مختبر مقاس L"
-              placeholderTextColor="rgba(142,142,147,0.65)"
-              style={styles.input}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.foreground }]}
               textAlign="right"
             />
           </View>
@@ -115,7 +118,7 @@ export function ExchangeItemsStep({
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
           <Ionicons name="grid-outline" size={14} color={EXCHANGE_ACCENT_DARK} />
-          <Text style={styles.fieldLabel}>تصنيف ما لديك</Text>
+          <Text style={[styles.fieldLabel, { color: colors.foreground }]}>تصنيف ما لديك</Text>
         </View>
 
         <View style={styles.grid}>
@@ -128,18 +131,19 @@ export function ExchangeItemsStep({
                 onPress={() => onCategoryChange(active ? null : item.id)}
                 style={({ pressed }) => [
                   styles.categoryButton,
+                  { backgroundColor: colors.card, borderColor: colors.border },
                   getCategoryStyle(active, item),
                   pressed && styles.pressed,
                 ]}
               >
-                <View style={[styles.categoryIcon, active && { backgroundColor: `${item.color}18` }]}>
+                <View style={[styles.categoryIcon, { backgroundColor: colors.secondary }, active && { backgroundColor: `${item.color}18` }]}>
                   <Ionicons
                     name={item.icon}
                     size={22}
-                    color={active ? item.color : Colors.mutedForeground}
+                    color={active ? item.color : colors.mutedForeground}
                   />
                 </View>
-                <Text style={[styles.categoryText, active && { color: item.color }]}>
+                <Text style={[styles.categoryText, { color: colors.mutedForeground }, active && { color: item.color }]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -148,7 +152,14 @@ export function ExchangeItemsStep({
         </View>
       </View>
 
-      <Pressable onPress={onPickPhotos} style={({ pressed }) => [styles.uploadCard, pressed && styles.pressed]}>
+      <Pressable
+        onPress={onPickPhotos}
+        style={({ pressed }) => [
+          styles.uploadCard,
+          { backgroundColor: colors.card, borderColor: `${EXCHANGE_ACCENT}66` },
+          pressed && styles.pressed,
+        ]}
+      >
         {photos.length > 0 ? (
           <>
             <View style={styles.photoGrid}>
@@ -174,7 +185,7 @@ export function ExchangeItemsStep({
                 </View>
               ))}
             </View>
-            <Text style={styles.photoCounter}>
+            <Text style={[styles.photoCounter, { color: colors.mutedForeground }]}>
               {photos.length}/{EXCHANGE_MAX_PHOTOS} صور مرفقة
             </Text>
           </>
@@ -184,8 +195,8 @@ export function ExchangeItemsStep({
               <Ionicons name="image-outline" size={25} color={EXCHANGE_ACCENT_DARK} />
             </View>
             <View>
-              <Text style={styles.uploadTitle}>أضف صوراً لعنصرك</Text>
-              <Text style={styles.uploadHint}>اختياري - حتى {EXCHANGE_MAX_PHOTOS} صور</Text>
+              <Text style={[styles.uploadTitle, { color: colors.foreground }]}>أضف صوراً لعنصرك</Text>
+              <Text style={[styles.uploadHint, { color: colors.mutedForeground }]}>اختياري - حتى {EXCHANGE_MAX_PHOTOS} صور</Text>
             </View>
           </>
         )}
@@ -196,12 +207,12 @@ export function ExchangeItemsStep({
         disabled={!canProceed}
         style={({ pressed }) => [
           styles.primaryButton,
-          !canProceed && styles.primaryButtonDisabled,
+          !canProceed && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
           pressed && canProceed && styles.pressed,
         ]}
       >
-        <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : Colors.mutedForeground} />
-        <Text style={[styles.primaryText, !canProceed && styles.primaryTextDisabled]}>التالي</Text>
+        <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : colors.mutedForeground} />
+        <Text style={[styles.primaryText, !canProceed && { color: colors.mutedForeground }]}>التالي</Text>
       </Pressable>
     </View>
   );

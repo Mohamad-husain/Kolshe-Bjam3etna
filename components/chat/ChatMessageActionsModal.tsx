@@ -3,6 +3,7 @@ import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import type { StyleProp, TextStyle } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 
 export type ChatMessageActionItem = {
     key: string
@@ -30,6 +31,8 @@ export default function ChatMessageActionsModal({
     actions,
     onClose,
 }: Props) {
+    const { colors } = useThemePreference()
+
     return (
         <Modal
             visible={visible}
@@ -41,31 +44,42 @@ export default function ChatMessageActionsModal({
                 <TouchableOpacity style={styles.backdrop} onPress={onClose} />
 
                 <SafeAreaView edges={[]} style={styles.safeArea}>
-                    <View style={styles.sheet}>
-                        <View style={styles.handle} />
+                    <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+                        <View style={[styles.handle, { backgroundColor: `${colors.mutedForeground}55` }]} />
 
                         <View style={styles.topBar}>
                             <TouchableOpacity
-                                style={styles.closeButton}
+                                style={[
+                                    styles.closeButton,
+                                    {
+                                        backgroundColor: colors.secondary,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
                                 onPress={onClose}
                                 activeOpacity={0.85}
                             >
-                                <Ionicons name="close-outline" size={18} color="#2563EB" />
+                                <Ionicons name="close-outline" size={18} color={colors.primary} />
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.header}>
-                            <View style={styles.headerIcon}>
+                        <View
+                            style={[
+                                styles.header,
+                                { backgroundColor: colors.secondary, borderColor: colors.border },
+                            ]}
+                        >
+                            <View style={[styles.headerIcon, { backgroundColor: `${colors.primary}20` }]}>
                                 <Ionicons
                                     name={iconName}
                                     size={22}
-                                    color="#2563EB"
+                                    color={colors.primary}
                                 />
                             </View>
 
                             <View style={styles.headerCopy}>
-                                <Text style={styles.title}>{title}</Text>
-                                <Text style={styles.subtitle} numberOfLines={2}>
+                                <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+                                <Text style={[styles.subtitle, { color: colors.mutedForeground }]} numberOfLines={2}>
                                     {subtitle}
                                 </Text>
                             </View>
@@ -74,7 +88,10 @@ export default function ChatMessageActionsModal({
                         {actions.map((action) => (
                             <TouchableOpacity
                                 key={action.key}
-                                style={styles.actionButton}
+                                style={[
+                                    styles.actionButton,
+                                    { backgroundColor: colors.card, borderColor: colors.border },
+                                ]}
                                 onPress={action.onPress}
                             >
                                 <Ionicons
@@ -105,7 +122,6 @@ const styles = StyleSheet.create({
         justifyContent: "flex-end",
     },
     sheet: {
-        backgroundColor: "#FFFFFF",
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingHorizontal: 18,
@@ -116,7 +132,6 @@ const styles = StyleSheet.create({
         width: 44,
         height: 5,
         borderRadius: 999,
-        backgroundColor: "#CBD5E1",
         alignSelf: "center",
         marginTop: 6,
         marginBottom: 16,
@@ -131,17 +146,13 @@ const styles = StyleSheet.create({
         borderRadius: 19,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#EFF6FF",
         borderWidth: 1,
-        borderColor: "#BFDBFE",
     },
     header: {
         flexDirection: "row-reverse",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
         paddingHorizontal: 14,
         paddingVertical: 14,
         marginBottom: 14,
@@ -150,7 +161,6 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: "#DBEAFE",
         alignItems: "center",
         justifyContent: "center",
         marginLeft: 12,
@@ -162,14 +172,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 17,
         fontWeight: "800",
-        color: "#0F172A",
         textAlign: "right",
     },
     subtitle: {
         marginTop: 4,
         fontSize: 12,
         lineHeight: 19,
-        color: "#64748B",
         textAlign: "right",
     },
     actionButton: {
@@ -179,9 +187,7 @@ const styles = StyleSheet.create({
         gap: 10,
         minHeight: 52,
         borderRadius: 18,
-        backgroundColor: "#FFFFFF",
         borderWidth: 1,
-        borderColor: "#E2E8F0",
         paddingHorizontal: 16,
         marginBottom: 10,
     },

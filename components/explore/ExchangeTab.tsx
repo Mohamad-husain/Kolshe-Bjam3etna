@@ -8,8 +8,9 @@ import {
 } from "react-native";
 
 import { useExchangeQuery } from "@/hooks/queries/use-explore-queries";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
-  Colors,
   FontFamily,
   FontSize,
   SemanticColors,
@@ -21,18 +22,19 @@ import { ExchangeCard } from "./ExchangeCard";
 import { SearchBar } from "./SearchBar";
 import { useSearchInput } from "@/hooks/explore/use-search-input";
 
-const CATEGORIES: Category[] = [
-  { id: "all", label: "الكل" },
-  { id: "إلكترونيات", label: "إلكترونيات" },
-  { id: "كتب", label: "كتب" },
-  { id: "تصميم", label: "تصميم" },
-];
-
 type ExchangeTabProps = {
   showFilter: boolean;
 };
 
 export function ExchangeTab({ showFilter }: ExchangeTabProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const categories: Category[] = [
+    { id: "all", label: t("common.all") },
+    { id: "إلكترونيات", label: t("explore.category.electronics") },
+    { id: "كتب", label: t("explore.category.books") },
+    { id: "تصميم", label: t("explore.category.design") },
+  ];
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useExchangeQuery();
   const { search, searchError, handleSearch } = useSearchInput();
@@ -63,7 +65,9 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>تعذر تحميل البيانات</Text>
+        <Text style={[styles.errorText, { color: colors.mutedForeground }]}>
+          {t("common.loadError")}
+        </Text>
       </View>
     );
   }
@@ -76,20 +80,20 @@ export function ExchangeTab({ showFilter }: ExchangeTabProps) {
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ماذا تريد ان تستيدل ؟"
+            placeholder={t("explore.searchExchange")}
             value={search}
             onChangeText={handleSearch}
             error={searchError}
           />
           {showFilter ? (
             <CategoryFilter
-              categories={CATEGORIES}
+              categories={categories}
               selected={selectedCategory}
               onSelect={setSelectedCategory}
               accentColor={SemanticColors.lightBlue}
               accentBg={`${SemanticColors.lightBlue}12`}
               icon="swap-horizontal-outline"
-              title="تبادل"
+              title={t("explore.exchange")}
               count={filtered.length}
             />
           ) : null}
@@ -115,6 +119,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
-    color: Colors.mutedForeground,
   },
 });

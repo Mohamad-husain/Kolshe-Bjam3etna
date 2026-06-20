@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { SwapAdCondition } from '@/services/swap-api';
 import {
   Colors,
@@ -40,6 +41,7 @@ export function ExchangeDetailsStep({
   onPrevious,
   onNext,
 }: Props) {
+  const { colors } = useThemePreference();
   const progress = Math.min((description.length / 350) * 100, 100);
 
   return (
@@ -49,7 +51,7 @@ export function ExchangeDetailsStep({
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
           <Ionicons name="sparkles-outline" size={14} color={EXCHANGE_ACCENT_DARK} />
-          <Text style={styles.fieldLabel}>حالة عنصرك</Text>
+          <Text style={[styles.fieldLabel, { color: colors.foreground }]}>حالة عنصرك</Text>
         </View>
 
         <View style={styles.chipWrap}>
@@ -62,11 +64,12 @@ export function ExchangeDetailsStep({
                 onPress={() => onConditionChange(active ? '' : item.value)}
                 style={({ pressed }) => [
                   styles.chip,
+                  { backgroundColor: colors.card, borderColor: colors.border },
                   active && styles.chipActive,
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                <Text style={[styles.chipText, { color: colors.foreground }, active && styles.chipTextActive]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -84,6 +87,7 @@ export function ExchangeDetailsStep({
           <Text
             style={[
               styles.counter,
+              { color: colors.mutedForeground },
               description.trim().length >= EXCHANGE_DESCRIPTION_MIN_LENGTH && styles.counterActive,
             ]}
           >
@@ -92,11 +96,17 @@ export function ExchangeDetailsStep({
 
           <View style={styles.labelRow}>
             <Ionicons name="reader-outline" size={14} color={EXCHANGE_ACCENT_DARK} />
-            <Text style={styles.fieldLabel}>وصف التبادل</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>وصف التبادل</Text>
           </View>
         </View>
 
-        <View style={[styles.textareaWrap, descriptionError ? styles.textareaError : null]}>
+        <View
+          style={[
+            styles.textareaWrap,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            descriptionError ? styles.textareaError : null,
+          ]}
+        >
           <TextInput
             value={description}
             onChangeText={onDescriptionChange}
@@ -105,10 +115,10 @@ export function ExchangeDetailsStep({
             textAlign="right"
             textAlignVertical="top"
             placeholder="صف حالة عنصرك بدقة، وأي شروط للتبادل التي تريدها..."
-            placeholderTextColor="rgba(142,142,147,0.65)"
-            style={styles.textarea}
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.textarea, { color: colors.foreground }]}
           />
-          <View style={styles.progressTrack}>
+          <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
             <View
               style={[
                 styles.progressFill,
@@ -134,18 +144,25 @@ export function ExchangeDetailsStep({
           style={({ pressed }) => [
             styles.primaryButton,
             styles.flexButton,
-            !canProceed && styles.primaryButtonDisabled,
+            !canProceed && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
             pressed && canProceed && styles.pressed,
           ]}
         >
-          <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : Colors.mutedForeground} />
-          <Text style={[styles.primaryText, !canProceed && styles.primaryTextDisabled]}>
+          <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : colors.mutedForeground} />
+          <Text style={[styles.primaryText, !canProceed && { color: colors.mutedForeground }]}>
             معاينة التبادل
           </Text>
         </Pressable>
 
-        <Pressable onPress={onPrevious} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-          <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+        <Pressable
+          onPress={onPrevious}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
         </Pressable>
       </View>
     </View>

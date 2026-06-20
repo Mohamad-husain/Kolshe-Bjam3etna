@@ -1,15 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
 
-import {
-  Colors,
-  Dimensions,
-  FontFamily,
-  FontSize,
-  FontWeight,
-  SemanticColors,
-  Spacing,
-} from '@/styles/ui-theme';
+import { SemanticColors } from '@/styles/ui-theme';
 
 export type ServiceRequestStep = 1 | 2 | 3;
 

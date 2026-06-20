@@ -1,20 +1,37 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppLogoBadge } from '@/components/app-logo-badge';
-import { AUTH_COPY } from '@/lib/auth/auth-copy';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontWeight,
 } from '@/styles/ui-theme';
 
 export function AuthBranding() {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.container}>
       <AppLogoBadge style={styles.logoBox} />
 
-      <Text style={styles.title}>{AUTH_COPY.appTitle}</Text>
-      <Text style={styles.subtitle}>{AUTH_COPY.appSubtitle}</Text>
+      <Text
+        style={[
+          styles.title,
+          { color: colors.foreground, writingDirection: isRtl ? 'rtl' : 'ltr' },
+        ]}
+      >
+        {t('common.appName')}
+      </Text>
+      <Text
+        style={[
+          styles.subtitle,
+          { color: colors.mutedForeground, writingDirection: isRtl ? 'rtl' : 'ltr' },
+        ]}
+      >
+        {t('auth.appSubtitle')}
+      </Text>
     </View>
   );
 }
@@ -28,20 +45,15 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   title: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 21,
     fontWeight: FontWeight.bold,
     textAlign: 'center',
-    writingDirection: 'rtl',
     marginBottom: 6,
-    letterSpacing: -0.3,
   },
   subtitle: {
-    color: '#9d9da4',
     fontFamily: FontFamily.cairo,
     fontSize: 14,
     textAlign: 'center',
-    writingDirection: 'rtl',
   },
 });

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { Colors } from '@/styles/ui-theme';
 
 type AppLogoBadgeProps = {
@@ -14,11 +15,15 @@ export function AppLogoBadge({
   iconSize = 37,
   style,
 }: AppLogoBadgeProps) {
+  const { colors } = useThemePreference();
+
   return (
     <View
       style={[
         styles.badge,
         {
+          backgroundColor: colors.primary,
+          shadowColor: colors.primary,
           width: size,
           height: size,
           borderRadius: Math.round(size * 0.275),

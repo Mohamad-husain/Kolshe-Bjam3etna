@@ -7,6 +7,7 @@ import {
   useCreateEventMutation,
   useUpdateEventMutation,
 } from "@/hooks/queries/use-coordinator-queries";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
   ActivityIndicator,
   Alert,
@@ -62,6 +63,7 @@ const EVENT_TYPES = [
 export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
   const isEditing = !!editingEvent;
   const insets = useSafeAreaInsets();
+  const { colors } = useThemePreference();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
@@ -212,6 +214,12 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
 
   const formatTime = (d: Date) =>
     `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+  const fieldSurfaceStyle = {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+  };
+  const fieldTextStyle = { color: colors.foreground };
+  const mutedTextStyle = { color: colors.mutedForeground };
 
   return (
     <KeyboardAvoidingView
@@ -233,7 +241,13 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           name="coverImage"
           render={({ field: { onChange, value } }) => (
             <Pressable
-              style={styles.imagePicker}
+              style={[
+                styles.imagePicker,
+                {
+                  backgroundColor: colors.secondary,
+                  borderColor: SemanticColors.green + "55",
+                },
+              ]}
               onPress={() => pickImage(onChange)}
             >
               <Ionicons
@@ -241,23 +255,23 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 size={32}
                 color={SemanticColors.green}
               />
-              <Text style={styles.imagePickerText}>
+              <Text style={[styles.imagePickerText, mutedTextStyle]}>
                 {value ? "تم اختيار صورة " : "أضف صورة أو بوستر للفعالية"}
               </Text>
             </Pressable>
           )}
         />
 
-        <Text style={styles.label}>عنوان الفعالية *</Text>
+        <Text style={[styles.label, fieldTextStyle]}>عنوان الفعالية *</Text>
         <Controller
           control={control}
           name="title"
           rules={{ required: "عنوان الفعالية مطلوب" }}
           render={({ field: { onChange, value } }) => (
             <TextInput
-              style={[styles.input, errors.title && styles.inputError]}
+              style={[styles.input, fieldSurfaceStyle, fieldTextStyle, errors.title && styles.inputError]}
               placeholder="مثال: ورشة عمل البرمجة بالبايثون"
-              placeholderTextColor={Colors.mutedForeground}
+              placeholderTextColor={colors.mutedForeground}
               value={value}
               onChangeText={onChange}
               textAlign="right"
@@ -268,34 +282,34 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           <Text style={styles.errorText}>{errors.title.message}</Text>
         )}
 
-        <Text style={styles.label}>نوع الفعالية</Text>
+        <Text style={[styles.label, fieldTextStyle]}>نوع الفعالية</Text>
         <Controller
           control={control}
           name="type"
           render={({ field: { onChange, value } }) => (
             <View style={styles.dropdownWrapper}>
               <Pressable
-                style={[styles.input, styles.dropdownTrigger]}
+                style={[styles.input, styles.dropdownTrigger, fieldSurfaceStyle]}
                 onPress={() => setTypeDropdownOpen((p) => !p)}
               >
                 <Ionicons
                   name={typeDropdownOpen ? "chevron-up" : "chevron-down"}
                   size={16}
-                  color={Colors.mutedForeground}
+                  color={colors.mutedForeground}
                 />
-                <Text style={styles.dropdownValue}>
+                <Text style={[styles.dropdownValue, fieldTextStyle]}>
                   {EVENT_TYPES.find((t) => t.id === value)?.label ??
                     "اختر نوع الفعالية"}
                 </Text>
               </Pressable>
               {typeDropdownOpen && (
-                <View style={styles.dropdownMenu}>
+                <View style={[styles.dropdownMenu, fieldSurfaceStyle]}>
                   {EVENT_TYPES.map((type, i) => (
                     <Pressable
                       key={type.id}
                       style={[
                         styles.dropdownItem,
-                        i < EVENT_TYPES.length - 1 && styles.dropdownItemBorder,
+                        i < EVENT_TYPES.length - 1 && [styles.dropdownItemBorder, { borderBottomColor: colors.border }],
                         value === type.id && styles.dropdownItemActive,
                       ]}
                       onPress={() => {
@@ -306,6 +320,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                       <Text
                         style={[
                           styles.dropdownItemText,
+                          fieldTextStyle,
                           value === type.id && styles.dropdownItemTextActive,
                         ]}
                       >
@@ -328,7 +343,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
 
         <View style={styles.row}>
           <View style={styles.rowItem}>
-            <Text style={styles.label}>الوقت</Text>
+            <Text style={[styles.label, fieldTextStyle]}>الوقت</Text>
             <Controller
               control={control}
               name="time"
@@ -337,19 +352,18 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 <>
                   <Pressable
                     onPress={() => setShowTimePicker(true)}
-                    style={[styles.input, styles.pickerTrigger]}
+                    style={[styles.input, styles.pickerTrigger, fieldSurfaceStyle]}
                   >
                     <Ionicons
                       name="time-outline"
                       size={16}
-                      color={Colors.mutedForeground}
+                      color={colors.mutedForeground}
                     />
                     <Text
-                      style={
-                        value
-                          ? styles.pickerValueFilled
-                          : styles.pickerValueEmpty
-                      }
+                      style={[
+                        value ? styles.pickerValueFilled : styles.pickerValueEmpty,
+                        { color: value ? colors.foreground : colors.mutedForeground },
+                      ]}
                     >
                       {value || "--:--"}
                     </Text>
@@ -371,7 +385,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
             />
           </View>
           <View style={styles.rowItem}>
-            <Text style={styles.label}>التاريخ</Text>
+            <Text style={[styles.label, fieldTextStyle]}>التاريخ</Text>
             <Controller
               control={control}
               name="date"
@@ -380,19 +394,18 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 <>
                   <Pressable
                     onPress={() => setShowDatePicker(true)}
-                    style={[styles.input, styles.pickerTrigger]}
+                    style={[styles.input, styles.pickerTrigger, fieldSurfaceStyle]}
                   >
                     <Ionicons
                       name="calendar-outline"
                       size={16}
-                      color={Colors.mutedForeground}
+                      color={colors.mutedForeground}
                     />
                     <Text
-                      style={
-                        value
-                          ? styles.pickerValueFilled
-                          : styles.pickerValueEmpty
-                      }
+                      style={[
+                        value ? styles.pickerValueFilled : styles.pickerValueEmpty,
+                        { color: value ? colors.foreground : colors.mutedForeground },
+                      ]}
                     >
                       {value || "mm/dd/yyyy"}
                     </Text>
@@ -416,7 +429,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
 
         <View style={styles.row}>
           <View style={styles.rowItem}>
-            <Text style={styles.label}>الحد الأقصى</Text>
+            <Text style={[styles.label, fieldTextStyle]}>الحد الأقصى</Text>
             <Controller
               control={control}
               name="capacity"
@@ -425,18 +438,19 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 <View
                   style={[
                     styles.inputWithIcon,
+                    fieldSurfaceStyle,
                     errors.capacity && styles.inputError,
                   ]}
                 >
                   <Ionicons
                     name="people-outline"
                     size={16}
-                    color={Colors.mutedForeground}
+                    color={colors.mutedForeground}
                   />
                   <TextInput
-                    style={styles.inputInner}
+                    style={[styles.inputInner, fieldTextStyle]}
                     placeholder="50"
-                    placeholderTextColor={Colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                     value={value}
                     onChangeText={onChange}
                     textAlign="right"
@@ -447,7 +461,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
             />
           </View>
           <View style={styles.rowItem}>
-            <Text style={styles.label}>المكان</Text>
+            <Text style={[styles.label, fieldTextStyle]}>المكان</Text>
             <Controller
               control={control}
               name="location"
@@ -456,18 +470,19 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 <View
                   style={[
                     styles.inputWithIcon,
+                    fieldSurfaceStyle,
                     errors.location && styles.inputError,
                   ]}
                 >
                   <Ionicons
                     name="location-outline"
                     size={16}
-                    color={Colors.mutedForeground}
+                    color={colors.mutedForeground}
                   />
                   <TextInput
-                    style={styles.inputInner}
+                    style={[styles.inputInner, fieldTextStyle]}
                     placeholder="قاعة الحاسوب"
-                    placeholderTextColor={Colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                     value={value}
                     onChangeText={onChange}
                     textAlign="right"
@@ -478,7 +493,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
           </View>
         </View>
 
-        <Text style={styles.label}>شرح التفاصيل</Text>
+        <Text style={[styles.label, fieldTextStyle]}>شرح التفاصيل</Text>
         <Controller
           control={control}
           name="description"
@@ -488,10 +503,12 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               style={[
                 styles.input,
                 styles.textArea,
+                fieldSurfaceStyle,
+                fieldTextStyle,
                 errors.description && styles.inputError,
               ]}
               placeholder="اشرح هدف الفعالية، ماذا سيستفيد المشاركون، والمحاور الرئيسية..."
-              placeholderTextColor={Colors.mutedForeground}
+              placeholderTextColor={colors.mutedForeground}
               value={value}
               onChangeText={onChange}
               textAlign="right"
@@ -506,19 +523,19 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
         )}
 
         <View style={styles.optionalHeader}>
-          <Text style={styles.optionalBadge}>اختياري</Text>
-          <Text style={styles.label}>المتحدثون</Text>
+          <Text style={[styles.optionalBadge, { backgroundColor: colors.secondary, color: colors.mutedForeground }]}>اختياري</Text>
+          <Text style={[styles.label, fieldTextStyle]}>المتحدثون</Text>
         </View>
         <Controller
           control={control}
           name="speakers"
           render={({ field: { onChange, value } }) => (
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, fieldSurfaceStyle, fieldTextStyle]}
               placeholder={
                 "مثال:\nد. ينال سويسة —دكتور في جامعة النجاح الوطنية"
               }
-              placeholderTextColor={Colors.mutedForeground}
+              placeholderTextColor={colors.mutedForeground}
               value={value}
               onChangeText={onChange}
               textAlign="right"
@@ -530,12 +547,12 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
         />
 
         <View style={styles.optionalHeader}>
-          <Text style={styles.optionalBadge}>اختياري</Text>
-          <Text style={styles.label}>الجدول الزمني</Text>
+          <Text style={[styles.optionalBadge, { backgroundColor: colors.secondary, color: colors.mutedForeground }]}>اختياري</Text>
+          <Text style={[styles.label, fieldTextStyle]}>الجدول الزمني</Text>
         </View>
 
         {fields.map((field, index) => (
-          <View key={field.id} style={styles.agendaItem}>
+          <View key={field.id} style={[styles.agendaItem, fieldSurfaceStyle]}>
             <View style={styles.agendaTimeRow}>
               <Controller
                 control={control}
@@ -543,7 +560,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 render={({ field: { onChange, value } }) => (
                   <>
                     <Pressable
-                      style={styles.agendaTimePicker}
+                      style={[styles.agendaTimePicker, { backgroundColor: colors.secondary }]}
                       onPress={() =>
                         setAgendaEndPickers((p) => ({ ...p, [index]: true }))
                       }
@@ -551,14 +568,13 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                       <Ionicons
                         name="time-outline"
                         size={14}
-                        color={Colors.mutedForeground}
+                        color={colors.mutedForeground}
                       />
                       <Text
-                        style={
-                          value
-                            ? styles.pickerValueFilled
-                            : styles.pickerValueEmpty
-                        }
+                        style={[
+                          value ? styles.pickerValueFilled : styles.pickerValueEmpty,
+                          { color: value ? colors.foreground : colors.mutedForeground },
+                        ]}
                       >
                         {value || "--:--"}
                       </Text>
@@ -585,7 +601,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               <Ionicons
                 name="arrow-back-outline"
                 size={14}
-                color={Colors.mutedForeground}
+                color={colors.mutedForeground}
               />
 
               <Controller
@@ -594,7 +610,7 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                 render={({ field: { onChange, value } }) => (
                   <>
                     <Pressable
-                      style={styles.agendaTimePicker}
+                      style={[styles.agendaTimePicker, { backgroundColor: colors.secondary }]}
                       onPress={() =>
                         setAgendaStartPickers((p) => ({ ...p, [index]: true }))
                       }
@@ -602,14 +618,13 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
                       <Ionicons
                         name="time-outline"
                         size={14}
-                        color={Colors.mutedForeground}
+                        color={colors.mutedForeground}
                       />
                       <Text
-                        style={
-                          value
-                            ? styles.pickerValueFilled
-                            : styles.pickerValueEmpty
-                        }
+                        style={[
+                          value ? styles.pickerValueFilled : styles.pickerValueEmpty,
+                          { color: value ? colors.foreground : colors.mutedForeground },
+                        ]}
                       >
                         {value || "--:--"}
                       </Text>
@@ -646,9 +661,9 @@ export function CreateEventTab({ editingEvent, onDone }: CreateEventTabProps) {
               name={`agenda.${index}.title`}
               render={({ field: { onChange, value } }) => (
                 <TextInput
-                  style={styles.agendaTitleInput}
+                  style={[styles.agendaTitleInput, { backgroundColor: colors.secondary, color: colors.foreground }]}
                   placeholder="اسم الجلسة أو النشاط"
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                   value={value}
                   onChangeText={onChange}
                   textAlign="right"

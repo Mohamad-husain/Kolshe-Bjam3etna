@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { useCompleteProfileMutation } from '@/hooks/mutations/use-auth-mutations';
 
 export type CompleteProfileFormValues = {
@@ -23,6 +24,7 @@ export function useCompleteProfileFlow({
   universityId,
   onCompleted,
 }: UseCompleteProfileFlowProps) {
+  const { t } = useAppSettings();
   const completeProfileMutation = useCompleteProfileMutation();
   const {
     control,
@@ -42,7 +44,7 @@ export function useCompleteProfileFlow({
     completeProfileMutation.isError && completeProfileMutation.error
       ? completeProfileMutation.error instanceof Error
         ? completeProfileMutation.error.message
-        : 'تعذر إكمال الملف الشخصي'
+        : t('completeProfile.error')
       : '';
 
   function clearServerError() {
@@ -58,8 +60,8 @@ export function useCompleteProfileFlow({
 
     if (!permission.granted) {
       Alert.alert(
-        'صلاحية مطلوبة',
-        'يرجى السماح للتطبيق بالوصول إلى الصور لاختيار صورة شخصية.',
+        t('completeProfile.photoPermissionTitle'),
+        t('completeProfile.photoPermissionMessage'),
       );
       return;
     }

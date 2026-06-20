@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { Image } from "expo-image";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
   useDeleteEventMutation,
   useEventRegistrationsQuery,
@@ -72,6 +73,7 @@ type MyEventCardProps = {
 };
 
 export function MyEventCard({ event, onEdit }: MyEventCardProps) {
+  const { colors } = useThemePreference();
   const [showRegistrations, setShowRegistrations] = useState(false);
 
   const deleteMutation = useDeleteEventMutation();
@@ -114,10 +116,10 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
 
   return (
     <>
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={[styles.accentBar, { backgroundColor: statusColor }]} />
         {imageUrl ? (
-          <View style={styles.mediaWrapper}>
+          <View style={[styles.mediaWrapper, { backgroundColor: colors.secondary }]}>
             <Image source={{ uri: imageUrl }} style={styles.image} />
           </View>
         ) : null}
@@ -134,7 +136,7 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
               </Text>
             </Text>
           </View>
-          <Text style={styles.cardTitle}>{event.title}</Text>
+          <Text style={[styles.cardTitle, { color: colors.foreground }]}>{event.title}</Text>
         </View>
 
         <View style={styles.details}>
@@ -142,17 +144,17 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
             <Ionicons
               name="location-outline"
               size={13}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.detailText}>{event.location}</Text>
+            <Text style={[styles.detailText, { color: colors.mutedForeground }]}>{event.location}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons
               name="time-outline"
               size={13}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.detailText}>
+            <Text style={[styles.detailText, { color: colors.mutedForeground }]}>
               {formatTime(event.dateTimeUtc)}
             </Text>
           </View>
@@ -160,9 +162,9 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
             <Ionicons
               name="calendar-outline"
               size={13}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.detailText}>
+            <Text style={[styles.detailText, { color: colors.mutedForeground }]}>
               {formatDate(event.dateTimeUtc)}
             </Text>
           </View>
@@ -173,11 +175,11 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
             <Text style={[styles.progressCount, { color: statusColor }]}>
               {Math.round(progress * 100)}%
             </Text>
-            <Text style={styles.progressLabel}>
+            <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
               {registeredCount} / {capacity} مسجل
             </Text>
           </View>
-          <View style={styles.progressTrack}>
+          <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
             <View
               style={[
                 styles.progressFill,
@@ -192,15 +194,15 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
 
         <View style={styles.actions}>
           <Pressable
-            style={styles.viewButton}
+            style={[styles.viewButton, { backgroundColor: colors.secondary }]}
             onPress={() => setShowRegistrations(true)}
           >
             <Ionicons
               name="eye-outline"
               size={16}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.viewButtonText}>عرض المسجلين</Text>
+            <Text style={[styles.viewButtonText, { color: colors.mutedForeground }]}>عرض المسجلين</Text>
           </Pressable>
 
           <Pressable style={styles.editButton} onPress={() => onEdit(event)}>
@@ -235,16 +237,16 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
         onRequestClose={() => setShowRegistrations(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Pressable onPress={() => setShowRegistrations(false)}>
                 <Ionicons
                   name="close-outline"
                   size={24}
-                  color={Colors.foreground}
+                  color={colors.foreground}
                 />
               </Pressable>
-              <Text style={styles.modalTitle}>المسجلين — {event.title}</Text>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>المسجلين — {event.title}</Text>
             </View>
 
             {registrationsQuery.isLoading ? (
@@ -260,24 +262,24 @@ export function MyEventCard({ event, onEdit }: MyEventCardProps) {
                 <Ionicons
                   name="people-outline"
                   size={40}
-                  color={Colors.mutedForeground}
+                  color={colors.mutedForeground}
                 />
-                <Text style={styles.emptyText}>لا يوجد مسجلون بعد</Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>لا يوجد مسجلون بعد</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
                 {registrationsQuery.data.map((reg) => (
-                  <View key={reg.userId} style={styles.registrationRow}>
+                  <View key={reg.userId} style={[styles.registrationRow, { borderBottomColor: colors.border }]}>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>
                         {reg.fullName.charAt(0)}
                       </Text>
                     </View>
                     <View style={styles.registrationInfo}>
-                      <Text style={styles.registrationName}>
+                      <Text style={[styles.registrationName, { color: colors.foreground }]}>
                         {reg.fullName}
                       </Text>
-                      <Text style={styles.registrationMeta}>
+                      <Text style={[styles.registrationMeta, { color: colors.mutedForeground }]}>
                         {reg.major}
                         {reg.studyYear ? ` • السنة ${reg.studyYear}` : ""}
                       </Text>

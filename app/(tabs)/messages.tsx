@@ -11,6 +11,8 @@ import { router } from "expo-router"
 import ChatEmptyState from "@/components/chat/ChatEmptyState"
 import ConversationListItem from "@/components/chat/ConversationListItem"
 import MessagesHeroCard from "@/components/chat/MessagesHeroCard"
+import { useAppSettings } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 import { useChatConversations } from "@/hooks/chat/queries/use-chat-conversations"
 import type { ChatConversation } from "@/types/chat"
 
@@ -31,10 +33,9 @@ const matchesConversationFilter = (
     return searchMatch && filterMatch
 }
 
-const getUnreadSummary = (unreadCount: number) =>
-    unreadCount === 1 ? "1 رسالة غير مقروءة" : `${unreadCount} رسائل غير مقروءة`
-
 export default function MessagesScreen() {
+    const { t } = useAppSettings()
+    const { colors } = useThemePreference()
     const [search, setSearch] = useState("")
     const [filter, setFilter] = useState<Filter>("all")
     const { data, isLoading } = useChatConversations()
@@ -52,18 +53,22 @@ export default function MessagesScreen() {
 
     if (isLoading) {
         return (
-            <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color="#2563eb" />
+            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         )
     }
 
     return (
-        <SafeAreaView edges={["top"]} style={styles.safeArea}>
-            <View style={styles.container}>
+        <SafeAreaView edges={["top"]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <MessagesHeroCard
                     search={search}
-                    unreadSummary={getUnreadSummary(unreadCount)}
+                    unreadSummary={
+                        unreadCount === 1
+                            ? t("messages.singleUnread")
+                            : t("messages.unreadSummary", { count: unreadCount })
+                    }
                     unreadCount={unreadCount}
                     filter={filter}
                     onChangeSearch={setSearch}
@@ -101,8 +106,8 @@ export default function MessagesScreen() {
                         <ChatEmptyState
                             compact
                             iconName="chatbubble-ellipses-outline"
-                            title="لا توجد محادثات مطابقة"
-                            description="جرّب البحث باسم مختلف أو انتظر حتى تصلك رسالة جديدة."
+                            title={t("messages.emptyTitle")}
+                            description={t("messages.emptyBody")}
                         />
                     }
                 />
@@ -114,18 +119,15 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
     },
     container: {
         flex: 1,
-        backgroundColor: "#F8FAFC",
         paddingHorizontal: 16,
     },
     loaderContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
     },
     listContent: {
         paddingTop: 18,

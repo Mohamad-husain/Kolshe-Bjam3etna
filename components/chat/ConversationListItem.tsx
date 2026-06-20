@@ -6,6 +6,8 @@ import {
     getMessagePreviewText,
 } from "@/components/chat/chat-message-helpers"
 import { getAvatarColor } from "@/components/chat/chat-ui"
+import { useAppSettings } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 
 type Props = {
     item: {
@@ -19,14 +21,30 @@ type Props = {
 }
 
 export default function ConversationListItem({ item, onPress }: Props) {
-    const timestamp = formatConversationTimestamp(item.time)
+    const { isRtl, language, t } = useAppSettings()
+    const { colors } = useThemePreference()
+    const timestamp = formatConversationTimestamp(item.time, language)
     const hasUnread = item.unread > 0
     const displayName = item.name?.trim() || ""
-    const displayMessage = getMessagePreviewText(item.message) || "لا توجد رسائل بعد"
+    const displayMessage = getMessagePreviewText(item.message, {
+        image: t("chat.attachmentImage"),
+        file: t("chat.attachmentFile"),
+    }) || t("messages.noMessages")
 
     return (
-        <TouchableOpacity activeOpacity={0.88} style={styles.row} onPress={onPress}>
-            <View style={styles.mainSection}>
+        <TouchableOpacity
+            activeOpacity={0.88}
+            style={[
+                styles.row,
+                {
+                    backgroundColor: colors.background,
+                    borderBottomColor: colors.border,
+                    flexDirection: isRtl ? "row-reverse" : "row",
+                },
+            ]}
+            onPress={onPress}
+        >
+            <View style={[styles.mainSection, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
                 <View style={styles.avatarWrapper}>
                     <ChatAvatar
                         size={58}
@@ -36,19 +54,36 @@ export default function ConversationListItem({ item, onPress }: Props) {
                     />
 
                     {hasUnread && (
-                        <View style={styles.badge}>
+                        <View style={[styles.badge, { borderColor: colors.background }]}>
                             <Text style={styles.badgeText}>{item.unread}</Text>
                         </View>
                     )}
                 </View>
 
-                <View style={styles.content}>
-                    <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
+                <View style={[styles.content, { alignItems: isRtl ? "flex-end" : "flex-start" }]}>
+                    <Text
+                        style={[
+                            styles.name,
+                            {
+                                color: hasUnread ? colors.foreground : colors.foreground,
+                                textAlign: isRtl ? "right" : "left",
+                            },
+                            hasUnread && styles.nameUnread,
+                        ]}
+                        numberOfLines={1}
+                    >
                         {displayName}
                     </Text>
 
                     <Text
-                        style={[styles.message, hasUnread && styles.messageUnread]}
+                        style={[
+                            styles.message,
+                            {
+                                color: hasUnread ? colors.foreground : colors.mutedForeground,
+                                textAlign: isRtl ? "right" : "left",
+                            },
+                            hasUnread && styles.messageUnread,
+                        ]}
                         numberOfLines={1}
                     >
                         {displayMessage}
@@ -57,7 +92,7 @@ export default function ConversationListItem({ item, onPress }: Props) {
             </View>
 
             <View style={styles.meta}>
-                {!!timestamp && <Text style={styles.time}>{timestamp}</Text>}
+                {!!timestamp && <Text style={[styles.time, { color: colors.mutedForeground }]}>{timestamp}</Text>}
             </View>
         </TouchableOpacity>
     )
@@ -65,18 +100,14 @@ export default function ConversationListItem({ item, onPress }: Props) {
 
 const styles = StyleSheet.create({
     row: {
-        flexDirection: "row-reverse",
         alignItems: "flex-start",
         justifyContent: "space-between",
         paddingHorizontal: 2,
         paddingVertical: 16,
-        backgroundColor: "#FFFFFF",
         borderBottomWidth: 1,
-        borderBottomColor: "#EEF2F7",
     },
     mainSection: {
         flex: 1,
-        flexDirection: "row-reverse",
         alignItems: "center",
         minWidth: 0,
     },
@@ -107,7 +138,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 2,
-        borderColor: "#FFFFFF",
     },
     badgeText: {
         color: "#FFFFFF",
@@ -123,23 +153,17 @@ const styles = StyleSheet.create({
     name: {
         fontWeight: "800",
         fontSize: 16,
-        color: "#1F2937",
-        textAlign: "right",
         width: "100%",
     },
     nameUnread: {
-        color: "#0F172A",
     },
     message: {
         marginTop: 7,
         fontSize: 13,
         lineHeight: 20,
-        color: "#64748B",
-        textAlign: "right",
         width: "100%",
     },
     messageUnread: {
-        color: "#1E293B",
         fontWeight: "600",
     },
 })

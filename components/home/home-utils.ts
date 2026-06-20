@@ -5,11 +5,11 @@ import { SemanticColors } from '@/styles/ui-theme';
 import type { QuickItem } from './home-types';
 
 export const quickAccess: QuickItem[] = [
-  { icon: 'add', label: 'طلب', color: SemanticColors.blue, bg: 'rgba(37,99,235,0.08)', tab: 'services' },
-  { icon: 'briefcase-outline', label: 'خدمات', color: SemanticColors.green, bg: 'rgba(52,199,89,0.08)', tab: 'services' },
-  { icon: 'bag-outline', label: 'المتجر', color: SemanticColors.orange, bg: 'rgba(255,149,0,0.08)', tab: 'marketplace' },
-  { icon: 'megaphone-outline', label: 'عروض', color: SemanticColors.violet, bg: 'rgba(175,82,222,0.08)', section: 'offers' },
-  { icon: 'calendar-outline', label: 'فعاليات', color: SemanticColors.violet, bg: 'rgba(175,82,222,0.08)', tab: 'events' },
+  { icon: 'add', labelKey: 'home.quick.newService', color: SemanticColors.blue, bg: 'rgba(37,99,235,0.08)', route: 'new-service' },
+  { icon: 'briefcase-outline', labelKey: 'home.quick.services', color: SemanticColors.green, bg: 'rgba(52,199,89,0.08)', tab: 'services' },
+  { icon: 'bag-outline', labelKey: 'home.quick.marketplace', color: SemanticColors.orange, bg: 'rgba(255,149,0,0.08)', tab: 'marketplace' },
+  { icon: 'megaphone-outline', labelKey: 'home.quick.offers', color: SemanticColors.violet, bg: 'rgba(175,82,222,0.08)', section: 'offers' },
+  { icon: 'calendar-outline', labelKey: 'home.quick.events', color: SemanticColors.violet, bg: 'rgba(175,82,222,0.08)', tab: 'events' },
 ];
 
 export function hasText(value: string, search: string) {
@@ -18,7 +18,7 @@ export function hasText(value: string, search: string) {
 
 export function price(value: number, suffix = '') {
   const text = Number.isInteger(value) ? `${value}` : value.toFixed(2).replace(/\.00$/, '');
-  return `${text} شيقل${suffix}`;
+  return `₪${text}${suffix}`;
 }
 
 export function serviceAccent(category: string) {

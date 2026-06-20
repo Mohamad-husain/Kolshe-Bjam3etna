@@ -10,10 +10,11 @@ import {
 } from 'react-native';
 
 import { ProfileSetupLayout } from '@/components/auth/profile-setup-layout';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { useAuth } from '@/contexts/auth-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { useUniversitiesQuery } from '@/hooks/queries/use-auth-queries';
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
@@ -21,6 +22,8 @@ import {
 } from '@/styles/ui-theme';
 
 export default function SelectUniversityRoute() {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ selectedId?: string }>();
   const universitiesQuery = useUniversitiesQuery(!!user);
@@ -52,8 +55,8 @@ export default function SelectUniversityRoute() {
   return (
     <ProfileSetupLayout
       step={1}
-      title="اختر جامعتك"
-      subtitle="انضم لمجتمع جامعتك لرؤية الطلبات المناسبة."
+      title={t('completeProfile.selectUniversityTitle')}
+      subtitle={t('completeProfile.selectUniversitySubtitle')}
       footer={
         <Pressable
           disabled={!selectedUniversity || universitiesQuery.isPending}
@@ -72,30 +75,33 @@ export default function SelectUniversityRoute() {
           }}
           style={({ pressed }) => [
             styles.primaryButton,
+            { backgroundColor: colors.primary, shadowColor: colors.primary },
             pressed && selectedUniversity && styles.primaryButtonPressed,
             (!selectedUniversity || universitiesQuery.isPending) && styles.primaryButtonDisabled,
           ]}
         >
-          <View style={styles.primaryButtonContent}>
+          <View style={[styles.primaryButtonContent, { flexDirection: isRtl ? 'row' : 'row-reverse' }]}>
             <Ionicons name="chevron-back" size={20} color="#ffffff" />
-            <Text style={styles.primaryButtonText}>متابعة</Text>
+            <Text style={styles.primaryButtonText}>{t('completeProfile.continue')}</Text>
           </View>
         </Pressable>
       }
     >
       {universitiesQuery.isPending ? (
-        <View style={styles.feedbackCard}>
-          <ActivityIndicator color={Colors.primary} />
-          <Text style={styles.feedbackText}>جارٍ تحميل الجامعات...</Text>
+        <View style={[styles.feedbackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={[styles.feedbackText, { color: colors.mutedForeground, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {t('completeProfile.loadingUniversities')}
+          </Text>
         </View>
       ) : null}
 
       {!universitiesQuery.isPending && universitiesQuery.isError ? (
-        <View style={styles.feedbackCard}>
-          <Text style={styles.feedbackText}>
+        <View style={[styles.feedbackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.feedbackText, { color: colors.mutedForeground, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {universitiesQuery.error instanceof Error
               ? universitiesQuery.error.message
-              : 'تعذر تحميل قائمة الجامعات'}
+              : t('completeProfile.loadUniversitiesError')}
           </Text>
           <Pressable
             onPress={() => {
@@ -103,7 +109,7 @@ export default function SelectUniversityRoute() {
             }}
             style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
           >
-            <Text style={styles.retryButtonText}>إعادة المحاولة</Text>
+            <Text style={[styles.retryButtonText, { color: colors.primary }]}>{t('completeProfile.retry')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -111,8 +117,10 @@ export default function SelectUniversityRoute() {
       {!universitiesQuery.isPending &&
       !universitiesQuery.isError &&
       universitiesQuery.data?.length === 0 ? (
-        <View style={styles.feedbackCard}>
-          <Text style={styles.feedbackText}>لا توجد جامعات متاحة حالياً.</Text>
+        <View style={[styles.feedbackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.feedbackText, { color: colors.mutedForeground, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {t('completeProfile.emptyUniversities')}
+          </Text>
         </View>
       ) : null}
 
@@ -129,14 +137,32 @@ export default function SelectUniversityRoute() {
               }}
               style={({ pressed }) => [
                 styles.universityCard,
-                isSelected && styles.universityCardSelected,
+                { backgroundColor: colors.card, borderColor: colors.border, flexDirection: isRtl ? 'row' : 'row-reverse' },
+                isSelected && [styles.universityCardSelected, { borderColor: colors.primary, shadowColor: colors.primary }],
                 pressed && styles.universityCardPressed,
               ]}
             >
-              <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+              <View
+                style={[
+                  styles.radioOuter,
+                  { borderColor: colors.border },
+                  isSelected && [styles.radioOuterSelected, { borderColor: colors.primary, backgroundColor: colors.primary }],
+                ]}
+              >
                 {isSelected ? <View style={styles.radioInner} /> : null}
               </View>
-              <Text style={styles.universityName}>{university.name}</Text>
+              <Text
+                style={[
+                  styles.universityName,
+                  {
+                    color: colors.foreground,
+                    textAlign: isRtl ? 'right' : 'left',
+                    writingDirection: isRtl ? 'rtl' : 'ltr',
+                  },
+                ]}
+              >
+                {university.name}
+              </Text>
             </Pressable>
           );
         })}
@@ -149,10 +175,7 @@ const styles = StyleSheet.create({
     minHeight: 70,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#dddfe7',
-    backgroundColor: '#ffffff',
     paddingHorizontal: 20,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     shadowColor: '#000000',
@@ -162,8 +185,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   universityCardSelected: {
-    borderColor: 'rgba(47, 99, 224, 0.25)',
-    shadowColor: Colors.primary,
     shadowOpacity: 0.08,
   },
   universityCardPressed: {
@@ -171,26 +192,20 @@ const styles = StyleSheet.create({
   },
   universityName: {
     flex: 1,
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 16,
     fontWeight: FontWeight.medium,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   radioOuter: {
     width: 26,
     height: 26,
     borderRadius: Dimensions.radiusFull,
     borderWidth: 2,
-    borderColor: '#d5d6db',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 14,
   },
   radioOuterSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary,
   },
   radioInner: {
     width: 9,
@@ -205,16 +220,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderWidth: 1,
-    borderColor: '#e2e4ea',
   },
   feedbackText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     textAlign: 'center',
-    writingDirection: 'rtl',
     lineHeight: 22,
   },
   retryButton: {
@@ -228,7 +239,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   retryButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
@@ -237,10 +247,8 @@ const styles = StyleSheet.create({
   primaryButton: {
     minHeight: 58,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.24,
     shadowRadius: 14,
@@ -254,7 +262,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   primaryButtonContent: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },

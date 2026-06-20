@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { type ComponentProps } from 'react';
 import { Pressable, TextInput, View, type TextInputProps } from 'react-native';
 
-import { Colors } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 
 import { styles } from './styles';
 
@@ -19,12 +20,32 @@ export function IconInputField({
   style,
   ...props
 }: IconInputFieldProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.inputWrapper}>
-      <Ionicons name={icon} size={20} color={Colors.mutedForeground} />
+    <View
+      style={[
+        styles.inputWrapper,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          flexDirection: isRtl ? 'row' : 'row-reverse',
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={20} color={colors.mutedForeground} />
       <TextInput
-        placeholderTextColor={Colors.mutedForeground}
-        style={[styles.input, style]}
+        placeholderTextColor={colors.mutedForeground}
+        style={[
+          styles.input,
+          {
+            color: colors.foreground,
+            textAlign: isRtl ? 'right' : 'left',
+            writingDirection: isRtl ? 'rtl' : 'ltr',
+          },
+          style,
+        ]}
         {...props}
       />
       {trailingIcon ? (
@@ -33,7 +54,7 @@ export function IconInputField({
           onPress={onTrailingPress}
           style={styles.trailingIconButton}
         >
-          <Ionicons name={trailingIcon} size={20} color={Colors.mutedForeground} />
+          <Ionicons name={trailingIcon} size={20} color={colors.mutedForeground} />
         </Pressable>
       ) : null}
     </View>

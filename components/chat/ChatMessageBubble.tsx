@@ -5,6 +5,8 @@ import { Image } from "expo-image"
 import { Ionicons } from "@expo/vector-icons"
 
 import ChatAvatar from "@/components/chat/ChatAvatar"
+import { useAppSettings } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 import {
     formatMessageTime,
     getDisplayImageUri,
@@ -29,13 +31,18 @@ export default function ChatMessageBubble({
     onPressImage,
     onPressFile,
 }: Props) {
-    const formattedTime = formatMessageTime(message.createdAt)
+    const { language, t } = useAppSettings()
+    const { colors } = useThemePreference()
+    const formattedTime = formatMessageTime(message.createdAt, language)
     const senderName = message.senderName?.trim() || ""
     const displayImageUri = getDisplayImageUri(message.imageUrl)
-    const fileLabel = getFileLabel(message.fileName, message.fileUrl)
+    const fileLabel = getFileLabel(message.fileName, message.fileUrl, t("chat.attachmentFile"))
     const hasImage = !!displayImageUri
     const hasFile = !!message.fileUrl?.trim() || !!message.fileName.trim()
-    const bodyText = getMessageBodyText(message.content, hasImage || hasFile)
+    const bodyText = getMessageBodyText(message.content, hasImage || hasFile, {
+        image: t("chat.attachmentImage"),
+        file: t("chat.attachmentFile"),
+    })
     const hasText = !!bodyText
     const longPressGesture = useMemo(
         () =>
@@ -85,6 +92,10 @@ export default function ChatMessageBubble({
                             styles.container,
                             (hasImage || hasFile) && styles.containerWithAttachment,
                             message.isMine ? styles.mine : styles.other,
+                            !message.isMine && {
+                                backgroundColor: colors.card,
+                                borderColor: colors.border,
+                            },
                         ]}
                     >
                         {hasImage ? (
@@ -114,6 +125,10 @@ export default function ChatMessageBubble({
                                 style={[
                                     styles.fileCard,
                                     message.isMine ? styles.fileCardMine : styles.fileCardOther,
+                                    !message.isMine && {
+                                        backgroundColor: colors.secondary,
+                                        borderColor: colors.border,
+                                    },
                                     hasImage && styles.fileCardWithImage,
                                 ]}
                                 onPress={onPressFile ? () => onPressFile(message) : undefined}
@@ -122,7 +137,7 @@ export default function ChatMessageBubble({
                                     <Ionicons
                                         name="document-attach-outline"
                                         size={18}
-                                        color={message.isMine ? "#FFFFFF" : "#2563EB"}
+                                        color={message.isMine ? "#FFFFFF" : colors.primary}
                                     />
                                 </View>
 
@@ -130,7 +145,9 @@ export default function ChatMessageBubble({
                                     <Text
                                         style={[
                                             styles.fileName,
-                                            message.isMine ? styles.mineText : styles.otherText,
+                                            message.isMine
+                                                ? styles.mineText
+                                                : { color: colors.foreground },
                                         ]}
                                         numberOfLines={1}
                                     >
@@ -139,10 +156,12 @@ export default function ChatMessageBubble({
                                     <Text
                                         style={[
                                             styles.fileAction,
-                                            message.isMine ? styles.fileActionMine : styles.fileActionOther,
+                                            message.isMine
+                                                ? styles.fileActionMine
+                                                : { color: colors.primary },
                                         ]}
                                     >
-                                        فتح الملف
+                                        {t("chat.openFile")}
                                     </Text>
                                 </View>
                             </TouchableOpacity>
@@ -153,7 +172,9 @@ export default function ChatMessageBubble({
                                 style={[
                                     styles.text,
                                     (hasImage || hasFile) && styles.textWithAttachment,
-                                    message.isMine ? styles.mineText : styles.otherText,
+                                    message.isMine
+                                        ? styles.mineText
+                                        : { color: colors.foreground },
                                 ]}
                             >
                                 {bodyText}
@@ -164,7 +185,9 @@ export default function ChatMessageBubble({
                             <Text
                                 style={[
                                     styles.time,
-                                    message.isMine ? styles.timeMine : styles.timeOther,
+                                    message.isMine
+                                        ? styles.timeMine
+                                        : [styles.timeOther, { color: colors.mutedForeground }],
                                 ]}
                             >
                                 {formattedTime}

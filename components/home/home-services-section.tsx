@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { ServiceCardData } from '@/types/explore';
-import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
+import { FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 import { HomeSectionHeader, HomeStateBlock } from './home-shared';
 import { price, serviceAccent } from './home-utils';
 
@@ -20,35 +22,53 @@ export function HomeServicesSection({
   onPressMore,
   onPressCard,
 }: HomeServicesSectionProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.sec}>
-      <HomeSectionHeader title="خدمات رائجة" icon="flame-outline" color={SemanticColors.red} bg="rgba(255,59,48,0.1)" onPress={onPressMore} />
+      <HomeSectionHeader title={t('home.services')} icon="flame-outline" color={SemanticColors.red} bg="rgba(255,59,48,0.1)" onPress={onPressMore} />
       {isLoading ? (
-        <HomeStateBlock color={SemanticColors.blue} loading empty="لا توجد خدمات حالياً" />
+        <HomeStateBlock color={SemanticColors.blue} loading empty={t('home.noServices')} />
       ) : isError ? (
-        <HomeStateBlock color={SemanticColors.blue} error empty="لا توجد خدمات حالياً" />
+        <HomeStateBlock color={SemanticColors.blue} error empty={t('home.noServices')} />
       ) : services.length === 0 ? (
-        <HomeStateBlock color={SemanticColors.blue} empty="لا توجد خدمات حالياً" />
+        <HomeStateBlock color={SemanticColors.blue} empty={t('home.noServices')} />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rtlScroll} contentContainerStyle={styles.hList}>
           {services.map((item) => {
             const accent = serviceAccent(item.category);
+            const ownerImageUrl = item.owner.imageUrl?.trim();
+
             return (
-              <Pressable key={item.id} onPress={() => onPressCard(item)} style={({ pressed }) => [styles.card, styles.serviceCard, styles.mirrorX, styles.hCard, pressed && styles.mirrorPressed]}>
+              <Pressable
+                key={item.id}
+                onPress={() => onPressCard(item)}
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.serviceCard,
+                  styles.mirrorX,
+                  styles.hCard,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  pressed && styles.mirrorPressed,
+                ]}
+              >
                 <View style={[styles.accent, { backgroundColor: accent }]} />
                 <View style={styles.rowBetween}>
                   <View style={[styles.pill, { backgroundColor: `${accent}12` }]}>
-                    <Text style={[styles.pillTxt, { color: accent }]}>{price(item.pricePerHour, '/ساعة')}</Text>
+                    <Text style={[styles.pillTxt, { color: accent }]}>
+                      {price(item.pricePerHour, t('home.perHour'))}
+                    </Text>
                   </View>
-                  <View style={styles.softPill}>
-                    <Text style={styles.softPillTxt}>{item.category}</Text>
+                  <View style={[styles.softPill, { backgroundColor: colors.secondary }]}>
+                    <Text style={[styles.softPillTxt, { color: colors.mutedForeground }]}>{item.category}</Text>
                   </View>
                 </View>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text numberOfLines={2} style={styles.cardDesc}>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
+                <Text numberOfLines={2} style={[styles.cardDesc, { color: colors.mutedForeground }]}>
                   {item.description}
                 </Text>
-                <View style={styles.footer}>
+                <View style={[styles.footer, { borderTopColor: colors.border }]}>
                   {item.deadline !== 'غير محدد' ? (
                     <View style={styles.time}>
                       <Ionicons name="time-outline" size={12} color={SemanticColors.green} />
@@ -58,9 +78,13 @@ export function HomeServicesSection({
                     <View />
                   )}
                   <View style={styles.owner}>
-                    <Text style={styles.ownerTxt}>{item.owner.name}</Text>
+                    <Text style={[styles.ownerTxt, { color: colors.mutedForeground }]}>{item.owner.name}</Text>
                     <View style={[styles.avatar, { backgroundColor: accent }]}>
-                      <Text style={styles.avatarTxt}>{item.owner.initials}</Text>
+                      {ownerImageUrl ? (
+                        <Image source={{ uri: ownerImageUrl }} style={styles.avatarImage} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.avatarTxt}>{item.owner.initials}</Text>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -99,7 +123,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 6
   },
   card: {
-    borderRadius: 24, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, ...cardShadow
+    borderRadius: 24, borderWidth: 1, ...cardShadow
   },
   serviceCard: {
     width: 248, padding: 18, overflow: 'hidden'
@@ -117,19 +141,19 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.cairo, fontSize: FontSize.xs, fontWeight: FontWeight.bold
   },
   softPill: {
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: Colors.secondary
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5
   },
   softPillTxt: {
-    color: Colors.mutedForeground, fontFamily: FontFamily.cairo, fontSize: FontSize.xs, fontWeight: FontWeight.semibold
+    fontFamily: FontFamily.cairo, fontSize: FontSize.xs, fontWeight: FontWeight.semibold
   },
   cardTitle: {
-    color: Colors.foreground, fontFamily: FontFamily.cairo, fontSize: FontSize.md, fontWeight: FontWeight.bold, textAlign: 'right', lineHeight: 22
+    fontFamily: FontFamily.cairo, fontSize: FontSize.md, fontWeight: FontWeight.bold, textAlign: 'right', lineHeight: 22
   },
   cardDesc: {
-    marginTop: 6, marginBottom: 16, color: Colors.mutedForeground, fontFamily: FontFamily.cairo, fontSize: FontSize.sm, lineHeight: 21, textAlign: 'right'
+    marginTop: 6, marginBottom: 16, fontFamily: FontFamily.cairo, fontSize: FontSize.sm, lineHeight: 21, textAlign: 'right'
   },
   footer: {
-    borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
+    borderTopWidth: 1, paddingTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
   },
   time: {
     flexDirection: 'row-reverse', alignItems: 'center', gap: 4
@@ -141,10 +165,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse', alignItems: 'center', gap: 8
   },
   ownerTxt: {
-    color: Colors.mutedForeground, fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.medium
+    fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.medium
   },
   avatar: {
-    width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center'
+    width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+  },
+  avatarImage: {
+    width: '100%', height: '100%'
   },
   avatarTxt: {
     color: '#fff', fontFamily: FontFamily.cairo, fontSize: FontSize.x11, fontWeight: FontWeight.bold

@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AUTH_COPY } from '@/lib/auth/auth-copy';
+import { useAppSettings, type TranslationKey } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontWeight,
 } from '@/styles/ui-theme';
@@ -14,14 +14,25 @@ type AuthTabSwitcherProps = {
   onTabChange: (tab: AuthTab) => void;
 };
 
-const AUTH_TABS: { label: string; value: AuthTab }[] = [
-  { label: AUTH_COPY.loginTab, value: 'login' },
-  { label: AUTH_COPY.registerTab, value: 'register' },
+const AUTH_TABS: { labelKey: TranslationKey; value: AuthTab }[] = [
+  { labelKey: 'auth.loginTab', value: 'login' },
+  { labelKey: 'auth.registerTab', value: 'register' },
 ];
 
 export function AuthTabSwitcher({ activeTab, onTabChange }: AuthTabSwitcherProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.segment}>
+    <View
+      style={[
+        styles.segment,
+        {
+          backgroundColor: colors.secondary,
+          flexDirection: isRtl ? 'row-reverse' : 'row',
+        },
+      ]}
+    >
       {AUTH_TABS.map((tab) => {
         const isActive = activeTab === tab.value;
 
@@ -29,10 +40,25 @@ export function AuthTabSwitcher({ activeTab, onTabChange }: AuthTabSwitcherProps
           <Pressable
             key={tab.value}
             onPress={() => onTabChange(tab.value)}
-            style={[styles.segmentButton, isActive && styles.segmentButtonActive]}
+            style={[
+              styles.segmentButton,
+              isActive && [
+                styles.segmentButtonActive,
+                { backgroundColor: colors.card },
+              ],
+            ]}
           >
-            <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-              {tab.label}
+            <Text
+              style={[
+                styles.segmentText,
+                {
+                  color: isActive ? colors.foreground : colors.mutedForeground,
+                  writingDirection: isRtl ? 'rtl' : 'ltr',
+                },
+                isActive && styles.segmentTextActive,
+              ]}
+            >
+              {t(tab.labelKey)}
             </Text>
           </Pressable>
         );
@@ -43,9 +69,7 @@ export function AuthTabSwitcher({ activeTab, onTabChange }: AuthTabSwitcherProps
 
 const styles = StyleSheet.create({
   segment: {
-    flexDirection: 'row-reverse',
     width: '100%',
-    backgroundColor: '#dcdee4',
     borderRadius: 20,
     padding: 3,
     marginBottom: 24,
@@ -59,7 +83,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segmentButtonActive: {
-    backgroundColor: '#ffffff',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.07,
@@ -67,13 +90,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentText: {
-    color: '#a0a0a7',
     fontFamily: FontFamily.cairo,
     fontSize: 14,
     fontWeight: FontWeight.semibold,
-    writingDirection: 'rtl',
   },
   segmentTextActive: {
-    color: Colors.foreground,
   },
 });

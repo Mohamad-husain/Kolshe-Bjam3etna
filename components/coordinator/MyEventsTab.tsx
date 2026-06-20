@@ -8,6 +8,7 @@ import {
 } from "react-native";
 
 import { MyEventCard } from "@/components/coordinator/MyEventCard";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import { useMyEventsQuery } from "@/hooks/queries/use-coordinator-queries";
 import type { CoordinatorEvent } from "@/services/coordinator-api";
 import {
@@ -23,6 +24,7 @@ type MyEventsTabProps = {
   onEdit: (event: CoordinatorEvent) => void;
 };
 export function MyEventsTab({ onEdit }: MyEventsTabProps) {
+  const { colors } = useThemePreference();
   const { data: events = [], isLoading, error } = useMyEventsQuery();
   const errorMessage =
     error instanceof Error ? error.message : "تعذر تحميل الفعاليات";
@@ -38,7 +40,7 @@ export function MyEventsTab({ onEdit }: MyEventsTabProps) {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{errorMessage}</Text>
+        <Text style={[styles.errorText, { color: colors.mutedForeground }]}>{errorMessage}</Text>
       </View>
     );
   }
@@ -49,10 +51,10 @@ export function MyEventsTab({ onEdit }: MyEventsTabProps) {
         <Ionicons
           name="calendar-outline"
           size={48}
-          color={Colors.mutedForeground}
+          color={colors.mutedForeground}
         />
-        <Text style={styles.emptyText}>لا توجد فعاليات بعد</Text>
-        <Text style={styles.emptySubText}>أنشئ فعاليتك الأولى!</Text>
+        <Text style={[styles.emptyText, { color: colors.foreground }]}>لا توجد فعاليات بعد</Text>
+        <Text style={[styles.emptySubText, { color: colors.mutedForeground }]}>أنشئ فعاليتك الأولى!</Text>
       </View>
     );
   }

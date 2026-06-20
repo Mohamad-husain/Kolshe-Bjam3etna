@@ -1,4 +1,5 @@
 import { SemanticColors } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { SettingsRow } from './SettingsRow';
 import { SettingsSection } from './SettingsSection';
 import { SettingsToggle } from './SettingsToggle';
@@ -28,13 +29,19 @@ export function SettingsNotificationsSection({
   onToggleNews,
   onToggleSound,
 }: SettingsNotificationsSectionProps) {
+  const { t } = useAppSettings();
+
   return (
-    <SettingsSection title="الإشعارات">
+    <SettingsSection title={t('settings.notifications')}>
       <SettingsRow
         icon="notifications-outline"
         iconBackgroundColor={SemanticColors.red}
-        title="الإشعارات"
-        description={notificationsEnabled ? 'مفعّلة' : 'مقفلة'}
+        title={t('settings.notifications')}
+        description={
+          notificationsEnabled
+            ? t('settings.notificationsEnabled')
+            : t('settings.notificationsDisabled')
+        }
         accessory={
           <SettingsToggle
             value={notificationsEnabled}
@@ -45,7 +52,7 @@ export function SettingsNotificationsSection({
       <SettingsRow
         icon="notifications-outline"
         iconBackgroundColor={SemanticColors.blue}
-        title="إشعارات الرسائل"
+        title={t('settings.messagesNotifications')}
         accessory={
           <SettingsToggle
             value={notificationsEnabled && messageNotifications}
@@ -57,7 +64,7 @@ export function SettingsNotificationsSection({
       <SettingsRow
         icon="notifications-outline"
         iconBackgroundColor={SemanticColors.green}
-        title="إشعارات العروض"
+        title={t('settings.offerNotifications')}
         accessory={
           <SettingsToggle
             value={notificationsEnabled && offerNotifications}
@@ -69,7 +76,7 @@ export function SettingsNotificationsSection({
       <SettingsRow
         icon="notifications-outline"
         iconBackgroundColor={SemanticColors.orange}
-        title="إشعارات الأخبار"
+        title={t('settings.newsNotifications')}
         accessory={
           <SettingsToggle
             value={notificationsEnabled && newsNotifications}
@@ -81,7 +88,7 @@ export function SettingsNotificationsSection({
       <SettingsRow
         icon="volume-mute-outline"
         iconBackgroundColor={SemanticColors.violet}
-        title="الأصوات"
+        title={t('settings.sound')}
         accessory={<SettingsToggle value={soundEnabled} onValueChange={onToggleSound} />}
       />
     </SettingsSection>

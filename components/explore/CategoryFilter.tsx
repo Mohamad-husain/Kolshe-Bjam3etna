@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
   FontWeight,
   Spacing,
 } from "@/styles/ui-theme";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 
 export interface Category {
   id: string;
@@ -35,22 +36,30 @@ export function CategoryFilter({
   title,
   count,
 }: CategoryFilterProps) {
+  const { t, isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={[styles.wrapper, { backgroundColor: accentBg }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
         <View style={[styles.iconBox, { backgroundColor: accentColor }]}>
           <Ionicons name={icon} size={16} color="#fff" />
         </View>
-        <View style={styles.titleBox}>
+        <View style={[styles.titleBox, { alignItems: isRtl ? "flex-end" : "flex-start" }]}>
           <Text style={[styles.title, { color: accentColor }]}>{title}</Text>
-          <Text style={styles.count}>{count} نتيجة</Text>
+          <Text style={[styles.count, { color: colors.mutedForeground }]}>
+            {t("common.results", { count })}
+          </Text>
         </View>
       </View>
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
+        contentContainerStyle={[
+          styles.chips,
+          { flexDirection: isRtl ? "row-reverse" : "row" },
+        ]}
       >
         {categories.map((cat) => {
           const isSelected = selected === cat.id;
@@ -60,14 +69,14 @@ export function CategoryFilter({
               onPress={() => onSelect(cat.id)}
               style={({ pressed }) => [
                 styles.chip,
-                { backgroundColor: isSelected ? accentColor : Colors.card },
+                { backgroundColor: isSelected ? accentColor : colors.card },
                 pressed && styles.chipPressed,
               ]}
             >
               <Text
                 style={[
                   styles.chipText,
-                  { color: isSelected ? "#fff" : Colors.mutedForeground },
+                  { color: isSelected ? "#fff" : colors.mutedForeground },
                 ]}
               >
                 {cat.label}
@@ -91,7 +100,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   header: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     marginBottom: Spacing.sm,
     gap: Spacing.sm,
@@ -104,7 +112,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   titleBox: {
-    alignItems: "flex-end",
   },
   title: {
     fontSize: FontSize.sm,
@@ -113,11 +120,9 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: FontSize.xs,
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
   },
   chips: {
-    flexDirection: "row-reverse",
     gap: Spacing.xs,
     paddingHorizontal: 2,
   },

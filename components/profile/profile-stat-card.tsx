@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
   SemanticColors,
 } from '@/styles/ui-theme';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 
 type ProfileStatCardProps = {
   label: string;
@@ -20,13 +20,15 @@ export function ProfileStatCard({
   value,
   highlight,
 }: ProfileStatCardProps) {
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, { backgroundColor: colors.secondary }]}>
       <View style={styles.statValueRow}>
         {highlight ? <Ionicons name="star" size={15} color={SemanticColors.orange} /> : null}
-        <Text style={styles.statValue}>{value}</Text>
+        <Text style={[styles.statValue, { color: colors.foreground }]}>{value}</Text>
       </View>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
     </View>
   );
 }
@@ -39,7 +41,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#f8f9fc',
   },
   statValueRow: {
     flexDirection: 'row-reverse',
@@ -47,13 +48,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statValue: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 16,
     fontWeight: FontWeight.extrabold,
   },
   statLabel: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.semibold,

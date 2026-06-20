@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   Dimensions,
@@ -47,6 +48,8 @@ export function ServiceRequestDetailsStep({
   onDescriptionChange,
   onNext,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -62,8 +65,8 @@ export function ServiceRequestDetailsStep({
 
         <View style={styles.fieldBlock}>
           <View style={styles.labelRow}>
-            <Ionicons name="cash-outline" size={14} color={Colors.primary} />
-            <Text style={styles.fieldLabel}>الميزانية</Text>
+            <Ionicons name="cash-outline" size={14} color={colors.primary} />
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>الميزانية</Text>
           </View>
 
           <View style={styles.chipWrap}>
@@ -76,11 +79,12 @@ export function ServiceRequestDetailsStep({
                   onPress={() => onBudgetPresetChange(active ? '' : item.id)}
                   style={({ pressed }) => [
                     styles.chip,
-                    active && styles.chipActive,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    active && [styles.chipActive, { backgroundColor: colors.primary, borderColor: colors.primary }],
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                  <Text style={[styles.chipText, { color: colors.foreground }, active && styles.chipTextActive]}>
                     {item.label}
                   </Text>
                 </Pressable>
@@ -88,25 +92,31 @@ export function ServiceRequestDetailsStep({
             })}
           </View>
 
-          <View style={[styles.fieldRow, budgetError ? styles.fieldRowError : null]}>
+          <View
+            style={[
+              styles.fieldRow,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              budgetError ? styles.fieldRowError : null,
+            ]}
+          >
             <TextInput
               value={customBudget}
               onChangeText={onCustomBudgetChange}
               keyboardType="decimal-pad"
               placeholder="أو أدخل ميزانية مخصصة..."
-              placeholderTextColor="rgba(142,142,147,0.65)"
-              style={styles.input}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.foreground }]}
               textAlign="right"
             />
-            <Ionicons name="cash-outline" size={18} color={Colors.mutedForeground} />
+            <Ionicons name="cash-outline" size={18} color={colors.mutedForeground} />
           </View>
           {budgetError ? <Text style={styles.errorText}>{budgetError}</Text> : null}
         </View>
 
         <View style={styles.fieldBlock}>
           <View style={styles.labelRow}>
-            <Ionicons name="calendar-outline" size={14} color={Colors.primary} />
-            <Text style={styles.fieldLabel}>الموعد النهائي</Text>
+            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>الموعد النهائي</Text>
           </View>
 
           <Pressable
@@ -114,6 +124,7 @@ export function ServiceRequestDetailsStep({
             style={({ pressed }) => [
               styles.fieldRow,
               styles.dateFieldButton,
+              { backgroundColor: colors.card, borderColor: colors.border },
               deadlineError ? styles.fieldRowError : null,
               pressed && styles.pressed,
             ]}
@@ -121,13 +132,12 @@ export function ServiceRequestDetailsStep({
             <Text
               style={[
                 styles.dateValueText,
-                deadline && styles.dateSelectedText,
-                !deadline && styles.datePlaceholderText,
+                { color: deadline ? colors.foreground : colors.mutedForeground },
               ]}
             >
               {deadline || 'اختر التاريخ'}
             </Text>
-            <Ionicons name="calendar-outline" size={18} color={Colors.mutedForeground} />
+            <Ionicons name="calendar-outline" size={18} color={colors.mutedForeground} />
           </Pressable>
           {deadlineError ? <Text style={styles.errorText}>{deadlineError}</Text> : null}
         </View>
@@ -141,18 +151,25 @@ export function ServiceRequestDetailsStep({
             <Text
               style={[
                 styles.counter,
-                description.trim().length >= DESCRIPTION_MIN_LENGTH && styles.counterActive,
+                { color: colors.mutedForeground },
+                description.trim().length >= DESCRIPTION_MIN_LENGTH && { color: colors.primary },
               ]}
             >
               {description.length}/500
             </Text>
             <View style={styles.labelRow}>
-              <Ionicons name="reader-outline" size={14} color={Colors.primary} />
-              <Text style={styles.fieldLabel}>الوصف التفصيلي</Text>
+              <Ionicons name="reader-outline" size={14} color={colors.primary} />
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>الوصف التفصيلي</Text>
             </View>
           </View>
 
-          <View style={[styles.textareaWrap, descriptionError ? styles.fieldRowError : null]}>
+          <View
+            style={[
+              styles.textareaWrap,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              descriptionError ? styles.fieldRowError : null,
+            ]}
+          >
             <TextInput
               value={description}
               onChangeText={onDescriptionChange}
@@ -161,10 +178,10 @@ export function ServiceRequestDetailsStep({
               textAlign="right"
               textAlignVertical="top"
               placeholder="اشرح ما تحتاجه بالتفصيل: المستوى المطلوب، الأوقات المناسبة، وأي متطلبات خاصة..."
-              placeholderTextColor="rgba(142,142,147,0.65)"
-              style={styles.textarea}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.textarea, { color: colors.foreground }]}
             />
-            <View style={styles.descriptionProgressTrack}>
+            <View style={[styles.descriptionProgressTrack, { backgroundColor: colors.secondary }]}>
               <View
                 style={[
                   styles.descriptionProgressFill,
@@ -172,7 +189,7 @@ export function ServiceRequestDetailsStep({
                     width: `${Math.min((description.length / 500) * 100, 100)}%`,
                     backgroundColor:
                       description.trim().length >= DESCRIPTION_MIN_LENGTH
-                        ? Colors.primary
+                        ? colors.primary
                         : SemanticColors.red,
                   },
                 ]}
@@ -189,16 +206,17 @@ export function ServiceRequestDetailsStep({
             style={({ pressed }) => [
               styles.primaryButton,
               styles.flexButton,
-              !canProceed && styles.primaryButtonDisabled,
+              { backgroundColor: colors.primary, shadowColor: colors.primary },
+              !canProceed && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
               pressed && canProceed && styles.pressed,
             ]}
           >
             <Ionicons
               name="arrow-back"
               size={18}
-              color={canProceed ? '#ffffff' : Colors.mutedForeground}
+              color={canProceed ? '#ffffff' : colors.mutedForeground}
             />
-            <Text style={[styles.primaryText, !canProceed && styles.primaryTextDisabled]}>
+            <Text style={[styles.primaryText, !canProceed && { color: colors.mutedForeground }]}>
               التالي
             </Text>
           </Pressable>

@@ -10,10 +10,12 @@ import {
 } from '@/components/auth/complete-profile/complete-profile-info-cards';
 import { CompleteProfileTextField } from '@/components/auth/complete-profile/complete-profile-text-field';
 import { ProfileSetupLayout } from '@/components/auth/profile-setup-layout';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useCompleteProfileFlow } from '@/hooks/use-complete-profile-flow';
 
 export default function CompleteProfileRoute() {
+  const { t } = useAppSettings();
   const { user, signIn } = useAuth();
   const params = useLocalSearchParams<{ universityId?: string; universityName?: string }>();
   const universityId = Number(params.universityId);
@@ -51,8 +53,8 @@ export default function CompleteProfileRoute() {
   return (
     <ProfileSetupLayout
       step={2}
-      title="أكمل ملفك الشخصي"
-      subtitle="أخبر زملاءك قليلاً عن تخصصك واهتماماتك."
+      title={t('completeProfile.profileTitle')}
+      subtitle={t('completeProfile.profileSubtitle')}
       footer={
         <CompleteProfileFooter
           isSubmitting={completeProfileFlow.isSubmitting}
@@ -79,21 +81,21 @@ export default function CompleteProfileRoute() {
       <CompleteProfileTextField
         control={completeProfileFlow.control}
         errors={completeProfileFlow.errors}
-        label="التخصص / القسم"
+        label={t('completeProfile.majorLabel')}
         name="major"
         onValueChange={completeProfileFlow.clearServerError}
-        placeholder="مثال: هندسة برمجيات"
-        requiredMessage="يرجى إدخال التخصص أو القسم"
+        placeholder={t('completeProfile.majorPlaceholder')}
+        requiredMessage={t('completeProfile.majorRequired')}
       />
 
       <CompleteProfileTextField
         control={completeProfileFlow.control}
         errors={completeProfileFlow.errors}
-        label="نبذة عنك"
+        label={t('completeProfile.bioLabel')}
         multiline
         name="bio"
         onValueChange={completeProfileFlow.clearServerError}
-        placeholder="أنا طالب سنة ثالثة مهتم بتطوير التطبيقات..."
+        placeholder={t('completeProfile.bioPlaceholder')}
       />
 
       <CompleteProfileVerifiedCard email={user.email} />

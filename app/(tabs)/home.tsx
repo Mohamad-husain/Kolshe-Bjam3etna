@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View, type LayoutChangeEvent, } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View, type LayoutChangeEvent, } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeAdsSection } from '@/components/home/home-ads-section';
 import { HomeEventsSection } from '@/components/home/home-events-section';
@@ -13,12 +13,16 @@ import { HomeQuickAccess } from '@/components/home/home-quick-access';
 import { HomeServicesSection } from '@/components/home/home-services-section';
 import type { ExploreTab, SectionKey } from '@/components/home/home-types';
 import { hasText } from '@/components/home/home-utils';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { useAuth } from '@/contexts/auth-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { useProfileQuery } from '@/hooks/queries/use-auth-queries';
+import { useNotificationsQuery } from '@/hooks/queries/use-notification-queries';
+import { subscribeHomeScrollToTop } from '@/lib/navigation-events';
 import { getCachedHomeDataFromSQLite, syncHomeDataFromApiToSQLite, type HomeData, } from '@/services/home-sqlite';
+import type { ServiceCardData } from '@/types/explore';
 import type { NewsItem } from '@/services/news-api';
 import type { PartnerOffer } from '@/services/partner-offers-api';
-import { Colors } from '@/styles/ui-theme';
 
 const emptyHomeData: HomeData = {
   news: [],
@@ -45,9 +49,36 @@ function hasAnyHomeData(data: HomeData) {
   );
 }
 
+function isNotificationTypeEnabled(
+  type: string,
+  notifications: ReturnType<typeof useAppSettings>['notifications'],
+) {
+  if (!notifications.notificationsEnabled) {
+    return false;
+  }
+
+  const normalized = type.toLowerCase();
+
+  if (normalized.includes('message')) {
+    return notifications.messageNotifications;
+  }
+
+  if (normalized.includes('offer')) {
+    return notifications.offerNotifications;
+  }
+
+  if (normalized.includes('announcement') || normalized.includes('event') || normalized.includes('deadline')) {
+    return notifications.newsNotifications;
+  }
+
+  return true;
+}
+
 export default function HomeRoute() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { colors } = useThemePreference();
+  const { notifications, t } = useAppSettings();
   const scrollRef = useRef<ScrollView>(null);
   const positions = useRef<Record<SectionKey, number>>({ news: 0, offers: 0 });
   const [search, setSearch] = useState('');
@@ -57,6 +88,7 @@ export default function HomeRoute() {
   const [hasLoadError, setHasLoadError] = useState(false);
 
   const profileQuery = useProfileQuery(!!user);
+  const notificationsQuery = useNotificationsQuery();
 
   const loadHomeData = useCallback(async (refreshing = false) => {
     if (refreshing) {
@@ -89,6 +121,16 @@ export default function HomeRoute() {
     }, [loadHomeData]),
   );
 
+  useFocusEffect(
+    useCallback(
+      () =>
+        subscribeHomeScrollToTop(() => {
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
+        }),
+      [],
+    ),
+  );
+
   const q = search.trim().toLowerCase();
   const hasCachedData = hasAnyHomeData(homeData);
   const showInitialLoading = isLoading && !hasCachedData;
@@ -102,10 +144,18 @@ export default function HomeRoute() {
 
   const ticker = news[0] ?? homeData.news[0] ?? null;
   const showOffers = showInitialLoading || offers.length > 0;
-  const universityName = profileQuery.data?.universityName?.trim() || 'المجتمع الجامعي';
+  const universityName = profileQuery.data?.universityName?.trim() || t('home.universityFallback');
   const fullName = profileQuery.data?.fullName?.trim() || user?.name || '';
   const scrollBottomPadding = insets.bottom + 118;
-  const fabBottom = insets.bottom + 86;
+  const unreadNotifications = useMemo(
+    () =>
+      (notificationsQuery.data?.items ?? []).filter(
+        (item) =>
+          !item.isRead &&
+          isNotificationTypeEnabled(item.type, notifications),
+      ).length,
+    [notifications, notificationsQuery.data?.items],
+  );
 
   const toExplore = (tab: ExploreTab) => {
     router.push({ pathname: '/(tabs)/explore', params: { tab } });
@@ -115,10 +165,19 @@ export default function HomeRoute() {
     router.push('/news');
   };
 
-  const goToOffers = () => onSection('offers');
+  const openAiAssistant = () => router.push('/ai-assistant');
+  const openNotifications = () => router.push('/notifications');
+  const openSponsoredListings = () => router.push('/sponsored');
   const goToServices = () => toExplore('services');
   const goToMarketplace = () => toExplore('marketplace');
   const goToEvents = () => toExplore('events');
+  const goToNewService = () => router.push('/new-service');
+  const openAdCard = (item: { id: string }) => {
+    router.push({ pathname: '/ad/[id]', params: { id: item.id } });
+  };
+  const openEventCard = (item: { id: string }) => {
+    router.push({ pathname: '/event/[id]', params: { id: item.id } });
+  };
 
   const onSection = (key: SectionKey) => {
     scrollRef.current?.scrollTo({ y: Math.max(positions.current[key] - 8, 0), animated: true });
@@ -133,22 +192,29 @@ export default function HomeRoute() {
   };
 
   const openOfferCard = (item: PartnerOffer) => {
-    Alert.alert(item.name, item.offerTitle);
+    router.push({ pathname: '/sponsored/[id]', params: { id: item.id } });
+  };
+
+  const openServiceCard = (item: ServiceCardData) => {
+    router.push({ pathname: '/service/[id]', params: { id: item.id } });
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.primary }]} edges={['top']}>
       <StatusBar style="light" />
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+          contentContainerStyle={[
+            styles.content,
+            { backgroundColor: colors.background, paddingBottom: scrollBottomPadding },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => void loadHomeData(true)}
-              tintColor={Colors.primary}
-              colors={[Colors.primary]}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -157,14 +223,21 @@ export default function HomeRoute() {
             universityName={universityName}
             fullName={fullName}
             search={search}
+            unreadNotifications={unreadNotifications}
             onChangeSearch={setSearch}
+            onOpenNotifications={openNotifications}
           />
 
-          <HomeQuickAccess showOffers={showOffers} onExplore={toExplore} onSection={onSection} />
+          <HomeQuickAccess
+            showOffers={showOffers}
+            onExplore={toExplore}
+            onSection={onSection}
+            onNewService={goToNewService}
+          />
 
           <View style={styles.body}>
             <HomeNewsSection
-              tickerTitle={ticker?.title ?? 'لا توجد أخبار جديدة حالياً'}
+              tickerTitle={ticker?.title ?? t('home.noLatestNews')}
               isLoading={showInitialLoading}
               isError={showSectionError}
               news={news}
@@ -179,7 +252,7 @@ export default function HomeRoute() {
               isError={showSectionError}
               services={services}
               onPressMore={goToServices}
-              onPressCard={goToServices}
+              onPressCard={openServiceCard}
             />
 
             <HomeAdsSection
@@ -187,7 +260,7 @@ export default function HomeRoute() {
               isError={showSectionError}
               ads={ads}
               onPressMore={goToMarketplace}
-              onPressCard={goToMarketplace}
+              onPressCard={openAdCard}
             />
 
             {showOffers ? (
@@ -195,7 +268,7 @@ export default function HomeRoute() {
                 isLoading={showInitialLoading}
                 isError={showSectionError}
                 offers={offers}
-                onPressMore={goToOffers}
+                onPressMore={openSponsoredListings}
                 onPressCard={openOfferCard}
                 onLayout={register('offers')}
               />
@@ -206,42 +279,48 @@ export default function HomeRoute() {
               isError={showSectionError}
               events={events}
               onPressMore={goToEvents}
-              onPressCard={goToEvents}
+              onPressCard={openEventCard}
             />
           </View>
         </ScrollView>
 
-        {/* <Pressable
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="المساعد الذكي"
-          onPress={() => router.push('/ai-assistant')}
-          style={({ pressed }) => [styles.fab, { bottom: fabBottom }, pressed && styles.pressed]}
+          onPress={openAiAssistant}
+          style={({ pressed }) => [
+            styles.aiButton,
+            { backgroundColor: colors.primary, bottom: insets.bottom + 92 },
+            pressed && styles.pressed,
+          ]}
         >
-          <Ionicons name="sparkles-outline" size={23} color="#ffffff" />
-        </Pressable> */}
+          <Ionicons name="sparkles-outline" size={24} color="#ffffff" />
+        </Pressable>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.primary },
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { backgroundColor: Colors.background },
+  safe: { flex: 1 },
+  root: { flex: 1 },
+  content: {},
   body: { paddingTop: 18, paddingHorizontal: 16 },
-  fab: {
+  aiButton: {
     position: 'absolute',
-    left: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    right: 18,
+    width: 58,
+    height: 58,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0a84ff',
-    shadowColor: '#0a84ff',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
     elevation: 8,
   },
-  pressed: { transform: [{ scale: 0.97 }] },
+  pressed: {
+    transform: [{ scale: 0.97 }],
+  },
 });

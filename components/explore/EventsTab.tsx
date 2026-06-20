@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   FlatList,
@@ -8,8 +9,9 @@ import {
 } from "react-native";
 
 import { useEventsQuery } from "@/hooks/queries/use-explore-queries";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
-  Colors,
   FontFamily,
   FontSize,
   SemanticColors,
@@ -21,21 +23,26 @@ import { EventCard } from "./EventCard";
 import { SearchBar } from "./SearchBar";
 import { useSearchInput } from "@/hooks/explore/use-search-input";
 
-const CATEGORIES: Category[] = [
-  { id: "all", label: "الكل" },
-  { id: "نادي البرمجة", label: "نادي البرمجة" },
-  { id: "نادي الروبوتات", label: "نادي الروبوتات" },
-  { id: "نادي ريادة الأعمال", label: "ريادة الأعمال" },
-];
-
 type EventsTabProps = {
   showFilter: boolean;
 };
 
 export function EventsTab({ showFilter }: EventsTabProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
   const { search, searchError, handleSearch } = useSearchInput();
+  const categories: Category[] = [
+    { id: "all", label: t("common.all") },
+    { id: "نادي البرمجة", label: t("explore.category.programmingClub") },
+    { id: "نادي الروبوتات", label: t("explore.category.roboticsClub") },
+    { id: "نادي ريادة الأعمال", label: t("explore.category.entrepreneurship") },
+  ];
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useEventsQuery();
+  const openEventDetails = (id: string) => {
+    router.push({ pathname: "/event/[id]", params: { id } });
+  };
+
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
@@ -63,7 +70,9 @@ export function EventsTab({ showFilter }: EventsTabProps) {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>تعذر تحميل البيانات</Text>
+        <Text style={[styles.errorText, { color: colors.mutedForeground }]}>
+          {t("common.loadError")}
+        </Text>
       </View>
     );
   }
@@ -72,24 +81,26 @@ export function EventsTab({ showFilter }: EventsTabProps) {
     <FlatList
       data={filtered}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <EventCard data={item} />}
+      renderItem={({ item }) => (
+        <EventCard data={item} onPress={() => openEventDetails(item.id)} />
+      )}
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في فعاليات..."
+            placeholder={t("explore.searchEvents")}
             value={search}
             onChangeText={handleSearch}
             error={searchError}
           />
           {showFilter ? (
             <CategoryFilter
-              categories={CATEGORIES}
+              categories={categories}
               selected={selectedCategory}
               onSelect={setSelectedCategory}
               accentColor={SemanticColors.violet}
               accentBg={`${SemanticColors.violet}12`}
               icon="calendar-outline"
-              title="فعاليات"
+              title={t("explore.events")}
               count={filtered.length}
             />
           ) : null}
@@ -115,6 +126,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
-    color: Colors.mutedForeground,
   },
 });

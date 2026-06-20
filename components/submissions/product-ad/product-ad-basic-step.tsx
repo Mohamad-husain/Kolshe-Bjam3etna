@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { ProductAdPhotoInput } from '@/services/marketplace-api';
 import {
   Colors,
@@ -53,13 +54,19 @@ export function ProductAdBasicStep({
   onRemovePhoto,
   onNext,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.card}>
       <ProductAdSectionHeader step={1} title="معلومات المنتج" subtitle="الصور، العنوان، والتصنيف" />
 
       <Pressable
         onPress={onPickPhotos}
-        style={({ pressed }) => [styles.uploadCard, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.uploadCard,
+          { backgroundColor: colors.card, borderColor: `${PRODUCT_AD_ACCENT}55` },
+          pressed && styles.pressed,
+        ]}
       >
         {photos.length > 0 ? (
           <>
@@ -83,7 +90,7 @@ export function ProductAdBasicStep({
                 </View>
               ))}
             </View>
-            <Text style={styles.photoCounter}>
+            <Text style={[styles.photoCounter, { color: colors.mutedForeground }]}>
               {photos.length}/{PRODUCT_AD_MAX_PHOTOS} صور مرفقة
             </Text>
           </>
@@ -93,8 +100,8 @@ export function ProductAdBasicStep({
               <Ionicons name="image-outline" size={25} color={PRODUCT_AD_ACCENT} />
             </View>
             <View>
-              <Text style={styles.uploadTitle}>أضف صور المنتج</Text>
-              <Text style={styles.uploadHint}>PNG, JPG - حتى {PRODUCT_AD_MAX_PHOTOS} صور</Text>
+              <Text style={[styles.uploadTitle, { color: colors.foreground }]}>أضف صور المنتج</Text>
+              <Text style={[styles.uploadHint, { color: colors.mutedForeground }]}>PNG, JPG - حتى {PRODUCT_AD_MAX_PHOTOS} صور</Text>
             </View>
           </>
         )}
@@ -102,30 +109,30 @@ export function ProductAdBasicStep({
 
       <View style={styles.fieldBlock}>
         <View style={styles.fieldTopRow}>
-          <Text style={styles.counter}>{title.length}/60</Text>
+          <Text style={[styles.counter, { color: colors.mutedForeground }]}>{title.length}/60</Text>
           <View style={styles.labelRow}>
             <Ionicons name="pricetag-outline" size={14} color={PRODUCT_AD_ACCENT} />
-            <Text style={styles.fieldLabel}>عنوان الإعلان</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>عنوان الإعلان</Text>
           </View>
         </View>
-        <View style={styles.fieldRow}>
+        <View style={[styles.fieldRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TextInput
             value={title}
             onChangeText={onTitleChange}
             maxLength={60}
             placeholder="مثال: كتاب تفاضل وتكامل - الطبعة العاشرة"
-            placeholderTextColor="rgba(142,142,147,0.65)"
-            style={styles.input}
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.input, { color: colors.foreground }]}
             textAlign="right"
           />
-          <Ionicons name="document-text-outline" size={18} color={Colors.mutedForeground} />
+          <Ionicons name="document-text-outline" size={18} color={colors.mutedForeground} />
         </View>
       </View>
 
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
           <Ionicons name="grid-outline" size={14} color={PRODUCT_AD_ACCENT} />
-          <Text style={styles.fieldLabel}>التصنيف</Text>
+          <Text style={[styles.fieldLabel, { color: colors.foreground }]}>التصنيف</Text>
         </View>
 
         <View style={styles.grid}>
@@ -138,18 +145,19 @@ export function ProductAdBasicStep({
                 onPress={() => onCategoryChange(active ? null : item.id)}
                 style={({ pressed }) => [
                   styles.categoryButton,
+                  { backgroundColor: colors.card, borderColor: colors.border },
                   getCategoryButtonStyle(active, item),
                   pressed && styles.pressed,
                 ]}
               >
-                <View style={[styles.categoryIcon, active && { backgroundColor: `${item.color}12` }]}>
+                <View style={[styles.categoryIcon, { backgroundColor: colors.secondary }, active && { backgroundColor: `${item.color}12` }]}>
                   <Ionicons
                     name={item.icon}
                     size={22}
-                    color={active ? item.color : Colors.mutedForeground}
+                    color={active ? item.color : colors.mutedForeground}
                   />
                 </View>
-                <Text style={[styles.categoryText, active && { color: item.color }]}>
+                <Text style={[styles.categoryText, { color: colors.mutedForeground }, active && { color: item.color }]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -163,12 +171,12 @@ export function ProductAdBasicStep({
         disabled={!canProceed}
         style={({ pressed }) => [
           styles.primaryButton,
-          !canProceed && styles.primaryButtonDisabled,
+          !canProceed && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
           pressed && canProceed && styles.pressed,
         ]}
       >
-        <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : Colors.mutedForeground} />
-        <Text style={[styles.primaryText, !canProceed && styles.primaryTextDisabled]}>التالي</Text>
+        <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : colors.mutedForeground} />
+        <Text style={[styles.primaryText, !canProceed && { color: colors.mutedForeground }]}>التالي</Text>
       </Pressable>
     </View>
   );

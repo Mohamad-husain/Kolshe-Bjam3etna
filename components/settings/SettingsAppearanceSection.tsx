@@ -3,6 +3,7 @@ import {
   SettingsThemeSelector,
   type SettingsThemeValue,
 } from './SettingsThemeSelector';
+import { useAppSettings } from '@/contexts/app-settings-context';
 
 type SettingsAppearanceSectionProps = {
   selectedTheme: SettingsThemeValue;
@@ -13,8 +14,10 @@ export function SettingsAppearanceSection({
   selectedTheme,
   onChangeTheme,
 }: SettingsAppearanceSectionProps) {
+  const { t } = useAppSettings();
+
   return (
-    <SettingsSection title="المظهر">
+    <SettingsSection title={t('settings.appearance')}>
       <SettingsThemeSelector value={selectedTheme} onChange={onChangeTheme} />
     </SettingsSection>
   );

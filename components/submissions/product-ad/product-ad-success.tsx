@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   FontFamily,
@@ -13,16 +14,18 @@ import {
 import { PRODUCT_AD_ACCENT } from './shared';
 
 export function ProductAdSuccess() {
+  const { colors, effectiveTheme } = useThemePreference();
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
-      <View style={styles.successWrap}>
-        <View style={styles.successCard}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
+      <View style={[styles.successWrap, { backgroundColor: colors.background }]}>
+        <View style={[styles.successCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={64} color={PRODUCT_AD_ACCENT} />
           </View>
-          <Text style={styles.successTitle}>تم نشر إعلانك</Text>
-          <Text style={styles.successText}>
+          <Text style={[styles.successTitle, { color: colors.foreground }]}>تم نشر إعلانك</Text>
+          <Text style={[styles.successText, { color: colors.mutedForeground }]}>
             سيظهر الآن ضمن المتجر ويمكنك متابعة العروض من صفحة الحساب.
           </Text>
         </View>

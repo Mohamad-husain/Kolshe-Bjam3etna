@@ -1,31 +1,29 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SettingsAccountSection } from '@/components/settings/SettingsAccountSection';
-import { SettingsAppearanceSection } from '@/components/settings/SettingsAppearanceSection';
 import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import { SettingsLogoutSection } from '@/components/settings/SettingsLogoutSection';
 import { SettingsNotificationsSection } from '@/components/settings/SettingsNotificationsSection';
 import { SettingsPrivacySection } from '@/components/settings/SettingsPrivacySection';
-import type { SettingsThemeValue } from '@/components/settings/SettingsThemeSelector';
+import { useAppSettings } from '@/contexts/app-settings-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useThemePreference } from '@/contexts/theme-preference-context';
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
+import { FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
 
 export default function SettingsRoute() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-  const { selectedTheme, effectiveTheme, setSelectedTheme } = useThemePreference();
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [messageNotifications, setMessageNotifications] = useState(true);
-  const [offerNotifications, setOfferNotifications] = useState(true);
-  const [newsNotifications, setNewsNotifications] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [showOnlineStatus, setShowOnlineStatus] = useState(true);
+  const { selectedTheme, colors } = useThemePreference();
+  const {
+    language,
+    notifications,
+    setNotificationPreference,
+    t,
+  } = useAppSettings();
 
   useEffect(() => {
     if (!user) {
@@ -33,19 +31,9 @@ export default function SettingsRoute() {
     }
   }, [user]);
 
-  const handleChangeTheme = (theme: SettingsThemeValue) => {
-    setSelectedTheme(theme);
-  };
-
   if (!user) {
     return null;
   }
-
-  const isDarkPreview = effectiveTheme === 'dark';
-
-  const showSoonAlert = (title: string, message: string) => {
-    Alert.alert(title, message);
-  };
 
   const handleGoBack = () => {
     if (router.canGoBack()) {
@@ -56,19 +44,14 @@ export default function SettingsRoute() {
     router.replace('/(tabs)/profile');
   };
 
-  const handleToggleThemeMode = () => {
-    const nextTheme: SettingsThemeValue = isDarkPreview ? 'light' : 'dark';
-    handleChangeTheme(nextTheme);
-  };
-
   const handleLogout = () => {
-    Alert.alert('تسجيل الخروج', 'هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟', [
+    Alert.alert(t('settings.logout'), t('settings.logoutConfirm'), [
       {
-        text: 'إلغاء',
+        text: t('common.cancel'),
         style: 'cancel',
       },
       {
-        text: 'تسجيل الخروج',
+        text: t('settings.logout'),
         style: 'destructive',
         onPress: signOut,
       },
@@ -76,64 +59,92 @@ export default function SettingsRoute() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.primary }]} edges={['top']}>
       <StatusBar style="light" />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 28 }]}
+          contentContainerStyle={[
+            styles.content,
+            { backgroundColor: colors.background, paddingBottom: insets.bottom + 28 },
+          ]}
           showsVerticalScrollIndicator={false}
         >
-          <SettingsHeader
-            isDarkPreview={isDarkPreview}
-            onGoBack={handleGoBack}
-            onToggleTheme={handleToggleThemeMode}
-          />
-
-          <SettingsAppearanceSection
-            selectedTheme={selectedTheme}
-            onChangeTheme={handleChangeTheme}
-          />
+          <SettingsHeader onGoBack={handleGoBack} />
 
           <SettingsNotificationsSection
-            notificationsEnabled={notificationsEnabled}
-            messageNotifications={messageNotifications}
-            newsNotifications={newsNotifications}
-            offerNotifications={offerNotifications}
-            soundEnabled={soundEnabled}
-            onToggleNotifications={() => setNotificationsEnabled((current) => !current)}
-            onToggleMessages={() => setMessageNotifications((current) => !current)}
-            onToggleOffers={() => setOfferNotifications((current) => !current)}
-            onToggleNews={() => setNewsNotifications((current) => !current)}
-            onToggleSound={() => setSoundEnabled((current) => !current)}
+            notificationsEnabled={notifications.notificationsEnabled}
+            messageNotifications={notifications.messageNotifications}
+            newsNotifications={notifications.newsNotifications}
+            offerNotifications={notifications.offerNotifications}
+            soundEnabled={notifications.soundEnabled}
+            onToggleNotifications={() =>
+              setNotificationPreference(
+                'notificationsEnabled',
+                !notifications.notificationsEnabled,
+              )
+            }
+            onToggleMessages={() =>
+              setNotificationPreference(
+                'messageNotifications',
+                !notifications.messageNotifications,
+              )
+            }
+            onToggleOffers={() =>
+              setNotificationPreference(
+                'offerNotifications',
+                !notifications.offerNotifications,
+              )
+            }
+            onToggleNews={() =>
+              setNotificationPreference(
+                'newsNotifications',
+                !notifications.newsNotifications,
+              )
+            }
+            onToggleSound={() =>
+              setNotificationPreference('soundEnabled', !notifications.soundEnabled)
+            }
           />
 
           <SettingsPrivacySection
-            showOnlineStatus={showOnlineStatus}
-            onToggleShowOnline={() => setShowOnlineStatus((current) => !current)}
+            showOnlineStatus={notifications.showOnlineStatus}
+            onToggleShowOnline={() =>
+              setNotificationPreference('showOnlineStatus', !notifications.showOnlineStatus)
+            }
             onChangePassword={() =>
               router.push({ pathname: '/edit-profile', params: { tab: 'security' } })
-            }
-            onOpenTwoFactor={() =>
-              showSoonAlert(
-                'المصادقة الثنائية',
-                'ميزة المصادقة الثنائية ستُربط لاحقًا ضمن إعدادات الأمان.',
-              )
             }
           />
 
           <SettingsAccountSection
+            appearanceDescription={t('settings.appearanceDescription', {
+              mode:
+                selectedTheme === 'system'
+                  ? t('settings.themeAuto')
+                  : selectedTheme === 'dark'
+                    ? t('settings.themeDark')
+                    : t('settings.themeLight'),
+            })}
+            languageDescription={
+              language === 'ar' ? t('settings.languageArabic') : t('settings.languageEnglish')
+            }
+            onOpenAppearance={() => router.push('/appearance-settings')}
+            onOpenLanguage={() => router.push('/language-settings')}
             onEditProfile={() =>
               router.push({ pathname: '/edit-profile', params: { tab: 'personal' } })
             }
             onChangeUniversity={() =>
               router.push({ pathname: '/edit-profile', params: { tab: 'academic' } })
             }
+            onAbout={() => router.push('/about')}
           />
 
           <SettingsLogoutSection onPress={handleLogout} />
 
-          <Text style={styles.footerText}>كلشي بجامعتنا © {new Date().getFullYear()}</Text>
+          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
+            {t('common.appName')} © {new Date().getFullYear()}
+          </Text>
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -143,14 +154,11 @@ export default function SettingsRoute() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
-    backgroundColor: Colors.background,
   },
   footerText: {
     marginTop: 28,

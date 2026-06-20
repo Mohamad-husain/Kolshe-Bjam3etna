@@ -13,10 +13,12 @@ import {
   getSavedSettingsTheme,
   saveSettingsTheme,
 } from '@/lib/storage/settings-preferences';
+import { DarkColors, LightColors } from '@/styles/ui-theme';
 
 type ThemePreferenceContextValue = {
   selectedTheme: SettingsThemeValue;
   effectiveTheme: 'light' | 'dark';
+  colors: typeof LightColors | typeof DarkColors;
   setSelectedTheme: (theme: SettingsThemeValue) => void;
 };
 
@@ -68,6 +70,7 @@ export function ThemePreferenceProvider({ children }: PropsWithChildren) {
     () => ({
       selectedTheme,
       effectiveTheme,
+      colors: effectiveTheme === 'dark' ? DarkColors : LightColors,
       setSelectedTheme: (theme) => {
         setSelectedThemeState(theme);
         void saveSettingsTheme(theme);

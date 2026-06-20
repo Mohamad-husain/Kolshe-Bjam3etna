@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontSize, FontWeight, SemanticColors } from '@/styles/ui-theme';
 
 type ProfileServiceCardData = {
   id: number;
@@ -17,12 +19,20 @@ type ProfileServiceCardProps = {
 };
 
 export function ProfileServiceCard({ service, onShowOffers }: ProfileServiceCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? 'row-reverse' : 'row';
+  const alignItems = isRtl ? 'flex-end' : 'flex-start';
+  const textAlign = isRtl ? 'right' : 'left';
+
   return (
-    <View style={styles.card}>
-      <View style={styles.listingHeader}>
-        <View style={styles.listingBadges}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.listingHeader, { flexDirection: rowDirection }]}>
+        <View style={[styles.listingBadges, { flexDirection: rowDirection }]}>
           <View style={styles.serviceOffersBadge}>
-            <Text style={styles.serviceOffersBadgeText}>{service.offers} عروض</Text>
+            <Text style={[styles.serviceOffersBadgeText, { color: colors.primary }]}>
+              {t('profile.offersCount', { count: service.offers })}
+            </Text>
           </View>
           <View
             style={[
@@ -34,27 +44,28 @@ export function ProfileServiceCard({ service, onShowOffers }: ProfileServiceCard
               style={[
                 styles.statusBadgeText,
                 service.status === 'active' ? styles.acceptedBadgeText : styles.closedBadgeText,
+                service.status !== 'active' && { color: colors.mutedForeground },
               ]}
             >
-              {service.status === 'active' ? 'نشط' : 'مغلق'}
+              {service.status === 'active' ? t('profile.active') : t('profile.closed')}
             </Text>
           </View>
         </View>
 
-        <View style={styles.listingTextWrap}>
-          <Text style={styles.offerName}>{service.title}</Text>
-          <Text style={styles.metaText}>{service.category}</Text>
+        <View style={[styles.listingTextWrap, { alignItems }]}>
+          <Text style={[styles.offerName, { color: colors.foreground, textAlign }]}>{service.title}</Text>
+          <Text style={[styles.metaText, { color: colors.mutedForeground, textAlign }]}>{service.category}</Text>
         </View>
       </View>
 
-      <View style={styles.separator} />
+      <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
-      <View style={styles.priceRow}>
+      <View style={[styles.priceRow, { flexDirection: rowDirection }]}>
         <Pressable
           onPress={onShowOffers}
           style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
         >
-          <Text style={styles.linkButtonText}>عرض العروض</Text>
+          <Text style={[styles.linkButtonText, { color: colors.primary }]}>{t('profile.showOffers')}</Text>
         </Pressable>
         <Text style={styles.offerPrice}>{service.price}</Text>
       </View>
@@ -66,9 +77,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.06)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -76,13 +85,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   listingHeader: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
   listingBadges: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
   },
@@ -95,7 +102,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,99,235,0.08)',
   },
   serviceOffersBadgeText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
@@ -122,34 +128,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(142,142,147,0.12)',
   },
   closedBadgeText: {
-    color: Colors.mutedForeground,
   },
   listingTextWrap: {
     flex: 1,
-    alignItems: 'flex-end',
   },
   offerName: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   metaText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.medium,
-    textAlign: 'right',
   },
   separator: {
     height: 1,
     marginTop: 14,
-    backgroundColor: 'rgba(60,60,67,0.08)',
   },
   priceRow: {
     marginTop: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -162,7 +160,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,99,235,0.08)',
   },
   linkButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,

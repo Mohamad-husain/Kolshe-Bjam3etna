@@ -1,71 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, FontWeight } from '@/styles/ui-theme';
-import { SettingsToggle } from './SettingsToggle';
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
+import { FontFamily, FontWeight } from '@/styles/ui-theme';
 
 type SettingsHeaderProps = {
-  isDarkPreview: boolean;
   onGoBack: () => void;
-  onToggleTheme: () => void;
 };
 
 export function SettingsHeader({
-  isDarkPreview,
   onGoBack,
-  onToggleTheme,
 }: SettingsHeaderProps) {
+  const { t, isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.primary }]}>
       <View style={styles.headerGlowPrimary} />
       <View style={styles.headerGlowSecondary} />
       <View style={styles.headerGlowTertiary} />
 
-      <View style={styles.headerTop}>
+      <View style={[styles.headerTop, { flexDirection: isRtl ? 'row' : 'row-reverse' }]}>
         <Pressable onPress={onGoBack} style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}>
-          <Ionicons name="chevron-back" size={20} color="#ffffff" />
+          <Ionicons name={isRtl ? 'chevron-back' : 'chevron-forward'} size={20} color="#ffffff" />
         </Pressable>
 
-        <Text style={styles.headerTitle}>الإعدادات</Text>
+        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
 
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.heroCard}>
-        <SettingsToggle value={isDarkPreview} onValueChange={onToggleTheme} />
-
-        <View style={styles.heroContent}>
-          <Text style={styles.heroTitle}>
-            {isDarkPreview ? 'الوضع الليلي' : 'الوضع النهاري'}
-          </Text>
-          <Text style={styles.heroDescription}>
-            {isDarkPreview
-              ? 'اضغط للتبديل للوضع الفاتح'
-              : 'اضغط للتبديل للوضع الداكن'}
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={onToggleTheme}
-          style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
-        >
-          <Ionicons
-            name={isDarkPreview ? 'sunny-outline' : 'moon-outline'}
-            size={24}
-            color={isDarkPreview ? '#ffb340' : '#ffffff'}
-          />
-        </Pressable>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 270,
+    minHeight: 84,
     paddingTop: 8,
-    paddingBottom: 30,
-    backgroundColor: Colors.primary,
+    paddingBottom: 14,
     overflow: 'hidden',
   },
   headerGlowPrimary: {
@@ -116,48 +90,6 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 38,
     height: 38,
-  },
-  heroCard: {
-    marginTop: 26,
-    marginHorizontal: 18,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  heroContent: {
-    flex: 1,
-    marginHorizontal: 14,
-    alignItems: 'flex-end',
-  },
-  heroTitle: {
-    color: '#ffffff',
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.x17,
-    fontWeight: FontWeight.black,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  heroDescription: {
-    marginTop: 2,
-    color: 'rgba(255,255,255,0.72)',
-    fontFamily: FontFamily.cairo,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  heroIconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   pressed: {
     transform: [{ scale: 0.97 }],

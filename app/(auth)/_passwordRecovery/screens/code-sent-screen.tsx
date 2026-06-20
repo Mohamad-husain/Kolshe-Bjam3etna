@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   RecoveryErrorText,
   RecoveryPrimaryButton,
@@ -23,18 +25,23 @@ export function CodeSentScreen({
   onEnterCode,
   onResendCode,
 }: CodeSentScreenProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.formArea}>
       <SuccessBadge />
-      <Text style={styles.title}>تم الإرسال</Text>
-      <Text style={styles.subtitleCompact}>أرسلنا رمز التحقق إلى</Text>
-      <Text style={styles.emailText}>{email}</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>{t('recovery.codeSentTitle')}</Text>
+      <Text style={[styles.subtitleCompact, { color: colors.mutedForeground }]}>
+        {t('recovery.codeSentSubtitle')}
+      </Text>
+      <Text style={[styles.emailText, { color: colors.primary }]}>{email}</Text>
 
       <RecoveryErrorText message={error} />
 
-      <RecoveryPrimaryButton title="أدخل رمز التحقق" onPress={onEnterCode} />
+      <RecoveryPrimaryButton title={t('recovery.codeSentButton')} onPress={onEnterCode} />
       <RecoverySecondaryButton
-        title="إعادة إرسال الرمز"
+        title={t('recovery.resendCode')}
         loading={loading}
         onPress={onResendCode}
       />

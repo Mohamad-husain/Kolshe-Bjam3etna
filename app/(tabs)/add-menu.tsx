@@ -4,8 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppSettings, type TranslationKey } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontSize,
@@ -14,8 +15,8 @@ import {
 } from '@/styles/ui-theme';
 
 type AddMenuItem = {
-  title: string;
-  description: string;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
   href: '/new-service' | '/new-ad' | '/new-exchange';
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
@@ -25,8 +26,8 @@ type AddMenuItem = {
 
 const menuItems: AddMenuItem[] = [
   {
-    title: 'طلب خدمة',
-    description: 'اطلب مساعدة دراسية أو اعرض مهاراتك',
+    titleKey: 'addMenu.serviceTitle',
+    descriptionKey: 'addMenu.serviceDescription',
     href: '/new-service',
     icon: 'briefcase-outline',
     color: SemanticColors.blue,
@@ -34,8 +35,8 @@ const menuItems: AddMenuItem[] = [
     borderColor: 'rgba(37,99,235,0.16)',
   },
   {
-    title: 'إضافة إعلان بيع',
-    description: 'لبيع الكتب والإلكترونيات والمستلزمات',
+    titleKey: 'addMenu.adTitle',
+    descriptionKey: 'addMenu.adDescription',
     href: '/new-ad',
     icon: 'bag-handle-outline',
     color: SemanticColors.orange,
@@ -43,8 +44,8 @@ const menuItems: AddMenuItem[] = [
     borderColor: 'rgba(255,149,0,0.16)',
   },
   {
-    title: 'إضافة طلب تبادل',
-    description: 'لتبادل الكتب والأغراض مع زملائك',
+    titleKey: 'addMenu.exchangeTitle',
+    descriptionKey: 'addMenu.exchangeDescription',
     href: '/new-exchange',
     icon: 'swap-horizontal-outline',
     color: SemanticColors.green,
@@ -55,12 +56,14 @@ const menuItems: AddMenuItem[] = [
 
 export default function AddMenuRoute() {
   const insets = useSafeAreaInsets();
+  const { t, isRtl } = useAppSettings();
+  const { colors, effectiveTheme } = useThemePreference();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
 
-      <View style={styles.screen}>
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={styles.primaryGlow} pointerEvents="none" />
         <View style={styles.secondaryGlow} pointerEvents="none" />
 
@@ -75,27 +78,33 @@ export default function AddMenuRoute() {
             <View style={styles.headerSide} />
 
             <View style={styles.titleRow}>
-              <Text style={styles.title}>إضافة جديد</Text>
+              <Text style={[styles.title, { color: colors.foreground }]}>
+                {t('addMenu.title')}
+              </Text>
             </View>
 
             <View style={styles.headerSide} />
           </View>
 
-          <View style={styles.sheet}>
-            <Text style={styles.sectionLabel}>اختر نوع المحتوى</Text>
+          <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+              {t('addMenu.sectionLabel')}
+            </Text>
 
             <View style={styles.cardsList}>
               {menuItems.map((item) => (
                 <Pressable
-                  key={item.title}
+                  key={item.titleKey}
                   accessibilityRole="button"
-                  accessibilityLabel={item.title}
+                  accessibilityLabel={t(item.titleKey)}
                   onPress={() => router.push(item.href)}
                   style={({ pressed }) => [
                     styles.optionCard,
                     {
                       borderColor: item.borderColor,
                       shadowColor: item.color,
+                      backgroundColor: colors.card,
+                      flexDirection: isRtl ? 'row' : 'row-reverse',
                     },
                     pressed && styles.optionCardPressed,
                   ]}
@@ -104,19 +113,43 @@ export default function AddMenuRoute() {
                     <Ionicons name={item.icon} size={27} color={item.color} />
                   </View>
 
-                  <View style={styles.copyBlock}>
-                    <Text style={styles.optionTitle}>{item.title}</Text>
-                    <Text style={styles.optionDescription}>{item.description}</Text>
+                  <View style={[styles.copyBlock, { alignItems: isRtl ? 'flex-end' : 'flex-start' }]}>
+                    <Text
+                      style={[
+                        styles.optionTitle,
+                        { color: colors.foreground, textAlign: isRtl ? 'right' : 'left' },
+                      ]}
+                    >
+                      {t(item.titleKey)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.optionDescription,
+                        {
+                          color: colors.mutedForeground,
+                          textAlign: isRtl ? 'right' : 'left',
+                          writingDirection: isRtl ? 'rtl' : 'ltr',
+                        },
+                      ]}
+                    >
+                      {t(item.descriptionKey)}
+                    </Text>
                   </View>
 
-                  <View style={styles.chevronWrap}>
-                    <Ionicons name="chevron-back" size={18} color="rgba(142,142,147,0.8)" />
+                  <View style={[styles.chevronWrap, { backgroundColor: colors.secondary }]}>
+                    <Ionicons
+                      name={isRtl ? 'chevron-back' : 'chevron-forward'}
+                      size={18}
+                      color={colors.mutedForeground}
+                    />
                   </View>
                 </Pressable>
               ))}
             </View>
 
-            <Text style={styles.helperText}>اختر القسم الذي تريد البدء به</Text>
+            <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
+              {t('addMenu.helper')}
+            </Text>
           </View>
         </ScrollView>
       </View>
@@ -127,11 +160,9 @@ export default function AddMenuRoute() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f3f4f8',
   },
   screen: {
     flex: 1,
-    backgroundColor: '#f3f4f8',
   },
   primaryGlow: {
     position: 'absolute',
@@ -173,16 +204,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 18,
     fontWeight: FontWeight.extrabold,
   },
   sheet: {
     borderRadius: 34,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.06)',
     paddingHorizontal: 14,
     paddingTop: 18,
     paddingBottom: 16,
@@ -193,7 +221,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   sectionLabel: {
-    color: '#a1a1aa',
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
@@ -204,11 +231,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   optionCard: {
-    flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 22,
     borderWidth: 1,
-    backgroundColor: '#ffffff',
     paddingHorizontal: 14,
     paddingVertical: 14,
     shadowOffset: { width: 0, height: 10 },
@@ -230,22 +255,17 @@ const styles = StyleSheet.create({
   copyBlock: {
     flex: 1,
     marginHorizontal: 14,
-    alignItems: 'flex-end',
   },
   optionTitle: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 17,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   optionDescription: {
     marginTop: 3,
-    color: '#9ca3af',
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    textAlign: 'right',
   },
   chevronWrap: {
     width: 28,
@@ -253,11 +273,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(60,60,67,0.05)',
   },
   helperText: {
     marginTop: 18,
-    color: '#b0b0b7',
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,

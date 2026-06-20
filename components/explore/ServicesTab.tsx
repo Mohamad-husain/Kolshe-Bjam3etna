@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   FlatList,
@@ -8,8 +9,9 @@ import {
 } from "react-native";
 
 import { useServicesQuery } from "@/hooks/queries/use-explore-queries";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import {
-  Colors,
   FontFamily,
   FontSize,
   SemanticColors,
@@ -21,19 +23,20 @@ import { SearchBar } from "./SearchBar";
 import { ServiceCard } from "./ServiceCard";
 import { useSearchInput } from "@/hooks/explore/use-search-input";
 
-const CATEGORIES: Category[] = [
-  { id: "all", label: "الكل" },
-  { id: "كتاب", label: "كتب" },
-  { id: "إلكترونيات", label: "إلكترونيات" },
-  { id: "تصميم", label: "تصميم" },
-];
-
 type ServicesTabProps = {
   showFilter: boolean;
 };
 
 export function ServicesTab({ showFilter }: ServicesTabProps) {
+  const { t } = useAppSettings();
+  const { colors } = useThemePreference();
   const { search, searchError, handleSearch } = useSearchInput();
+  const categories: Category[] = [
+    { id: "all", label: t("common.all") },
+    { id: "كتاب", label: t("explore.category.books") },
+    { id: "إلكترونيات", label: t("explore.category.electronics") },
+    { id: "تصميم", label: t("explore.category.design") },
+  ];
   const [selectedCategory, setSelectedCategory] = useState("all");
   const { data: items = [], isLoading, error } = useServicesQuery();
   const filtered = useMemo(() => {
@@ -63,7 +66,9 @@ export function ServicesTab({ showFilter }: ServicesTabProps) {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>تعذر تحميل البيانات</Text>
+        <Text style={[styles.errorText, { color: colors.mutedForeground }]}>
+          {t("common.loadError")}
+        </Text>
       </View>
     );
   }
@@ -72,24 +77,29 @@ export function ServicesTab({ showFilter }: ServicesTabProps) {
     <FlatList
       data={filtered}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <ServiceCard data={item} />}
+      renderItem={({ item }) => (
+        <ServiceCard
+          data={item}
+          onPress={() => router.push({ pathname: "/service/[id]", params: { id: item.id } })}
+        />
+      )}
       ListHeaderComponent={
         <View>
           <SearchBar
-            placeholder="ابحث في خدمات..."
+            placeholder={t("explore.searchServices")}
             value={search}
             onChangeText={handleSearch}
             error={searchError}
           />
           {showFilter ? (
             <CategoryFilter
-              categories={CATEGORIES}
+              categories={categories}
               selected={selectedCategory}
               onSelect={setSelectedCategory}
               accentColor={SemanticColors.blue}
               accentBg={`${SemanticColors.blue}12`}
               icon="briefcase-outline"
-              title="خدمات"
+              title={t("explore.services")}
               count={filtered.length}
             />
           ) : null}
@@ -115,6 +125,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
-    color: Colors.mutedForeground,
   },
 });

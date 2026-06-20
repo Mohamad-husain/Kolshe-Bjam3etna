@@ -42,8 +42,15 @@ function pluralizeArabic(
   return `${value} ${singular}`;
 }
 
+function parseUtcDate(dateValue: string) {
+  const value = dateValue.trim();
+  const hasTimezone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(value);
+
+  return new Date(hasTimezone ? value : `${value}Z`);
+}
+
 function formatRelativeTime(dateValue: string) {
-  const createdAt = new Date(dateValue);
+  const createdAt = parseUtcDate(dateValue);
   if (Number.isNaN(createdAt.getTime())) return "الآن";
 
   const diffMs = Date.now() - createdAt.getTime();

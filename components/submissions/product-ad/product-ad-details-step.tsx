@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { ProductAdCondition } from '@/services/marketplace-api';
 import {
   Colors,
@@ -46,6 +47,8 @@ export function ProductAdDetailsStep({
   onPrevious,
   onNext,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -58,7 +61,7 @@ export function ProductAdDetailsStep({
         <View style={styles.fieldBlock}>
           <View style={styles.labelRow}>
             <Ionicons name="cash-outline" size={14} color={PRODUCT_AD_ACCENT} />
-            <Text style={styles.fieldLabel}>السعر ({PRODUCT_AD_CURRENCY})</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>السعر ({PRODUCT_AD_CURRENCY})</Text>
           </View>
 
           <View style={styles.chipWrap}>
@@ -71,11 +74,12 @@ export function ProductAdDetailsStep({
                   onPress={() => onPricePresetChange(active ? '' : item.id)}
                   style={({ pressed }) => [
                     styles.chip,
+                    { backgroundColor: colors.card, borderColor: colors.border },
                     active && styles.chipActive,
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                  <Text style={[styles.chipText, { color: colors.foreground }, active && styles.chipTextActive]}>
                     {item.label}
                   </Text>
                 </Pressable>
@@ -83,24 +87,24 @@ export function ProductAdDetailsStep({
             })}
           </View>
 
-          <View style={styles.fieldRow}>
+          <View style={[styles.fieldRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TextInput
               value={customPrice}
               onChangeText={onCustomPriceChange}
               keyboardType="decimal-pad"
               placeholder="أو أدخل سعراً مخصصاً..."
-              placeholderTextColor="rgba(142,142,147,0.65)"
-              style={styles.input}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.foreground }]}
               textAlign="right"
             />
-            <Ionicons name="cash-outline" size={18} color={Colors.mutedForeground} />
+            <Ionicons name="cash-outline" size={18} color={colors.mutedForeground} />
           </View>
         </View>
 
         <View style={styles.fieldBlock}>
           <View style={styles.labelRow}>
             <Ionicons name="sparkles-outline" size={14} color={PRODUCT_AD_ACCENT} />
-            <Text style={styles.fieldLabel}>حالة المنتج</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>حالة المنتج</Text>
           </View>
 
           <View style={styles.chipWrap}>
@@ -113,11 +117,12 @@ export function ProductAdDetailsStep({
                   onPress={() => onConditionChange(active ? '' : item.value)}
                   style={({ pressed }) => [
                     styles.chip,
+                    { backgroundColor: colors.card, borderColor: colors.border },
                     active && styles.chipSoftActive,
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={[styles.chipText, active && styles.chipTextSoftActive]}>
+                  <Text style={[styles.chipText, { color: colors.foreground }, active && styles.chipTextSoftActive]}>
                     {item.label}
                   </Text>
                 </Pressable>
@@ -135,6 +140,7 @@ export function ProductAdDetailsStep({
             <Text
               style={[
                 styles.counter,
+                { color: colors.mutedForeground },
                 description.trim().length >= PRODUCT_AD_DESCRIPTION_MIN_LENGTH && styles.counterActive,
               ]}
             >
@@ -142,11 +148,11 @@ export function ProductAdDetailsStep({
             </Text>
             <View style={styles.labelRow}>
               <Ionicons name="reader-outline" size={14} color={PRODUCT_AD_ACCENT} />
-              <Text style={styles.fieldLabel}>وصف المنتج</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>وصف المنتج</Text>
             </View>
           </View>
 
-          <View style={styles.textareaWrap}>
+          <View style={[styles.textareaWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TextInput
               value={description}
               onChangeText={onDescriptionChange}
@@ -155,8 +161,8 @@ export function ProductAdDetailsStep({
               textAlign="right"
               textAlignVertical="top"
               placeholder="صف المنتج بدقة: الحالة، سبب البيع، وأي ملاحظات مهمة..."
-              placeholderTextColor="rgba(142,142,147,0.65)"
-              style={styles.textarea}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.textarea, { color: colors.foreground }]}
             />
           </View>
         </KeyboardAvoidingView>
@@ -168,18 +174,25 @@ export function ProductAdDetailsStep({
             style={({ pressed }) => [
               styles.primaryButton,
               styles.flexButton,
-              !canProceed && styles.primaryButtonDisabled,
+              !canProceed && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
               pressed && canProceed && styles.pressed,
             ]}
           >
-            <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : Colors.mutedForeground} />
-            <Text style={[styles.primaryText, !canProceed && styles.primaryTextDisabled]}>
+            <Ionicons name="arrow-back" size={18} color={canProceed ? '#ffffff' : colors.mutedForeground} />
+            <Text style={[styles.primaryText, !canProceed && { color: colors.mutedForeground }]}>
               معاينة الإعلان
             </Text>
           </Pressable>
 
-          <Pressable onPress={onPrevious} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-            <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+          <Pressable
+            onPress={onPrevious}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
           </Pressable>
         </View>
       </View>

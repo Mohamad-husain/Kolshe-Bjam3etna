@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 
 import { AuthProvider } from "@/contexts/auth-context";
 import { AppProviders } from "@/contexts/app-providers";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import { queryClient } from "@/lib/query-client";
 
 export default function RootLayout() {
@@ -13,10 +14,16 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppProviders>
-          <StatusBar style="auto" />
+          <ThemedStatusBar />
           <Stack screenOptions={{ headerShown: false }} />
         </AppProviders>
       </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+function ThemedStatusBar() {
+  const { effectiveTheme } = useThemePreference();
+
+  return <StatusBar style={effectiveTheme === "dark" ? "light" : "dark"} />;
 }

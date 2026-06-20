@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontWeight,
 } from '@/styles/ui-theme';
@@ -17,16 +18,22 @@ export function CompleteProfileFooter({
   onBack,
   onSubmit,
 }: CompleteProfileFooterProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.footerActions}>
+    <View style={[styles.footerActions, { flexDirection: isRtl ? 'row' : 'row-reverse' }]}>
       <Pressable
         onPress={onBack}
         style={({ pressed }) => [
           styles.secondaryButton,
+          { backgroundColor: colors.card, borderColor: colors.border },
           pressed && styles.secondaryButtonPressed,
         ]}
       >
-        <Text style={styles.secondaryButtonText}>رجوع</Text>
+        <Text style={[styles.secondaryButtonText, { color: colors.foreground }]}>
+          {t('completeProfile.back')}
+        </Text>
       </Pressable>
 
       <Pressable
@@ -34,12 +41,13 @@ export function CompleteProfileFooter({
         onPress={onSubmit}
         style={({ pressed }) => [
           styles.primaryButton,
+          { backgroundColor: colors.primary, shadowColor: colors.primary },
           pressed && !isSubmitting && styles.primaryButtonPressed,
           isSubmitting && styles.primaryButtonDisabled,
         ]}
       >
         <Text style={styles.primaryButtonText}>
-          {isSubmitting ? 'جارٍ الإرسال...' : 'إكمال التسجيل'}
+          {isSubmitting ? t('completeProfile.footerPending') : t('completeProfile.footerSubmit')}
         </Text>
       </Pressable>
     </View>
@@ -48,7 +56,6 @@ export function CompleteProfileFooter({
 
 const styles = StyleSheet.create({
   footerActions: {
-    flexDirection: 'row',
     gap: 12,
   },
   secondaryButton: {
@@ -56,8 +63,6 @@ const styles = StyleSheet.create({
     minHeight: 56,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#dddfe7',
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
@@ -70,7 +75,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   secondaryButtonText: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 17,
     fontWeight: FontWeight.semibold,
@@ -79,10 +83,8 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 56,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.24,
     shadowRadius: 14,

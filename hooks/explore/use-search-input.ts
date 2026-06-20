@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useAppSettings } from "@/contexts/app-settings-context";
 
 export function useSearchInput() {
+  const { t } = useAppSettings();
   const [search, setSearch] = useState("");
   const [searchError, setSearchError] = useState("");
 
@@ -8,7 +10,7 @@ export function useSearchInput() {
     setSearch(text);
 
     if (!text.trim() && text.length > 0) {
-      setSearchError("لا يمكن البحث بمسافات فارغة");
+      setSearchError(t("common.searchWhitespaceError"));
     } else {
       setSearchError("");
     }

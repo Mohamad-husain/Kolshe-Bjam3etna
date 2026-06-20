@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
 import {
   useForgotPasswordMutation,
   useResetPasswordMutation,
@@ -23,6 +24,7 @@ function createEmptyCodeDigits() {
 }
 
 export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
+  const { t } = useAppSettings();
   const [step, setStep] = useState<RecoveryStep>('forgot');
   const [email, setEmail] = useState('');
   const [codeDigits, setCodeDigits] = useState<string[]>(createEmptyCodeDigits);
@@ -86,7 +88,7 @@ export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
 
   const handleSendCode = async () => {
     if (!isEmailValid()) {
-      setError('يرجى إدخال بريد جامعي صحيح');
+      setError(t('recovery.invalidEmail'));
       return;
     }
 
@@ -97,13 +99,13 @@ export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
       resetCodeDigits();
       setStep('sent');
     } catch (err) {
-      setError(getErrorMessage(err, 'تعذر إرسال رمز التحقق'));
+      setError(getErrorMessage(err, t('recovery.sendCodeError')));
     }
   };
 
   const handleResendCode = async () => {
     if (!isEmailValid()) {
-      setError('يرجى إدخال بريد جامعي صحيح');
+      setError(t('recovery.invalidEmail'));
       return;
     }
 
@@ -112,13 +114,13 @@ export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
     try {
       await forgotPasswordMutation.mutateAsync({ email: normalizedEmail });
     } catch (err) {
-      setError(getErrorMessage(err, 'تعذر إعادة إرسال الرمز'));
+      setError(getErrorMessage(err, t('recovery.resendCodeError')));
     }
   };
 
   const handleVerifyCode = async () => {
     if (code.length !== CODE_LENGTH) {
-      setError('يرجى إدخال رمز التحقق كاملًا');
+      setError(t('recovery.codeIncomplete'));
       return;
     }
 
@@ -131,7 +133,7 @@ export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
       });
       setStep('reset');
     } catch (err) {
-      setError(getErrorMessage(err, 'رمز التحقق غير صحيح'));
+      setError(getErrorMessage(err, t('recovery.invalidCode')));
     }
   };
 
@@ -139,12 +141,12 @@ export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
     const trimmedPassword = newPassword.trim();
 
     if (trimmedPassword.length < 8) {
-      setError('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      setError(t('recovery.passwordMin'));
       return;
     }
 
     if (trimmedPassword !== confirmPassword.trim()) {
-      setError('تأكيد كلمة المرور غير مطابق');
+      setError(t('recovery.confirmPasswordMismatch'));
       return;
     }
 
@@ -158,7 +160,7 @@ export function usePasswordRecoveryFlow({ onDone }: PasswordRecoveryFlowProps) {
       });
       setStep('success');
     } catch (err) {
-      setError(getErrorMessage(err, 'تعذر حفظ كلمة المرور الجديدة'));
+      setError(getErrorMessage(err, t('recovery.savePassword')));
     }
   };
 

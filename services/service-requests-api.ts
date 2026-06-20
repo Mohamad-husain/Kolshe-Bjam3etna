@@ -1,6 +1,7 @@
 import { ServiceCardData } from '@/types/explore';
 
 import { apiClient, getApiErrorMessage } from './http-client';
+import { toAbsoluteImageUrl } from './media';
 
 type ApiServiceRequest = {
   id: number;
@@ -17,14 +18,61 @@ type ApiServiceRequest = {
   };
 };
 
+type ApiServiceRequestAttachment = {
+  id: number;
+  fileUrl: string;
+  fileName: string;
+  size: number;
+  uploadedAtUtc: string;
+};
+
+type ApiServiceRequestDetails = {
+  id: number;
+  title: string;
+  budget: number;
+  deadlineUtc: string;
+  description: string;
+  categoryId: number;
+  categoryName: string;
+  userId: string;
+  createdAtUtc: string;
+  attachments: ApiServiceRequestAttachment[];
+  user: {
+    id: string;
+    fullName: string;
+    profileImageUrl: string | null;
+    major: string | null;
+    studyYear: number | null;
+    universityId: number | null;
+  };
+};
+
 type ApiServiceRequestsResponse = {
   success?: boolean;
   data?: ApiServiceRequest[];
 };
 
+type ApiServiceRequestDetailsResponse = {
+  success?: boolean;
+  data?: ApiServiceRequestDetails;
+};
+
 type ApiCreateServiceRequestResponse = {
   success?: boolean;
   message?: string;
+};
+
+export type ServiceRequestDetails = ServiceCardData & {
+  budget: number;
+  deadlineUtc: string;
+  createdAtUtc: string;
+  attachments: ApiServiceRequestAttachment[];
+  owner: ServiceCardData['owner'] & {
+    id: string;
+    major?: string | null;
+    studyYear?: number | null;
+    universityId?: number | null;
+  };
 };
 
 export type CreateServiceRequestInput = {
@@ -118,6 +166,8 @@ function formatDeadline(deadlineUtc: string): string {
 }
 
 function mapToServiceCard(item: ApiServiceRequest): ServiceCardData {
+  const ownerName = item.user.fullName || 'طالب';
+
   return {
     id: String(item.id),
     title: item.title,
@@ -126,8 +176,35 @@ function mapToServiceCard(item: ApiServiceRequest): ServiceCardData {
     pricePerHour: item.budget,
     deadline: formatDeadline(item.deadlineUtc),
     owner: {
-      name: item.user.fullName,
-      initials: item.user.fullName.charAt(0),
+      name: ownerName,
+      initials: ownerName.charAt(0),
+      imageUrl: toAbsoluteImageUrl(item.user.profileImageUrl),
+    },
+  };
+}
+
+function mapToServiceDetails(item: ApiServiceRequestDetails): ServiceRequestDetails {
+  const ownerName = item.user.fullName || 'طالب';
+
+  return {
+    id: String(item.id),
+    title: item.title,
+    description: item.description,
+    category: item.categoryName,
+    pricePerHour: item.budget,
+    budget: item.budget,
+    deadline: formatDeadline(item.deadlineUtc),
+    deadlineUtc: item.deadlineUtc,
+    createdAtUtc: item.createdAtUtc,
+    attachments: item.attachments ?? [],
+    owner: {
+      id: item.user.id || item.userId,
+      name: ownerName,
+      initials: ownerName.charAt(0),
+      imageUrl: toAbsoluteImageUrl(item.user.profileImageUrl),
+      major: item.user.major,
+      studyYear: item.user.studyYear,
+      universityId: item.user.universityId,
     },
   };
 }
@@ -141,6 +218,22 @@ export async function getServiceRequests(): Promise<ServiceCardData[]> {
     }
 
     return data.data.map(mapToServiceCard);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, SERVICE_REQUEST_ERRORS.listFailed));
+  }
+}
+
+export async function getServiceRequestDetails(id: string | number): Promise<ServiceRequestDetails> {
+  try {
+    const { data } = await apiClient.get<ApiServiceRequestDetailsResponse>(
+      `/api/ServiceRequests/${id}`,
+    );
+
+    if (!data.data) {
+      throw new Error(SERVICE_REQUEST_ERRORS.listFailed);
+    }
+
+    return mapToServiceDetails(data.data);
   } catch (error) {
     throw new Error(getApiErrorMessage(error, SERVICE_REQUEST_ERRORS.listFailed));
   }

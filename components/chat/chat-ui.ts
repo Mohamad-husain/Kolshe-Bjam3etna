@@ -27,7 +27,7 @@ export function getAvatarColor(seed?: string | null) {
 
 export function getAvatarInitial(name?: string | null) {
     const value = (name ?? "").trim()
-    return value[0]?.toUpperCase() ?? "م"
+    return value[0]?.toUpperCase() ?? "U"
 }
 
 export function getValidChatAssetUri(value?: string | null) {

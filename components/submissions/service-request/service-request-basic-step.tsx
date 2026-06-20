@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   FontFamily,
@@ -49,6 +50,8 @@ export function ServiceRequestBasicStep({
   onCategoryChange,
   onNext,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
     <View style={styles.card}>
       <ServiceRequestSectionHeader
@@ -59,31 +62,37 @@ export function ServiceRequestBasicStep({
 
       <View style={styles.fieldBlock}>
         <View style={styles.fieldTopRow}>
-          <Text style={styles.counter}>{title.length}/80</Text>
+          <Text style={[styles.counter, { color: colors.mutedForeground }]}>{title.length}/80</Text>
           <View style={styles.labelRow}>
-            <Ionicons name="pricetag-outline" size={14} color={Colors.primary} />
-            <Text style={styles.fieldLabel}>عنوان الطلب</Text>
+            <Ionicons name="pricetag-outline" size={14} color={colors.primary} />
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>عنوان الطلب</Text>
           </View>
         </View>
-        <View style={[styles.fieldRow, titleError ? styles.fieldRowError : null]}>
+        <View
+          style={[
+            styles.fieldRow,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            titleError ? styles.fieldRowError : null,
+          ]}
+        >
           <TextInput
             value={title}
             onChangeText={onTitleChange}
             maxLength={80}
             placeholder="مثال: مطلوب مدرس تفاضل وتكامل"
-            placeholderTextColor="rgba(142,142,147,0.65)"
-            style={styles.input}
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.input, { color: colors.foreground }]}
             textAlign="right"
           />
-          <Ionicons name="search-outline" size={18} color={Colors.mutedForeground} />
+          <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
         </View>
         {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
       </View>
 
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Ionicons name="grid-outline" size={14} color={Colors.primary} />
-          <Text style={styles.fieldLabel}>التصنيف</Text>
+          <Ionicons name="grid-outline" size={14} color={colors.primary} />
+          <Text style={[styles.fieldLabel, { color: colors.foreground }]}>التصنيف</Text>
         </View>
 
         <View style={styles.grid}>
@@ -96,6 +105,7 @@ export function ServiceRequestBasicStep({
                 onPress={() => onCategoryChange(active ? null : item.id)}
                 style={({ pressed }) => [
                   styles.categoryButton,
+                  { backgroundColor: colors.card, borderColor: colors.border },
                   getCategoryButtonStyle(active, item),
                   pressed && styles.pressed,
                 ]}
@@ -103,16 +113,17 @@ export function ServiceRequestBasicStep({
                 <View
                   style={[
                     styles.categoryIcon,
+                    { backgroundColor: colors.secondary },
                     active && { backgroundColor: `${item.color}12` },
                   ]}
                 >
                   <Ionicons
                     name={item.icon}
                     size={22}
-                    color={active ? item.color : Colors.mutedForeground}
+                    color={active ? item.color : colors.mutedForeground}
                   />
                 </View>
-                <Text style={[styles.categoryText, active && { color: item.color }]}>
+                <Text style={[styles.categoryText, { color: colors.mutedForeground }, active && { color: item.color }]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -126,16 +137,17 @@ export function ServiceRequestBasicStep({
         disabled={!canProceed}
         style={({ pressed }) => [
           styles.primaryButton,
-          !canProceed && styles.primaryButtonDisabled,
+          { backgroundColor: colors.primary, shadowColor: colors.primary },
+          !canProceed && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
           pressed && canProceed && styles.pressed,
         ]}
       >
         <Ionicons
           name="arrow-back"
           size={18}
-          color={canProceed ? '#ffffff' : Colors.mutedForeground}
+          color={canProceed ? '#ffffff' : colors.mutedForeground}
         />
-        <Text style={[styles.primaryText, !canProceed && styles.primaryTextDisabled]}>
+        <Text style={[styles.primaryText, !canProceed && { color: colors.mutedForeground }]}>
           التالي
         </Text>
       </Pressable>

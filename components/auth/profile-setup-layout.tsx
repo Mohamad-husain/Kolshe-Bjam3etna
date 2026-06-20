@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   Dimensions,
   FontFamily,
   FontWeight,
@@ -32,12 +33,14 @@ export function ProfileSetupLayout({
   footer,
 }: ProfileSetupLayoutProps) {
   const insets = useSafeAreaInsets();
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
   const isSecondStep = step === 2;
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.topRightBubble} pointerEvents="none" />
       <View style={styles.leftBubble} pointerEvents="none" />
@@ -70,12 +73,26 @@ export function ProfileSetupLayout({
           )}
         </View>
 
-        <View style={styles.iconBox}>
-          <Ionicons name="school-outline" size={30} color={Colors.primary} />
+        <View style={[styles.iconBox, { backgroundColor: colors.secondary }]}>
+          <Ionicons name="school-outline" size={30} color={colors.primary} />
         </View>
 
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Text
+          style={[
+            styles.title,
+            { color: colors.foreground, writingDirection: isRtl ? 'rtl' : 'ltr' },
+          ]}
+        >
+          {title}
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            { color: colors.mutedForeground, writingDirection: isRtl ? 'rtl' : 'ltr' },
+          ]}
+        >
+          {subtitle}
+        </Text>
 
         <View style={styles.body}>{children}</View>
 
@@ -88,7 +105,6 @@ export function ProfileSetupLayout({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ececf1',
     overflow: 'hidden',
   },
   softOverlay: {
@@ -137,7 +153,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 8,
     borderRadius: Dimensions.radiusFull,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb',
   },
   progressDot: {
     width: 8,
@@ -146,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(60, 60, 67, 0.18)',
   },
   progressDotActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb',
   },
   iconBox: {
     width: 72,
@@ -154,25 +170,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(47, 99, 224, 0.08)',
     marginBottom: 18,
   },
   title: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 22,
     fontWeight: FontWeight.bold,
     textAlign: 'center',
-    writingDirection: 'rtl',
     marginBottom: 6,
-    letterSpacing: -0.3,
   },
   subtitle: {
-    color: '#9d9da4',
     fontFamily: FontFamily.cairo,
     fontSize: 15,
     textAlign: 'center',
-    writingDirection: 'rtl',
     lineHeight: 24,
     maxWidth: 290,
   },

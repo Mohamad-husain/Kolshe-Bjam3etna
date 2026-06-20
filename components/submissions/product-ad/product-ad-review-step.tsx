@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import type { ProductAdPhotoInput } from '@/services/marketplace-api';
 import {
   Colors,
@@ -42,13 +43,14 @@ export function ProductAdReviewStep({
   onPrevious,
   onSubmit,
 }: Props) {
+  const { colors } = useThemePreference();
   const coverPhoto = photos[0] ?? null;
 
   return (
     <View style={styles.card}>
       <ProductAdSectionHeader step={3} title="مراجعة ونشر" subtitle="تحقق من البيانات قبل النشر" />
 
-      <View style={styles.previewCard}>
+      <View style={[styles.previewCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.previewStripe} />
         {coverPhoto ? <Image source={{ uri: coverPhoto.uri }} style={styles.previewMedia} /> : null}
 
@@ -62,25 +64,25 @@ export function ProductAdReviewStep({
               ) : null}
 
               {selectedCategory ? (
-                <View style={[styles.previewBadge, styles.previewBadgeMuted]}>
-                  <Text style={[styles.previewBadgeText, styles.previewBadgeMutedText]}>
+                <View style={[styles.previewBadge, styles.previewBadgeMuted, { backgroundColor: colors.secondary }]}>
+                  <Text style={[styles.previewBadgeText, { color: colors.foreground }]}>
                     {selectedCategory.label}
                   </Text>
                 </View>
               ) : null}
             </View>
-            <Text style={styles.previewLabel}>معاينة الإعلان</Text>
+            <Text style={[styles.previewLabel, { color: colors.foreground }]}>معاينة الإعلان</Text>
           </View>
 
-          <Text style={styles.previewTitle}>{title.trim() || 'عنوان الإعلان'}</Text>
-          <Text style={styles.previewDesc} numberOfLines={3}>
+          <Text style={[styles.previewTitle, { color: colors.foreground }]}>{title.trim() || 'عنوان الإعلان'}</Text>
+          <Text style={[styles.previewDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
             {description.trim() || 'وصف المنتج سيظهر هنا...'}
           </Text>
 
-          <View style={styles.previewFooter}>
-            <View style={styles.previewInfo}>
-              <Ionicons name="person-outline" size={13} color={Colors.mutedForeground} />
-              <Text style={styles.previewInfoText}>أنت</Text>
+          <View style={[styles.previewFooter, { borderTopColor: colors.border }]}>
+            <View style={[styles.previewInfo, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="person-outline" size={13} color={colors.mutedForeground} />
+              <Text style={[styles.previewInfoText, { color: colors.mutedForeground }]}>أنت</Text>
             </View>
 
             <View style={[styles.previewInfo, styles.previewInfoPrimary]}>
@@ -90,9 +92,9 @@ export function ProductAdReviewStep({
           </View>
 
           {photos.length > 0 ? (
-            <View style={styles.previewInfo}>
-              <Ionicons name="images-outline" size={13} color={Colors.mutedForeground} />
-              <Text style={styles.previewInfoText}>{photos.length} صورة مرفقة</Text>
+            <View style={[styles.previewInfo, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="images-outline" size={13} color={colors.mutedForeground} />
+              <Text style={[styles.previewInfoText, { color: colors.mutedForeground }]}>{photos.length} صورة مرفقة</Text>
             </View>
           ) : null}
         </View>
@@ -105,7 +107,7 @@ export function ProductAdReviewStep({
           style={({ pressed }) => [
             styles.primaryButton,
             styles.flexButton,
-            !canSubmit && styles.primaryButtonDisabled,
+            !canSubmit && [styles.primaryButtonDisabled, { backgroundColor: colors.secondary }],
             pressed && canSubmit && styles.pressed,
           ]}
         >
@@ -115,16 +117,23 @@ export function ProductAdReviewStep({
             <Ionicons
               name="cloud-upload-outline"
               size={18}
-              color={canSubmit ? '#ffffff' : Colors.mutedForeground}
+              color={canSubmit ? '#ffffff' : colors.mutedForeground}
             />
           )}
-          <Text style={[styles.primaryText, !canSubmit && styles.primaryTextDisabled]}>
+          <Text style={[styles.primaryText, !canSubmit && { color: colors.mutedForeground }]}>
             {isSubmitting ? 'جارٍ النشر...' : 'نشر الإعلان الآن'}
           </Text>
         </Pressable>
 
-        <Pressable onPress={onPrevious} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-          <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+        <Pressable
+          onPress={onPrevious}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
         </Pressable>
       </View>
     </View>

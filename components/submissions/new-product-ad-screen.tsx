@@ -18,6 +18,7 @@ import { ProductAdDetailsStep } from '@/components/submissions/product-ad/produc
 import { ProductAdHeader } from '@/components/submissions/product-ad/product-ad-header';
 import { ProductAdReviewStep } from '@/components/submissions/product-ad/product-ad-review-step';
 import { ProductAdSuccess } from '@/components/submissions/product-ad/product-ad-success';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   getPriceLabel,
   parsePriceValue,
@@ -59,6 +60,7 @@ function mapAssetToPhoto(asset: ImagePicker.ImagePickerAsset, index: number): Pr
 
 export function NewProductAdScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, effectiveTheme } = useThemePreference();
   const mutation = useCreateProductAdMutation();
   const [activeStep, setActiveStep] = useState<ProductAdStep>(1);
   const [submitted, setSubmitted] = useState(false);
@@ -218,9 +220,9 @@ export function NewProductAdScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
-      <View style={styles.screen}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={styles.topBubble} pointerEvents="none" />
         <View style={styles.bottomBubble} pointerEvents="none" />
 

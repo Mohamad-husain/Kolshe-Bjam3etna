@@ -26,6 +26,7 @@ import {
 } from '@/components/submissions/exchange/exchange-options';
 import { ExchangeReviewStep } from '@/components/submissions/exchange/exchange-review-step';
 import { ExchangeSuccess } from '@/components/submissions/exchange/exchange-success';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import { useCreateSwapAdMutation } from '@/hooks/mutations/use-swap-ad-mutations';
 import type { SwapAdCondition, SwapAdPhotoInput } from '@/services/swap-api';
 import { Spacing } from '@/styles/ui-theme';
@@ -55,6 +56,7 @@ function mapAssetToPhoto(asset: ImagePicker.ImagePickerAsset, index: number): Sw
 
 export function NewExchangeScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, effectiveTheme } = useThemePreference();
   const mutation = useCreateSwapAdMutation();
   const [activeStep, setActiveStep] = useState<ExchangeStep>(1);
   const [submitted, setSubmitted] = useState(false);
@@ -211,10 +213,10 @@ export function NewExchangeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
 
-      <View style={styles.screen}>
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={styles.topBubble} pointerEvents="none" />
         <View style={styles.bottomBubble} pointerEvents="none" />
 

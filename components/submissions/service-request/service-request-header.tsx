@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
   Colors,
   Dimensions,
@@ -26,8 +27,10 @@ export function ServiceRequestHeader({
   onBack,
   onStepPress,
 }: Props) {
+  const { colors } = useThemePreference();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
       <View style={styles.progressRow}>
         {[1, 2, 3].map((stepNumber) => (
           <Pressable
@@ -47,20 +50,28 @@ export function ServiceRequestHeader({
             }}
             style={[
               styles.progressDot,
-              activeStep === stepNumber && styles.progressDotActive,
-              activeStep > stepNumber && styles.progressDotDone,
+              { backgroundColor: colors.border },
+              activeStep === stepNumber && [styles.progressDotActive, { backgroundColor: colors.primary }],
+              activeStep > stepNumber && { backgroundColor: `${colors.primary}55` },
             ]}
           />
         ))}
       </View>
 
       <View style={styles.headerCenter}>
-        <Text style={styles.headerTitle}>طلب خدمة جديد</Text>
-        <Text style={styles.headerSubtitle}>{getStepCopy(activeStep)}</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>طلب خدمة جديد</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>{getStepCopy(activeStep)}</Text>
       </View>
 
-      <Pressable onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-        <Ionicons name="chevron-forward" size={20} color={Colors.foreground} />
+      <Pressable
+        onPress={onBack}
+        style={({ pressed }) => [
+          styles.backButton,
+          { backgroundColor: colors.card, borderColor: colors.border },
+          pressed && styles.pressed,
+        ]}
+      >
+        <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
       </Pressable>
     </View>
   );
@@ -92,9 +103,6 @@ const styles = StyleSheet.create({
   progressDotActive: {
     width: 22,
     backgroundColor: Colors.primary,
-  },
-  progressDotDone: {
-    backgroundColor: 'rgba(37,99,235,0.35)',
   },
   headerCenter: { alignItems: 'center', paddingHorizontal: 64 },
   headerTitle: {

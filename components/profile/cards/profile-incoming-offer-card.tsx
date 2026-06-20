@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
@@ -40,44 +41,57 @@ export function ProfileIncomingOfferCard({
   isAccepting,
   isRejecting,
 }: ProfileIncomingOfferCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? 'row-reverse' : 'row';
+  const textAlign = isRtl ? 'right' : 'left';
+  const alignItems = isRtl ? 'flex-end' : 'flex-start';
+
   return (
-    <View style={styles.card}>
-      <View style={styles.referencePill}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.referencePill, { backgroundColor: colors.secondary, flexDirection: rowDirection }]}>
         <Ionicons
           name={offer.type === 'exchange' ? 'swap-horizontal-outline' : 'bag-handle-outline'}
           size={15}
-          color={offer.type === 'exchange' ? SemanticColors.lightBlue : Colors.primary}
+          color={offer.type === 'exchange' ? SemanticColors.lightBlue : colors.primary}
         />
-        <Text style={styles.referenceText}>{offer.listingTitle}</Text>
+        <Text style={[styles.referenceText, { color: colors.foreground, textAlign }]}>{offer.listingTitle}</Text>
       </View>
 
-      <View style={styles.offerHeaderRow}>
+      <View style={[styles.offerHeaderRow, { flexDirection: rowDirection }]}>
         <View style={[styles.offerAvatar, { backgroundColor: offer.color }]}>
           <Text style={styles.offerAvatarText}>{offer.initials}</Text>
         </View>
 
-        <View style={styles.offerIdentity}>
-          <Text style={styles.offerName}>{offer.from}</Text>
-          <View style={styles.ratingRow}>
+        <View style={[styles.offerIdentity, { alignItems }]}>
+          <Text style={[styles.offerName, { color: colors.foreground, textAlign }]}>{offer.from}</Text>
+          <View style={[styles.ratingRow, { flexDirection: rowDirection }]}>
             <Ionicons name="star" size={12} color={SemanticColors.orange} />
-            <Text style={styles.ratingText}>{offer.rating.toFixed(1)}</Text>
+            <Text style={[styles.ratingText, { color: colors.mutedForeground }]}>{offer.rating.toFixed(1)}</Text>
           </View>
         </View>
 
-        <Text style={styles.offerTime}>{offer.time}</Text>
+        <Text style={[styles.offerTime, { color: colors.mutedForeground }]}>{offer.time}</Text>
       </View>
 
-      <Text style={styles.messageBubble}>{offer.message}</Text>
+      <Text
+        style={[
+          styles.messageBubble,
+          { backgroundColor: colors.secondary, color: colors.mutedForeground, textAlign },
+        ]}
+      >
+        {offer.message}
+      </Text>
 
-      <View style={styles.offerFooter}>
+      <View style={[styles.offerFooter, { flexDirection: rowDirection }]}>
         {offer.price ? <Text style={styles.offerPrice}>{offer.price}</Text> : <View />}
 
-        <View style={styles.offerActions}>
+        <View style={[styles.offerActions, { flexDirection: rowDirection }]}>
           <Pressable
             onPress={onOpenMessages}
             style={({ pressed }) => [styles.iconAction, styles.messageAction, pressed && styles.pressed]}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={15} color={Colors.primary} />
+            <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} />
           </Pressable>
 
           <Pressable
@@ -85,12 +99,15 @@ export function ProfileIncomingOfferCard({
             onPress={() => onRejectOffer(offer)}
             style={({ pressed }) => [
               styles.secondaryAction,
+              { flexDirection: rowDirection },
               (isAccepting || isRejecting) && styles.disabledAction,
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons name="close-circle-outline" size={15} color={Colors.mutedForeground} />
-            <Text style={styles.secondaryActionText}>{isRejecting ? 'جاري الرفض' : 'رفض'}</Text>
+            <Ionicons name="close-circle-outline" size={15} color={colors.mutedForeground} />
+            <Text style={[styles.secondaryActionText, { color: colors.mutedForeground }]}>
+              {isRejecting ? t('profile.rejecting') : t('profile.reject')}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -98,12 +115,15 @@ export function ProfileIncomingOfferCard({
             onPress={() => onAcceptOffer(offer)}
             style={({ pressed }) => [
               styles.primaryAction,
+              { flexDirection: rowDirection },
               (isAccepting || isRejecting) && styles.disabledAction,
               pressed && styles.pressed,
             ]}
           >
             <Ionicons name="checkmark-circle-outline" size={15} color="#ffffff" />
-            <Text style={styles.primaryActionText}>{isAccepting ? 'جاري القبول' : 'قبول'}</Text>
+            <Text style={styles.primaryActionText}>
+              {isAccepting ? t('profile.accepting') : t('profile.accept')}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -115,9 +135,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(60,60,67,0.06)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
@@ -128,21 +146,16 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: 16,
     paddingHorizontal: 12,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(120,120,128,0.08)',
   },
   referenceText: {
     flex: 1,
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,
-    textAlign: 'right',
   },
   offerHeaderRow: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
     marginTop: 14,
@@ -162,29 +175,23 @@ const styles = StyleSheet.create({
   },
   offerIdentity: {
     flex: 1,
-    alignItems: 'flex-end',
   },
   offerName: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    textAlign: 'right',
   },
   ratingRow: {
     marginTop: 2,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 4,
   },
   ratingText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.semibold,
   },
   offerTime: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
@@ -194,16 +201,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: 'rgba(120,120,128,0.08)',
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     lineHeight: 22,
-    textAlign: 'right',
   },
   offerFooter: {
     marginTop: 14,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -214,7 +217,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   offerActions: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
   },
@@ -232,7 +234,6 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: 12,
     paddingHorizontal: 14,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
     backgroundColor: SemanticColors.green,
@@ -247,13 +248,11 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: 12,
     paddingHorizontal: 14,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
     backgroundColor: 'rgba(120,120,128,0.08)',
   },
   secondaryActionText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.semibold,

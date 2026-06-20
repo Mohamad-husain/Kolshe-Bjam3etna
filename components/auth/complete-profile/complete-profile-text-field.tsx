@@ -1,8 +1,9 @@
 import { Controller, type Control, type FieldErrors } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useAppSettings } from '@/contexts/app-settings-context';
+import { useThemePreference } from '@/contexts/theme-preference-context';
 import {
-  Colors,
   FontFamily,
   FontWeight,
 } from '@/styles/ui-theme';
@@ -32,11 +33,24 @@ export function CompleteProfileTextField({
   multiline = false,
   onValueChange,
 }: CompleteProfileTextFieldProps) {
+  const { isRtl } = useAppSettings();
+  const { colors } = useThemePreference();
   const errorMessage = errors[name]?.message;
 
   return (
     <View style={styles.fieldGroup}>
-      <Text style={styles.label}>{label}</Text>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: colors.foreground,
+            textAlign: isRtl ? 'right' : 'left',
+            writingDirection: isRtl ? 'rtl' : 'ltr',
+          },
+        ]}
+      >
+        {label}
+      </Text>
       <Controller<CompleteProfileFormValues, CompleteProfileTextFieldName>
         control={control}
         name={name}
@@ -51,9 +65,18 @@ export function CompleteProfileTextField({
                 onChange(nextValue);
               }}
               placeholder={placeholder}
-              placeholderTextColor="#a1a1aa"
-              style={[styles.input, multiline ? styles.textArea : null]}
-              textAlign="right"
+              placeholderTextColor={colors.mutedForeground}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                  writingDirection: isRtl ? 'rtl' : 'ltr',
+                },
+                multiline ? styles.textArea : null,
+              ]}
+              textAlign={isRtl ? 'right' : 'left'}
               textAlignVertical={multiline ? 'top' : undefined}
               value={value}
             />
@@ -70,12 +93,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   label: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 16,
     fontWeight: FontWeight.medium,
-    textAlign: 'right',
-    writingDirection: 'rtl',
     paddingHorizontal: 4,
   },
   input: {
@@ -83,13 +103,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 18,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e1e3e9',
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 15,
-    writingDirection: 'rtl',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,

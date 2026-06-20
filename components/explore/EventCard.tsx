@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import {
-  Colors,
   SemanticColors,
   Dimensions,
   FontFamily,
@@ -10,6 +9,8 @@ import {
   Spacing,
 } from "@/styles/ui-theme";
 import { getEventAccent } from "./explore-colors";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import type { EventCardData } from "@/types/explore";
 interface EventCardProps {
   data: EventCardData;
@@ -17,6 +18,8 @@ interface EventCardProps {
 }
 
 export function EventCard({ data, onPress }: EventCardProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
   const hasValidCapacity = data.maxCount > 0;
   const hasImage = Boolean(data.imageUrl);
   const progress = hasValidCapacity
@@ -24,22 +27,34 @@ export function EventCard({ data, onPress }: EventCardProps) {
     : 0;
   const isFull = data.registeredCount >= data.maxCount;
   const accent = getEventAccent(data.eventType);
+  const rowDirection = isRtl ? "row-reverse" : "row";
+  const textAlign = isRtl ? "right" : "left";
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        pressed && styles.cardPressed,
+      ]}
     >
       {data.imageUrl ? (
-        <View style={styles.mediaWrapper}>
+        <View style={[styles.mediaWrapper, { backgroundColor: colors.secondary }]}>
           <Image source={{ uri: data.imageUrl }} style={styles.image} />
         </View>
       ) : null}
 
-      <View style={[styles.accentBar, { backgroundColor: accent.color }]} />
+      <View
+        style={[
+          styles.accentBar,
+          isRtl ? styles.accentBarRtl : styles.accentBarLtr,
+          { backgroundColor: accent.color },
+        ]}
+      />
 
-      <View style={[styles.header, hasImage && styles.headerAfterImage]}>
-        <View style={styles.headerText}>
+      <View style={[styles.header, { flexDirection: rowDirection }, hasImage && styles.headerAfterImage]}>
+        <View style={[styles.headerText, { alignItems: isRtl ? "flex-end" : "flex-start" }]}>
           <Text
             style={[
               styles.eventTypeBadge,
@@ -48,50 +63,58 @@ export function EventCard({ data, onPress }: EventCardProps) {
           >
             {data.eventType}
           </Text>
-          <Text style={styles.club}>{data.club}</Text>
+          <Text style={[styles.club, { color: colors.mutedForeground }]}>{data.club}</Text>
         </View>
         <View style={[styles.calendarIcon, { backgroundColor: accent.softBg }]}>
           <Ionicons name="calendar-outline" size={20} color={accent.color} />
         </View>
       </View>
 
-      <Text style={styles.title}>{data.title}</Text>
+      <Text style={[styles.title, { color: colors.foreground, textAlign }]}>
+        {data.title}
+      </Text>
 
-      <Text style={styles.description} numberOfLines={2}>
+      <Text
+        style={[
+          styles.description,
+          { color: colors.mutedForeground, textAlign },
+        ]}
+        numberOfLines={2}
+      >
         {data.description}
       </Text>
 
       <View style={styles.details}>
-        <View style={styles.detailRow}>
+        <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
           <Ionicons
             name="calendar-outline"
             size={13}
-            color={Colors.mutedForeground}
+            color={colors.mutedForeground}
           />
-          <Text style={styles.detailText}>{data.date}</Text>
+          <Text style={[styles.detailText, { color: colors.mutedForeground }]}>{data.date}</Text>
         </View>
 
-        <View style={styles.detailRow}>
+        <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
           <Ionicons
             name="time-outline"
             size={13}
-            color={Colors.mutedForeground}
+            color={colors.mutedForeground}
           />
-          <Text style={styles.detailText}>{data.time}</Text>
+          <Text style={[styles.detailText, { color: colors.mutedForeground }]}>{data.time}</Text>
         </View>
 
-        <View style={styles.detailRow}>
+        <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
           <Ionicons
             name="location-outline"
             size={13}
-            color={Colors.mutedForeground}
+            color={colors.mutedForeground}
           />
-          <Text style={styles.detailText}>{data.location}</Text>
+          <Text style={[styles.detailText, { color: colors.mutedForeground }]}>{data.location}</Text>
         </View>
       </View>
 
       <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
+        <View style={[styles.progressHeader, { flexDirection: rowDirection }]}>
           <Text
             style={[
               styles.progressCount,
@@ -100,17 +123,19 @@ export function EventCard({ data, onPress }: EventCardProps) {
           >
             {data.registeredCount}/{data.maxCount}
           </Text>
-          <View style={styles.progressLabel}>
+          <View style={[styles.progressLabel, { flexDirection: rowDirection }]}>
             <Ionicons
               name="people-outline"
               size={13}
-              color={Colors.mutedForeground}
+              color={colors.mutedForeground}
             />
-            <Text style={styles.progressLabelText}>المسجلين</Text>
+            <Text style={[styles.progressLabelText, { color: colors.mutedForeground }]}>
+              {t("explore.registered")}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.progressTrack}>
+        <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
           <View
             style={[
               styles.progressFill,
@@ -136,7 +161,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -149,11 +173,16 @@ const styles = StyleSheet.create({
   },
   accentBar: {
     position: "absolute",
-    right: 0,
     top: 0,
     bottom: 0,
     width: 3,
     borderRadius: 2,
+  },
+  accentBarRtl: {
+    right: 0,
+  },
+  accentBarLtr: {
+    left: 0,
   },
   mediaWrapper: {
     width: "100%",
@@ -161,14 +190,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Dimensions.baseRadius,
     borderTopRightRadius: Dimensions.baseRadius,
     overflow: "hidden",
-    backgroundColor: Colors.secondary,
   },
   image: {
     width: "100%",
     height: "100%",
   },
   header: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: Spacing.sm,
@@ -177,7 +204,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   headerText: {
-    alignItems: "flex-end",
     gap: Spacing.xs,
   },
   calendarIcon: {
@@ -190,7 +216,6 @@ const styles = StyleSheet.create({
   club: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
   },
   eventTypeBadge: {
     fontSize: FontSize.sm,
@@ -203,15 +228,11 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     fontFamily: FontFamily.cairo,
-    color: Colors.foreground,
-    textAlign: "right",
     marginBottom: Spacing.xs,
   },
   description: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
-    textAlign: "right",
     lineHeight: 20,
     marginBottom: Spacing.md,
   },
@@ -220,32 +241,27 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   detailRow: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.xs,
   },
   detailText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
   },
   progressSection: {
     gap: Spacing.xs,
   },
   progressHeader: {
-    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
   },
   progressLabel: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 3,
   },
   progressLabelText: {
     fontSize: FontSize.xs,
     fontFamily: FontFamily.cairo,
-    color: Colors.mutedForeground,
   },
   progressCount: {
     fontSize: FontSize.sm,
@@ -255,7 +271,6 @@ const styles = StyleSheet.create({
 
   progressTrack: {
     height: 6,
-    backgroundColor: Colors.border,
     borderRadius: Dimensions.radiusFull,
     overflow: "hidden",
   },

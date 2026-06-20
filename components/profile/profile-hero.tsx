@@ -3,12 +3,13 @@ import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
-  Colors,
   FontFamily,
   FontSize,
   FontWeight,
   SemanticColors,
 } from "@/styles/ui-theme";
+import { useAppSettings } from "@/contexts/app-settings-context";
+import { useThemePreference } from "@/contexts/theme-preference-context";
 import { ProfileActionChip } from "./profile-action-chip";
 import { ProfileStatCard } from "./profile-stat-card";
 
@@ -45,9 +46,15 @@ export function ProfileHero({
   onEditProfile,
   onOpenCoordinator,
 }: ProfileHeroProps) {
+  const { isRtl, t } = useAppSettings();
+  const { colors } = useThemePreference();
+  const rowDirection = isRtl ? "row-reverse" : "row";
+  const textAlign = isRtl ? "right" : "left";
+  const alignItems = isRtl ? "flex-end" : "flex-start";
+
   return (
     <>
-      <View style={styles.hero}>
+      <View style={[styles.hero, { backgroundColor: colors.primary }]}>
         <View style={styles.heroGlowPrimary} />
         <View style={styles.heroGlowSecondary} />
         <View style={styles.heroGlowTertiary} />
@@ -58,14 +65,14 @@ export function ProfileHero({
         <View style={[styles.heroActions, { paddingTop: topInset + 4 }]}>
           {showCoordinatorAction ? (
             <ProfileActionChip
-              label="الفعاليات"
+              label={t("explore.events")}
               icon="calendar-outline"
               onPress={() => onOpenCoordinator()}
             />
           ) : null}
           {showAdminAction ? (
             <ProfileActionChip
-              label="الإدارة"
+              label={t("profile.admin")}
               icon="shield-checkmark-outline"
               onPress={onOpenAdmin}
             />
@@ -83,8 +90,8 @@ export function ProfileHero({
       </View>
 
       <View style={styles.profileCardWrap}>
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
+        <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.profileHeader, { flexDirection: rowDirection }]}>
             <View style={styles.avatarWrap}>
               <View style={styles.avatarShell}>
                 {summary.profileImageUri ? (
@@ -119,26 +126,32 @@ export function ProfileHero({
               </View>
             </View>
 
-            <View style={styles.profileInfo}>
-              <Text style={styles.nameText}>{summary.fullName}</Text>
-              <Text style={styles.roleText}>{summary.major}</Text>
+            <View style={[styles.profileInfo, { alignItems }]}>
+              <Text style={[styles.nameText, { color: colors.foreground, textAlign }]}>
+                {summary.fullName}
+              </Text>
+              <Text style={[styles.roleText, { color: colors.primary, textAlign }]}>
+                {summary.major}
+              </Text>
 
-              <View style={styles.infoRows}>
-                <View style={styles.infoLine}>
+              <View style={[styles.infoRows, { alignItems }]}>
+                <View style={[styles.infoLine, { flexDirection: rowDirection }]}>
                   <Ionicons
                     name="star-outline"
                     size={13}
-                    color={Colors.mutedForeground}
+                    color={colors.mutedForeground}
                   />
-                  <Text style={styles.infoText}>{summary.universityName}</Text>
+                  <Text style={[styles.infoText, { color: colors.mutedForeground, textAlign }]}>
+                    {summary.universityName}
+                  </Text>
                 </View>
-                <View style={styles.infoLine}>
+                <View style={[styles.infoLine, { flexDirection: rowDirection }]}>
                   <Ionicons
                     name="location-outline"
                     size={13}
-                    color={Colors.mutedForeground}
+                    color={colors.mutedForeground}
                   />
-                  <Text style={styles.infoText}>
+                  <Text style={[styles.infoText, { color: colors.mutedForeground, textAlign }]}>
                     {summary.studyYear} • {summary.detailText}
                   </Text>
                 </View>
@@ -146,12 +159,12 @@ export function ProfileHero({
             </View>
           </View>
 
-          <View style={styles.profileDivider} />
+          <View style={[styles.profileDivider, { backgroundColor: colors.border }]} />
 
-          <View style={styles.statsRow}>
-            <ProfileStatCard label="المبيعات" value="5" />
-            <ProfileStatCard label="المهام" value="12" />
-            <ProfileStatCard label="التقييم" value="4.9" highlight />
+          <View style={[styles.statsRow, { flexDirection: rowDirection }]}>
+            <ProfileStatCard label={t("profile.sales")} value="5" />
+            <ProfileStatCard label={t("profile.tasks")} value="12" />
+            <ProfileStatCard label={t("profile.rating")} value="4.9" highlight />
           </View>
 
           <Pressable
@@ -161,8 +174,10 @@ export function ProfileHero({
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons name="create-outline" size={17} color={Colors.primary} />
-            <Text style={styles.editButtonText}>تعديل الملف الشخصي</Text>
+            <Ionicons name="create-outline" size={17} color={colors.primary} />
+            <Text style={[styles.editButtonText, { color: colors.primary }]}>
+              {t("profile.editProfile")}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -173,7 +188,6 @@ export function ProfileHero({
 const styles = StyleSheet.create({
   hero: {
     height: 210,
-    backgroundColor: Colors.primary,
     overflow: "hidden",
   },
   heroGlowPrimary: {
@@ -250,9 +264,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.96)",
     borderWidth: 1,
-    borderColor: "rgba(60,60,67,0.06)",
     shadowColor: "#0f172a",
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.1,
@@ -260,7 +272,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   profileHeader: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 16,
   },
@@ -313,48 +324,37 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
-    alignItems: "flex-end",
     justifyContent: "center",
   },
   nameText: {
-    color: Colors.foreground,
     fontFamily: FontFamily.cairo,
     fontSize: 17,
     fontWeight: FontWeight.extrabold,
-    textAlign: "right",
   },
   roleText: {
     marginTop: 4,
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    textAlign: "right",
   },
   infoRows: {
     marginTop: 8,
-    alignItems: "flex-end",
     gap: 4,
   },
   infoLine: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
   },
   infoText: {
-    color: Colors.mutedForeground,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.x11,
     fontWeight: FontWeight.medium,
-    textAlign: "right",
   },
   profileDivider: {
     height: 1,
     marginVertical: 18,
-    backgroundColor: "rgba(60,60,67,0.08)",
   },
   statsRow: {
-    flexDirection: "row-reverse",
     gap: 10,
   },
   editButton: {
@@ -368,7 +368,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   editButtonText: {
-    color: Colors.primary,
     fontFamily: FontFamily.cairo,
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,

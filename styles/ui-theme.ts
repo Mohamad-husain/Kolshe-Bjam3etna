@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 export const LightColors = {
   background: "#f2f2f7",
   foreground: "#1c1c1e",
-  card: "rgba(255,255,255,0.72)",
+  card: "#ffffff",
   primary: "#2563eb",
   secondary: "rgba(120,120,128,0.08)",
   mutedForeground: "#8e8e93",
@@ -12,14 +12,14 @@ export const LightColors = {
 } as const;
 
 export const DarkColors = {
-  background: "#000000",
-  foreground: "#ffffff",
-  card: "rgba(28,28,30,0.72)",
-  primary: "#0a84ff",
-  secondary: "rgba(120,120,128,0.24)",
-  mutedForeground: "#8e8e93",
+  background: "#0b1120",
+  foreground: "#f8fafc",
+  card: "#111827",
+  primary: "#60a5fa",
+  secondary: "rgba(148,163,184,0.16)",
+  mutedForeground: "#cbd5e1",
   destructive: "#ff453a",
-  border: "rgba(84,84,88,0.36)",
+  border: "rgba(148,163,184,0.28)",
 } as const;
 
 export const SemanticColors = {

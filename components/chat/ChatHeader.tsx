@@ -2,6 +2,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 
 import ChatAvatar from "@/components/chat/ChatAvatar"
+import { useAppSettings } from "@/contexts/app-settings-context"
+import { useThemePreference } from "@/contexts/theme-preference-context"
 
 type Props = {
     title: string
@@ -16,8 +18,16 @@ export default function ChatHeader({
     avatarColor,
     onBack,
 }: Props) {
+    const { t } = useAppSettings()
+    const { colors } = useThemePreference()
+
     return (
-        <View style={styles.header}>
+        <View
+            style={[
+                styles.header,
+                { backgroundColor: colors.card, borderBottomColor: colors.border },
+            ]}
+        >
             <View style={styles.sideSpacer} />
 
             <View style={styles.userInfo}>
@@ -29,7 +39,7 @@ export default function ChatHeader({
                 />
 
                 <View style={styles.userCopy}>
-                    <Text style={styles.name} numberOfLines={1}>
+                    <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
                         {title}
                     </Text>
                 </View>
@@ -40,8 +50,10 @@ export default function ChatHeader({
                 style={styles.backButton}
                 onPress={onBack}
             >
-                <Text style={styles.backLabel}>الرسائل</Text>
-                <Ionicons name="chevron-forward" size={20} color="#2563EB" />
+                <Text style={[styles.backLabel, { color: colors.primary }]}>
+                    {t("nav.messages")}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.primary} />
             </TouchableOpacity>
         </View>
     )
